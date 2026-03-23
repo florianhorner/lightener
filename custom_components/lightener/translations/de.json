@@ -24,7 +24,7 @@
           "brightness": "Helligkeitskurve"
         },
         "data_description": {
-          "brightness": "Eine Zuordnung pro Zeile als Gruppe:Lampe. Beispiel: \"60:100\" bedeutet, dass diese Lampe bei 60\u00a0% Gruppenhelligkeit 100\u00a0% erreicht."
+          "brightness": "Eine Zuordnung pro Zeile als Gruppe:Lampe. Beispiel: \"60:100\" bedeutet, dass \"{light_name}\" bei 60\u00a0% Gruppenhelligkeit 100\u00a0% erreicht."
         }
       }
     },
@@ -48,7 +48,7 @@
           "brightness": "Helligkeitskurve"
         },
         "data_description": {
-          "brightness": "Eine Zuordnung pro Zeile als Gruppe:Lampe. Beispiel: \"60:100\" bedeutet, dass diese Lampe bei 60\u00a0% Gruppenhelligkeit 100\u00a0% erreicht."
+          "brightness": "Eine Zuordnung pro Zeile als Gruppe:Lampe. Beispiel: \"60:100\" bedeutet, dass \"{light_name}\" bei 60\u00a0% Gruppenhelligkeit 100\u00a0% erreicht."
         }
       }
     },

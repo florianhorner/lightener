@@ -24,7 +24,7 @@
           "brightness": "Krivka jasu"
         },
         "data_description": {
-          "brightness": "Jedno mapovanie na riadok ako skupina:svetlo. Pr\u00edklad: \"60:100\" znamen\u00e1, \u017ee pri 60% jasu skupiny toto svetlo dosiahne 100%."
+          "brightness": "Jedno mapovanie na riadok ako skupina:svetlo. Pr\u00edklad: \"60:100\" znamen\u00e1, \u017ee pri 60% jasu skupiny \"{light_name}\" dosiahne 100%."
         }
       }
     },
@@ -48,7 +48,7 @@
           "brightness": "Krivka jasu"
         },
         "data_description": {
-          "brightness": "Jedno mapovanie na riadok ako skupina:svetlo. Pr\u00edklad: \"60:100\" znamen\u00e1, \u017ee pri 60% jasu skupiny toto svetlo dosiahne 100%."
+          "brightness": "Jedno mapovanie na riadok ako skupina:svetlo. Pr\u00edklad: \"60:100\" znamen\u00e1, \u017ee pri 60% jasu skupiny \"{light_name}\" dosiahne 100%."
         }
       }
     },
