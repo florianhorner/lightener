@@ -2,59 +2,59 @@
   "config": {
     "step": {
       "user": {
-        "title": "Criar um dispositivo Lightener",
-        "description": "Por favor, forneça um nome para o dispositivo Lightener que você está criando",
+        "title": "Novo dispositivo Lightener",
+        "description": "",
         "data": {
-          "name": "Nome do dispositivo"
+          "name": "Nome"
         },
         "data_description": {
-          "name": "O objetivo é indicar claramente qual grupo de luzes é controlado por este dispositivo. Normalmente, é o nome de uma área ou cômodo, como \"Sala de Estar\", mas pode ser qualquer coisa."
+          "name": "Um nome de c\u00f4modo ou \u00e1rea funciona melhor, ex. \"Sala de Estar\""
         }
       },
       "lights": {
-        "title": "Luzes controladas",
+        "title": "Selecionar luzes",
         "data": {
-          "controlled_entities": "Selecione as entidades de luz a serem controladas por este dispositivo Lightener"
+          "controlled_entities": "Luzes a controlar"
         }
       },
       "light_configuration": {
-        "title": "Configurar \"{light_name}\"",
-        "description": "Brilho atual: {current_brightness}",
+        "title": "Curva de brilho de \"{light_name}\"",
+        "description": "Atualmente: {current_brightness}",
         "data": {
-          "brightness": "Mapeamento de brilho"
+          "brightness": "Curva de brilho"
         },
         "data_description": {
-          "brightness": "Uma lista que mapeia o brilho desta luz quando o Lightener atinge determinados níveis de brilho. Cada linha tem o formato (Brilho do Lightener %): (Brilho da luz controlada %). Por exemplo, \"60:100\" especifica que quando o Lightener atinge 60% de brilho, \"{light_name}\" atingirá 100% de brilho"
+          "brightness": "Um mapeamento por linha como grupo:luz. Exemplo: \"60:100\" significa que a 60% de brilho do grupo, esta luz atinge 100%."
         }
       }
     },
     "error": {
       "controlled_entities_empty": "Selecione pelo menos uma luz",
-      "invalid_brightness": "Configuração de mapeamento de brilho inválida \"{error_entry}\". Cada linha deve ter o formato \"(número de 1 a 100): (número de 0 a 100)\". Por exemplo, \"40:100\""
+      "invalid_brightness": "Entrada inv\u00e1lida \"{error_entry}\". Use o formato \"X:Y\" onde X \u00e9 1\u2013100 e Y \u00e9 0\u2013100, ex. \"40:100\""
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Luzes controladas",
+        "title": "Selecionar luzes",
         "data": {
-          "controlled_entities": "Selecione as entidades de luz a serem controladas por este dispositivo Lightener"
+          "controlled_entities": "Luzes a controlar"
         }
       },
       "light_configuration": {
-        "title": "Configurar \"{light_name}\"",
-        "description": "Brilho atual: {current_brightness}",
+        "title": "Curva de brilho de \"{light_name}\"",
+        "description": "Atualmente: {current_brightness}",
         "data": {
-          "brightness": "Mapeamento de brilho"
+          "brightness": "Curva de brilho"
         },
         "data_description": {
-          "brightness": "Uma lista que mapeia o brilho desta luz quando o Lightener atinge determinados níveis de brilho. Cada linha tem o formato (Brilho do Lightener %): (Brilho da luz controlada %). Por exemplo, \"60:100\" especifica que quando o Lightener atinge 60% de brilho, \"{light_name}\" atingirá 100% de brilho."
+          "brightness": "Um mapeamento por linha como grupo:luz. Exemplo: \"60:100\" significa que a 60% de brilho do grupo, esta luz atinge 100%."
         }
       }
     },
     "error": {
       "controlled_entities_empty": "Selecione pelo menos uma luz",
-      "invalid_brightness": "Configuração de mapeamento de brilho inválida \"{error_entry}\". Cada linha deve ter o formato \"(número de 1 a 100): (número de 0 a 100)\". Por exemplo, \"40:100\""
+      "invalid_brightness": "Entrada inv\u00e1lida \"{error_entry}\". Use o formato \"X:Y\" onde X \u00e9 1\u2013100 e Y \u00e9 0\u2013100, ex. \"40:100\""
     }
   }
 }

@@ -2,59 +2,59 @@
   "config": {
     "step": {
       "user": {
-        "title": "Create a Lightener device",
-        "description": "Please provide a name for the Lightener device you are creating",
+        "title": "New Lightener device",
+        "description": "",
         "data": {
-          "name": "Device name"
+          "name": "Name"
         },
         "data_description": {
-          "name": "The purpose is to clearly indicate which group of lights is controlled by this device. Typically, it is an area or room name, such as \"Living Room,\" but it can be anything"
+          "name": "A room or area name works best, e.g. \"Living Room\""
         }
       },
       "lights": {
-        "title": "Controlled lights",
+        "title": "Select lights",
         "data": {
-          "controlled_entities": "Select the light entities to be controlled by this Lightener device"
+          "controlled_entities": "Lights to control"
         }
       },
       "light_configuration": {
-        "title": "Configure \"{light_name}\"",
-        "description": "Current brightness: {current_brightness}",
+        "title": "\"{light_name}\" brightness curve",
+        "description": "Currently: {current_brightness}",
         "data": {
-          "brightness": "Brightness mapping"
+          "brightness": "Brightness curve"
         },
         "data_description": {
-          "brightness": "A list that maps the brightness of this light when the Lightener reaches certain brightness levels. Each line has the format (Lightener brightness %): (Controlled light brightness %). For example, \"60:100\" specifies that when the Lightener reaches 60% brightness, \"{light_name}\" will reach 100% brightness"
+          "brightness": "One mapping per line as group:light. Example: \"60:100\" means at 60% group brightness, this light reaches 100%."
         }
       }
     },
     "error": {
       "controlled_entities_empty": "Select at least one light",
-      "invalid_brightness": "Invalid brightness mapping configuration \"{error_entry}\". Each line must have the format \"(number from 1 to 100): (number from 0 to 100)\". For example, \"40:100\""
+      "invalid_brightness": "Invalid entry \"{error_entry}\". Use the format \"X:Y\" where X is 1\u2013100 and Y is 0\u2013100, e.g. \"40:100\""
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Controlled lights",
+        "title": "Select lights",
         "data": {
-          "controlled_entities": "Select the light entities to be controlled by this Lightener device"
+          "controlled_entities": "Lights to control"
         }
       },
       "light_configuration": {
-        "title": "Configure \"{light_name}\"",
-        "description": "Current brightness: {current_brightness}",
+        "title": "\"{light_name}\" brightness curve",
+        "description": "Currently: {current_brightness}",
         "data": {
-          "brightness": "Brightness mapping"
+          "brightness": "Brightness curve"
         },
         "data_description": {
-          "brightness": "A list that maps the brightness of this light when the Lightener reaches certain brightness levels. Each line has the format (Lightener brightness %): (Controlled light brightness %). For example, \"60:100\" specifies that when the Lightener reaches 60% brightness, \"{light_name}\" will reach 100% brightness"
+          "brightness": "One mapping per line as group:light. Example: \"60:100\" means at 60% group brightness, this light reaches 100%."
         }
       }
     },
     "error": {
       "controlled_entities_empty": "Select at least one light",
-      "invalid_brightness": "Invalid brightness mapping configuration \"{error_entry}\". Each line must have the format \"(number from 1 to 100): (number from 0 to 100)\". For example, \"40:100\""
+      "invalid_brightness": "Invalid entry \"{error_entry}\". Use the format \"X:Y\" where X is 1\u2013100 and Y is 0\u2013100, e.g. \"40:100\""
     }
   }
 }

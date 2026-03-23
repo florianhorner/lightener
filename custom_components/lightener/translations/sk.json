@@ -2,59 +2,59 @@
   "config": {
     "step": {
       "user": {
-        "title": "Vytvorte zariadenie Lightener",
-        "description": "Zadajte názov zariadenia Lightener, ktoré vytvárate",
+        "title": "Nov\u00e9 zariadenie Lightener",
+        "description": "",
         "data": {
-          "name": "Názov zariadenia"
+          "name": "N\u00e1zov"
         },
         "data_description": {
-          "name": "Účelom je jasne uviesť, ktorá skupina svetiel je týmto zariadením ovládaná. Zvyčajne je to názov oblasti alebo miestnosti, napríklad \"Obývačka\", ale môže to byť čokoľvek"
+          "name": "Najlep\u0161ie funguje n\u00e1zov miestnosti alebo oblasti, napr. \"Ob\u00fdva\u010dka\""
         }
       },
       "lights": {
-        "title": "Ovládané svetlá",
+        "title": "Vybra\u0165 svetl\u00e1",
         "data": {
-          "controlled_entities": "Vyberte svetelné entity, ktoré chcete ovládať týmto zariadením Lightener"
+          "controlled_entities": "Svetl\u00e1 na ovl\u00e1danie"
         }
       },
       "light_configuration": {
-        "title": "Konfigurovať \"{light_name}\"",
-        "description": "Current brightness: {current_brightness}",
+        "title": "Krivka jasu \"{light_name}\"",
+        "description": "Aktu\u00e1lne: {current_brightness}",
         "data": {
-          "brightness": "Mapovanie jasu"
+          "brightness": "Krivka jasu"
         },
         "data_description": {
-          "brightness": "Zoznam, ktorý mapuje jas tohto svetla, keď Lightener dosiahne určité úrovne jasu. Každý riadok má formát (Lightener jas %): (Kontrolovaný jas svetla %). Napríklad, \"60:100\" určuje, keď Lightener dosiahne jas 60 %, \"{light_name}\" dosiahne 100% jas"
+          "brightness": "Jedno mapovanie na riadok ako skupina:svetlo. Pr\u00edklad: \"60:100\" znamen\u00e1, \u017ee pri 60% jasu skupiny toto svetlo dosiahne 100%."
         }
       }
     },
     "error": {
-      "controlled_entities_empty": "Vyberte aspoň jedno svetlo",
-      "invalid_brightness": "Neplatná konfigurácia mapovania jasu \"{error_entry}\". Každý riadok musí mať formát \"(číslo od 1 do 100): (číslo od 0 do 100)\". Napríklad, \"40:100\""
+      "controlled_entities_empty": "Vyberte aspo\u0148 jedno svetlo",
+      "invalid_brightness": "Neplatn\u00fd z\u00e1znam \"{error_entry}\". Pou\u017eite form\u00e1t \"X:Y\" kde X je 1\u2013100 a Y je 0\u2013100, napr. \"40:100\""
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Ovládané svetlá",
+        "title": "Vybra\u0165 svetl\u00e1",
         "data": {
-          "controlled_entities": "Vyberte svetelné entity, ktoré chcete ovládať týmto zariadením Lightener"
+          "controlled_entities": "Svetl\u00e1 na ovl\u00e1danie"
         }
       },
       "light_configuration": {
-        "title": "Konfigurovať \"{light_name}\"",
-        "description": "Current brightness: {current_brightness}",
+        "title": "Krivka jasu \"{light_name}\"",
+        "description": "Aktu\u00e1lne: {current_brightness}",
         "data": {
-          "brightness": "Mapovanie jasu"
+          "brightness": "Krivka jasu"
         },
         "data_description": {
-          "brightness": "Zoznam, ktorý mapuje jas tohto svetla, keď Lightener dosiahne určité úrovne jasu. Každý riadok má formát (Jas Lightener %): (Kontrolovaný jas svetla %). Napríklad, \"60:100\" určuje, že keď Lightener dosiahne jas 60 %, \"{light_name}\" dosiahne 100% jas"
+          "brightness": "Jedno mapovanie na riadok ako skupina:svetlo. Pr\u00edklad: \"60:100\" znamen\u00e1, \u017ee pri 60% jasu skupiny toto svetlo dosiahne 100%."
         }
       }
     },
     "error": {
-      "controlled_entities_empty": "Vyberte aspoň jedno svetlo",
-      "invalid_brightness": "Neplatná konfigurácia mapovania jasu \"{error_entry}\". Každý riadok musí mať formát \"(číslo od 1 do 100): (číslo od 0 do 100)\". Napríklad, \"40:100\""
+      "controlled_entities_empty": "Vyberte aspo\u0148 jedno svetlo",
+      "invalid_brightness": "Neplatn\u00fd z\u00e1znam \"{error_entry}\". Pou\u017eite form\u00e1t \"X:Y\" kde X je 1\u2013100 a Y je 0\u2013100, napr. \"40:100\""
     }
   }
 }
