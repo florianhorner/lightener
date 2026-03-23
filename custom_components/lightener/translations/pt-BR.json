@@ -24,7 +24,7 @@
           "brightness": "Curva de brilho"
         },
         "data_description": {
-          "brightness": "Um mapeamento por linha como grupo:luz. Exemplo: \"60:100\" significa que a 60% de brilho do grupo, esta luz atinge 100%."
+          "brightness": "Um mapeamento por linha como grupo:luz. Exemplo: \"60:100\" significa que a 60% de brilho do grupo, \"{light_name}\" atinge 100%."
         }
       }
     },
@@ -48,7 +48,7 @@
           "brightness": "Curva de brilho"
         },
         "data_description": {
-          "brightness": "Um mapeamento por linha como grupo:luz. Exemplo: \"60:100\" significa que a 60% de brilho do grupo, esta luz atinge 100%."
+          "brightness": "Um mapeamento por linha como grupo:luz. Exemplo: \"60:100\" significa que a 60% de brilho do grupo, \"{light_name}\" atinge 100%."
         }
       }
     },

@@ -24,7 +24,7 @@
           "brightness": "Brightness curve"
         },
         "data_description": {
-          "brightness": "One mapping per line as group:light. Example: \"60:100\" means at 60% group brightness, this light reaches 100%."
+          "brightness": "One mapping per line as group:light. Example: \"60:100\" means at 60% group brightness, \"{light_name}\" reaches 100%."
         }
       }
     },
@@ -48,7 +48,7 @@
           "brightness": "Brightness curve"
         },
         "data_description": {
-          "brightness": "One mapping per line as group:light. Example: \"60:100\" means at 60% group brightness, this light reaches 100%."
+          "brightness": "One mapping per line as group:light. Example: \"60:100\" means at 60% group brightness, \"{light_name}\" reaches 100%."
         }
       }
     },
