@@ -1,0 +1,60 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Neues Lightener-Ger\u00e4t",
+        "description": "",
+        "data": {
+          "name": "Name"
+        },
+        "data_description": {
+          "name": "Am besten ein Raum- oder Bereichsname, z.\u00a0B. \"Wohnzimmer\""
+        }
+      },
+      "lights": {
+        "title": "Lampen ausw\u00e4hlen",
+        "data": {
+          "controlled_entities": "Zu steuernde Lampen"
+        }
+      },
+      "light_configuration": {
+        "title": "Helligkeitskurve \"{light_name}\"",
+        "description": "Aktuell: {current_brightness}",
+        "data": {
+          "brightness": "Helligkeitskurve"
+        },
+        "data_description": {
+          "brightness": "Eine Zuordnung pro Zeile als Gruppe:Lampe. Beispiel: \"60:100\" bedeutet, dass diese Lampe bei 60\u00a0% Gruppenhelligkeit 100\u00a0% erreicht."
+        }
+      }
+    },
+    "error": {
+      "controlled_entities_empty": "Mindestens eine Lampe ausw\u00e4hlen",
+      "invalid_brightness": "Ung\u00fcltiger Eintrag \"{error_entry}\". Format \"X:Y\" verwenden, wobei X 1\u2013100 und Y 0\u2013100 ist, z.\u00a0B. \"40:100\""
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Lampen ausw\u00e4hlen",
+        "data": {
+          "controlled_entities": "Zu steuernde Lampen"
+        }
+      },
+      "light_configuration": {
+        "title": "Helligkeitskurve \"{light_name}\"",
+        "description": "Aktuell: {current_brightness}",
+        "data": {
+          "brightness": "Helligkeitskurve"
+        },
+        "data_description": {
+          "brightness": "Eine Zuordnung pro Zeile als Gruppe:Lampe. Beispiel: \"60:100\" bedeutet, dass diese Lampe bei 60\u00a0% Gruppenhelligkeit 100\u00a0% erreicht."
+        }
+      }
+    },
+    "error": {
+      "controlled_entities_empty": "Mindestens eine Lampe ausw\u00e4hlen",
+      "invalid_brightness": "Ung\u00fcltiger Eintrag \"{error_entry}\". Format \"X:Y\" verwenden, wobei X 1\u2013100 und Y 0\u2013100 ist, z.\u00a0B. \"40:100\""
+    }
+  }
+}
