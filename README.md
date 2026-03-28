@@ -1,9 +1,42 @@
-# Lightener
+# Lightener Curve Editor
 
 [![GitHub Release][releases-shield]][releases]
 [![hacs][hacsbadge]][hacs]
 
+> **This is a fork of [fredck/lightener](https://github.com/fredck/lightener) (v2.4.0).**
+> It adds an interactive brightness curve editor card. The goal is to merge these features back upstream once stable.
+
 Lightener is a Home Assistant integration used to create virtual lights that can control a group of lights. It offers the added benefit of controlling the state (on/off) and brightness level of each light independently.
+
+## What This Fork Adds
+
+- **Interactive Curve Editor Card** (`custom:lightener-curve-card`) — visual editing of per-light brightness curves directly in the HA dashboard, instead of typing number pairs by hand
+- **WebSocket API** — `lightener/get_curves` and `lightener/save_curves` for reading and writing brightness configs from the frontend
+- **Frontend asset serving** — the card JS is served via `async_setup`
+
+### Upstream Status
+
+| Feature | Status |
+|---------|--------|
+| Curve editor card + WebSocket API | Fork-only, planned for upstream PR once stable |
+| All upstream v2.4.0 functionality | Included, unchanged |
+
+### Switching Back to Upstream
+
+Remove `florianhorner/lightener-curve-editor` from HACS custom repositories and reinstall "Lightener" from the default HACS store. The curve editor card will stop working but all Lightener devices and automations remain unaffected.
+
+## Installing This Fork
+
+1. In HACS, go to the three-dot menu and select "Custom repositories"
+2. Add `florianhorner/lightener-curve-editor` as an Integration
+3. Search for "Lightener Curve Editor" and install it
+4. Restart Home Assistant
+5. Add a card to your dashboard:
+
+```yaml
+type: custom:lightener-curve-card
+entity: light.your_lightener_device
+```
 
 ## Example Use Case
 
@@ -31,9 +64,9 @@ Lightener makes this magic possible.
 
 ## Installation
 
-### Using HACS (recommended)
+### Using HACS (upstream)
 
-Simply search for `Lightener` in HACS and easily install it.
+For the original Lightener without the curve editor, search for `Lightener` in HACS.
 
 ### Manual
 
@@ -96,5 +129,5 @@ Have fun!
 [hacs]: https://github.com/hacs/integration
 [hacsbadge]: https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge
 
-[releases-shield]: https://img.shields.io/github/release/fredck/lightener.svg?style=for-the-badge
-[releases]: https://github.com/fredck/lightener/releases
+[releases-shield]: https://img.shields.io/github/release/florianhorner/lightener-curve-editor.svg?style=for-the-badge&include_prereleases
+[releases]: https://github.com/florianhorner/lightener-curve-editor/releases
