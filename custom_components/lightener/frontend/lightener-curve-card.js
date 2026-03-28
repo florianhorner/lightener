@@ -112,6 +112,7 @@ function t(t,e,i,s){var r,o=arguments.length,n=o<3?e:null===s?s=Object.getOwnPro
       display: block;
       border-radius: 8px;
       background: var(--graph-bg, #252525);
+      border: 1px solid var(--divider-color, transparent);
     }
     .grid-line {
       stroke: var(--secondary-text, #9e9e9e);
@@ -307,7 +308,7 @@ function t(t,e,i,s){var r,o=arguments.length,n=o<3?e:null===s?s=Object.getOwnPro
           ${this.saving?"Saving...":"Save"}
         </button>
       </div>
-    `:G}};kt.styles=n`
+    `:W`<div class="footer"></div>`}};kt.styles=n`
     :host {
       display: block;
     }
@@ -380,7 +381,7 @@ function t(t,e,i,s){var r,o=arguments.length,n=o<3?e:null===s?s=Object.getOwnPro
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            <path d="M2 20 C6 20, 8 4, 12 4 S18 20, 22 20" />
           </svg>
           <h2>Brightness Curves</h2>
         </div>

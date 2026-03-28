@@ -99,7 +99,7 @@ export class CurveFooter extends LitElement {
       `;
     }
 
-    if (!this.dirty) return nothing;
+    if (!this.dirty) return html`<div class="footer"></div>`;
 
     return html`
       <div class="footer">
