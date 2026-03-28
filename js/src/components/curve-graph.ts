@@ -273,6 +273,7 @@ export class CurveGraph extends LitElement {
     pointIdx: number
   ): void {
     e.preventDefault();
+    e.stopPropagation();
     if (this.readOnly) return;
     if (!this._isCurveInteractive(curveIdx)) return;
     // Cannot remove the origin anchor (index 0)
@@ -429,6 +430,10 @@ export class CurveGraph extends LitElement {
 
     const gradientId = `grad-${curveIdx}`;
 
+    // Dash patterns for colorblind accessibility (cycle through 5 patterns)
+    const dashPatterns = ["", "8 4", "4 4", "12 4 4 4", "2 4"];
+    const dashArray = dashPatterns[curveIdx % dashPatterns.length];
+
     const isDraggingThisCurve = this._dragCurveIdx === curveIdx;
     const fillColor = curve.color + "33"; // 20% opacity version
     const lineOpacity = isSelected ? 1 : 0.35;
@@ -456,12 +461,15 @@ export class CurveGraph extends LitElement {
         d="${fillPath}"
         fill="url(#${gradientId})"
         style="opacity: ${lineOpacity}"
+        pointer-events="none"
       />
       <path
         class="curve-line"
         d="${curvePath}"
         stroke="${curve.color}"
+        stroke-dasharray="${dashArray}"
         style="opacity: ${lineOpacity}"
+        pointer-events="none"
       />
       ${showPoints
         ? curve.controlPoints.map((cp, pi) => {
