@@ -11,8 +11,7 @@ export function scaleRangedValue(
 ): number {
   const [a, b] = sourceRange;
   const [c, d] = targetRange;
-  const y = c + ((value - a) * (d - c)) / (b - a);
-  return Math.round(y);
+  return c + ((value - a) * (d - c)) / (b - a);
 }
 
 /**

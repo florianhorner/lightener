@@ -76,7 +76,7 @@ export class CurveGraph extends LitElement {
     }
     .tick-label {
       fill: var(--secondary-text, #9e9e9e);
-      font-size: 7.5px;
+      font-size: 9px;
       font-family: inherit;
     }
     .curve-line {
@@ -401,6 +401,21 @@ export class CurveGraph extends LitElement {
               this._hoveredPoint?.point === pi;
             return svg`
               <circle
+                class="hit-circle"
+                cx="${toSvgX(cp.lightener)}"
+                cy="${toSvgY(cp.target)}"
+                r="16"
+                fill="transparent"
+                pointer-events="all"
+                @pointerdown=${(e: PointerEvent) =>
+                  this._onPointerDown(e, curveIdx, pi)}
+                @contextmenu=${(e: MouseEvent) =>
+                  this._onPointContextMenu(e, curveIdx, pi)}
+                @pointerenter=${() =>
+                  (this._hoveredPoint = { curve: curveIdx, point: pi })}
+                @pointerleave=${() => (this._hoveredPoint = null)}
+              />
+              <circle
                 class="control-point ${isFixed ? "fixed" : ""} ${
               isActive ? "dragging" : ""
             } ${isHovered ? "hovered" : ""}"
@@ -411,13 +426,7 @@ export class CurveGraph extends LitElement {
                 stroke="${curve.color}"
                 stroke-width="2"
                 style="--glow-color: ${curve.color}"
-                @pointerdown=${(e: PointerEvent) =>
-                  this._onPointerDown(e, curveIdx, pi)}
-                @contextmenu=${(e: MouseEvent) =>
-                  this._onPointContextMenu(e, curveIdx, pi)}
-                @pointerenter=${() =>
-                  (this._hoveredPoint = { curve: curveIdx, point: pi })}
-                @pointerleave=${() => (this._hoveredPoint = null)}
+                pointer-events="none"
               />
             `;
           })
@@ -440,6 +449,9 @@ export class CurveGraph extends LitElement {
         @pointermove=${this._onPointerMove}
         @pointerup=${this._onPointerUp}
         @dblclick=${this._onDblClick}
+        @contextmenu=${(e: MouseEvent) => {
+          if (!this.readOnly) e.preventDefault();
+        }}
       >
         ${this._renderGrid()}
 
