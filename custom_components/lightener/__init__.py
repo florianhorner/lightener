@@ -1,6 +1,7 @@
 """Lightener Integration."""
 
 import logging
+from pathlib import Path
 from types import MappingProxyType
 from typing import Any
 
@@ -14,6 +15,22 @@ from .config_flow import LightenerConfigFlow
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.LIGHT]
+
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the Lightener integration."""
+    from . import websocket
+
+    websocket.async_register_commands(hass)
+
+    # Serve the frontend card JS
+    hass.http.register_static_path(
+        "/lightener/lightener-curve-card.js",
+        str(Path(__file__).parent / "frontend" / "lightener-curve-card.js"),
+        cache_headers=False,
+    )
+
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
