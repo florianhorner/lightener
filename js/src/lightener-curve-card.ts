@@ -327,7 +327,7 @@ export class LightenerCurveCard extends LitElement {
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            <path d="M2 20 C6 20, 8 4, 12 4 S18 20, 22 20" />
           </svg>
           <h2>Brightness Curves</h2>
         </div>

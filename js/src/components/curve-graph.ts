@@ -57,6 +57,7 @@ export class CurveGraph extends LitElement {
       display: block;
       border-radius: 8px;
       background: var(--graph-bg, #252525);
+      border: 1px solid var(--divider-color, transparent);
     }
     .grid-line {
       stroke: var(--secondary-text, #9e9e9e);
