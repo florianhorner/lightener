@@ -32,12 +32,10 @@ export class CurveFooter extends LitElement {
       height: 14px;
       opacity: 0.6;
     }
-    .dirty-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #ffa726;
-      flex-shrink: 0;
+    .unsaved-label {
+      font-size: 12px;
+      color: var(--warning-color, #ffa726);
+      margin-right: auto;
     }
     button {
       font-family: inherit;
@@ -103,7 +101,7 @@ export class CurveFooter extends LitElement {
 
     return html`
       <div class="footer">
-        <span class="dirty-dot"></span>
+        <span class="unsaved-label">Unsaved changes</span>
         <button class="btn-cancel"
           @click=${this._onCancel}
           ?disabled=${this.saving}>Cancel</button>
