@@ -8,6 +8,7 @@ import {
   curvesEqual,
 } from "./utils/data.js";
 import "./components/curve-graph.js";
+import "./components/curve-scrubber.js";
 import "./components/curve-legend.js";
 import "./components/curve-footer.js";
 
@@ -343,6 +344,11 @@ export class LightenerCurveCard extends LitElement {
             @point-remove=${this._onPointRemove}
           ></curve-graph>
         </div>
+
+        <curve-scrubber
+          .curves=${this._curves}
+          .readOnly=${!this._isAdmin}
+        ></curve-scrubber>
 
         <div class="divider"></div>
 
