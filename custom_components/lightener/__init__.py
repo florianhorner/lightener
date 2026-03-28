@@ -20,14 +20,19 @@ PLATFORMS = [Platform.LIGHT]
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Lightener integration."""
     from . import websocket
+    from homeassistant.components.http import StaticPathConfig
 
     websocket.async_register_commands(hass)
 
     # Serve the frontend card JS
-    hass.http.register_static_path(
-        "/lightener/lightener-curve-card.js",
-        str(Path(__file__).parent / "frontend" / "lightener-curve-card.js"),
-        cache_headers=False,
+    await hass.http.async_register_static_paths(
+        [
+            StaticPathConfig(
+                "/lightener/lightener-curve-card.js",
+                str(Path(__file__).parent / "frontend" / "lightener-curve-card.js"),
+                cache_headers=False,
+            )
+        ]
     )
 
     return True
