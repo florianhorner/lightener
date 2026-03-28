@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lightener Curve Card - Dev Preview</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 40px;
+        background: #111;
+        font-family: "Roboto", "Segoe UI", sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 100vh;
+      }
+      .preview-container {
+        width: 400px;
+      }
+      .label {
+        color: #666;
+        font-size: 12px;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="preview-container">
+      <div class="label">Lovelace Card Preview</div>
+      <lightener-curve-card></lightener-curve-card>
+    </div>
+
+    <script type="module">
+      import "../custom_components/lightener/frontend/lightener-curve-card.js";
+
+      const card = document.querySelector("lightener-curve-card");
+
+      // HA calls setConfig then hass. We must wait for the element to
+      // upgrade fully before setting properties, otherwise Lit's @state()
+      // accessor setup can lose object properties.
+      await customElements.whenDefined("lightener-curve-card");
+      card.setConfig({ type: "custom:lightener-curve-card" });
+
+      // Use setTimeout to run after all Lit microtasks complete
+      setTimeout(() => {
+        card.hass = {
+          user: { is_admin: true },
+          states: {},
+          language: "en",
+          themes: { default_theme: "default" },
+        };
+      }, 0);
+    </script>
+  </body>
+</html>
