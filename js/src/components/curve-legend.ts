@@ -13,10 +13,10 @@ export class CurveLegend extends LitElement {
     }
     .legend {
       display: flex;
-      flex-wrap: wrap;
-      gap: 12px 16px;
+      flex-direction: column;
+      gap: 4px;
       padding: 8px 0 0;
-      max-height: 120px;
+      max-height: 140px;
       overflow-y: auto;
     }
     .legend-item {
@@ -64,7 +64,6 @@ export class CurveLegend extends LitElement {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 160px;
     }
   `;
 
