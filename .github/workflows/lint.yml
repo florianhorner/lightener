@@ -1,29 +1,99 @@
-name: "Lint"
+name: "Quality"
 
 on:
   push:
     branches:
-      - "main"
+      - "master"
   pull_request:
     branches:
-      - "main"
+      - "master"
 
 jobs:
   ruff:
     name: "Ruff"
     runs-on: "ubuntu-latest"
     steps:
-        - name: "Checkout the repository"
-          uses: "actions/checkout@v4"
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v4"
 
-        - name: "Set up Python"
-          uses: actions/setup-python@v5.0.0
-          with:
-            python-version: "3.10"
-            cache: "pip"
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
 
-        - name: "Install requirements"
-          run: python3 -m pip install -r requirements.txt
+      - name: "Install requirements"
+        run: python3 -m pip install -r requirements.txt
 
-        - name: "Run"
-          run: python3 -m ruff check .
+      - name: "Ruff check"
+        run: python3 -m ruff check .
+
+      - name: "Ruff format check"
+        run: python3 -m ruff format --check .
+
+  mypy:
+    name: "Mypy"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v4"
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: "Install requirements"
+        run: python3 -m pip install -r requirements.txt
+
+      - name: "Run mypy"
+        run: python3 -m mypy custom_components/lightener/
+
+  pytest:
+    name: "Pytest"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v4"
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: "Install requirements"
+        run: python3 -m pip install -r requirements.txt
+
+      - name: "Run tests"
+        run: python3 -m pytest
+
+  frontend:
+    name: "Frontend"
+    runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        working-directory: js
+    steps:
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v4"
+
+      - name: "Set up Node.js"
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: js/package-lock.json
+
+      - name: "Install dependencies"
+        run: npm ci
+
+      - name: "ESLint"
+        run: npx eslint src/
+
+      - name: "Prettier check"
+        run: npx prettier --check src/
+
+      - name: "TypeScript check"
+        run: npx tsc --noEmit
