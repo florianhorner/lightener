@@ -1,27 +1,30 @@
-import { LitElement, html, css } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { LightCurve, Hass } from "./utils/types.js";
-import {
-  curvesToWsPayload,
-  wsPayloadToCurves,
-  cloneCurves,
-  curvesEqual,
-} from "./utils/data.js";
-import "./components/curve-graph.js";
-import "./components/curve-scrubber.js";
-import "./components/curve-legend.js";
-import "./components/curve-footer.js";
+import { LitElement, html, css } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { LightCurve, Hass } from './utils/types.js';
+import { curvesToWsPayload, wsPayloadToCurves, cloneCurves, curvesEqual } from './utils/data.js';
+import './components/curve-graph.js';
+import './components/curve-scrubber.js';
+import './components/curve-legend.js';
+import './components/curve-footer.js';
 
 const CURVE_COLORS = [
-  "#42a5f5", "#ef5350", "#66bb6a", "#ffa726", "#ab47bc",
-  "#26c6da", "#ec407a", "#9ccc65", "#ffca28", "#7e57c2",
+  '#42a5f5',
+  '#ef5350',
+  '#66bb6a',
+  '#ffa726',
+  '#ab47bc',
+  '#26c6da',
+  '#ec407a',
+  '#9ccc65',
+  '#ffca28',
+  '#7e57c2',
 ];
 
 function createMockCurves(): LightCurve[] {
   return [
     {
-      entityId: "light.ceiling_light",
-      friendlyName: "Ceiling Light",
+      entityId: 'light.ceiling_light',
+      friendlyName: 'Ceiling Light',
       controlPoints: [
         { lightener: 0, target: 0 },
         { lightener: 20, target: 0 },
@@ -32,8 +35,8 @@ function createMockCurves(): LightCurve[] {
       color: CURVE_COLORS[0],
     },
     {
-      entityId: "light.sofa_lamp",
-      friendlyName: "Sofa Lamp",
+      entityId: 'light.sofa_lamp',
+      friendlyName: 'Sofa Lamp',
       controlPoints: [
         { lightener: 0, target: 0 },
         { lightener: 10, target: 50 },
@@ -45,8 +48,8 @@ function createMockCurves(): LightCurve[] {
       color: CURVE_COLORS[1],
     },
     {
-      entityId: "light.led_strip",
-      friendlyName: "LED Strip",
+      entityId: 'light.led_strip',
+      friendlyName: 'LED Strip',
       controlPoints: [
         { lightener: 0, target: 0 },
         { lightener: 1, target: 1 },
@@ -58,7 +61,7 @@ function createMockCurves(): LightCurve[] {
   ];
 }
 
-@customElement("lightener-curve-card")
+@customElement('lightener-curve-card')
 export class LightenerCurveCard extends LitElement {
   @state() private _curves: LightCurve[] = [];
   @state() private _originalCurves: LightCurve[] = [];
@@ -81,15 +84,12 @@ export class LightenerCurveCard extends LitElement {
       --graph-bg: var(--card-background-color, #252525);
 
       display: block;
-      font-family: var(--paper-font-body1_-_font-family, "Roboto", sans-serif);
+      font-family: var(--paper-font-body1_-_font-family, 'Roboto', sans-serif);
     }
     .card {
       background: var(--card-bg);
       border-radius: var(--ha-card-border-radius, 12px);
-      box-shadow: var(
-        --ha-card-box-shadow,
-        0 2px 6px rgba(0, 0, 0, 0.3)
-      );
+      box-shadow: var(--ha-card-box-shadow, 0 2px 6px rgba(0, 0, 0, 0.3));
       padding: 16px;
       color: var(--text-color);
     }
@@ -185,21 +185,17 @@ export class LightenerCurveCard extends LitElement {
       const result = await this._hass.callWS<{
         entities: Record<string, { brightness: Record<string, string> }>;
       }>({
-        type: "lightener/get_curves",
+        type: 'lightener/get_curves',
         entity_id: this._entityId,
       });
 
-      const curves = wsPayloadToCurves(
-        result.entities,
-        this._hass.states,
-        CURVE_COLORS
-      );
+      const curves = wsPayloadToCurves(result.entities, this._hass.states, CURVE_COLORS);
       this._curves = curves;
       this._originalCurves = cloneCurves(curves);
       this._loaded = true;
       this._loadedEntityId = this._entityId;
     } catch (err) {
-      console.error("[Lightener] Failed to load curves:", err);
+      console.error('[Lightener] Failed to load curves:', err);
       this._loadError = String(err);
       // _loaded stays false so the next hass update can retry.
     }
@@ -213,8 +209,7 @@ export class LightenerCurveCard extends LitElement {
     // Cannot select a hidden curve
     if (curve && !curve.visible) return;
     // Toggle: deselect if already selected
-    this._selectedCurveId =
-      this._selectedCurveId === entityId ? null : entityId;
+    this._selectedCurveId = this._selectedCurveId === entityId ? null : entityId;
   }
 
   private _onPointMove(e: CustomEvent): void {
@@ -239,9 +234,7 @@ export class LightenerCurveCard extends LitElement {
     const targetEntityId = entityId ?? this._selectedCurveId;
     if (!targetEntityId) return;
 
-    const curveIdx = this._curves.findIndex(
-      (c) => c.entityId === targetEntityId
-    );
+    const curveIdx = this._curves.findIndex((c) => c.entityId === targetEntityId);
     if (curveIdx < 0) return;
 
     // Reject if a point already exists at this lightener value
@@ -267,9 +260,7 @@ export class LightenerCurveCard extends LitElement {
 
     const curves = [...this._curves];
     const updated = { ...curves[curveIndex] };
-    updated.controlPoints = updated.controlPoints.filter(
-      (_, i) => i !== pointIndex
-    );
+    updated.controlPoints = updated.controlPoints.filter((_, i) => i !== pointIndex);
     curves[curveIndex] = updated;
     this._curves = curves;
   }
@@ -297,14 +288,14 @@ export class LightenerCurveCard extends LitElement {
     try {
       const payload = curvesToWsPayload(this._curves);
       await this._hass.callWS({
-        type: "lightener/save_curves",
+        type: 'lightener/save_curves',
         entity_id: this._entityId,
         curves: payload,
       });
       this._originalCurves = cloneCurves(this._curves);
     } catch (err) {
-      console.error("[Lightener] Failed to save curves:", err);
-      this._saveError = "Save failed. Check connection.";
+      console.error('[Lightener] Failed to save curves:', err);
+      this._saveError = 'Save failed. Check connection.';
     } finally {
       this._saving = false;
     }
@@ -345,10 +336,7 @@ export class LightenerCurveCard extends LitElement {
           ></curve-graph>
         </div>
 
-        <curve-scrubber
-          .curves=${this._curves}
-          .readOnly=${!this._isAdmin}
-        ></curve-scrubber>
+        <curve-scrubber .curves=${this._curves} .readOnly=${!this._isAdmin}></curve-scrubber>
 
         <div class="divider"></div>
 
@@ -367,12 +355,8 @@ export class LightenerCurveCard extends LitElement {
           @cancel-curves=${this._onCancel}
         ></curve-footer>
 
-        ${this._loadError
-          ? html`<div class="error">Failed to load curves</div>`
-          : ""}
-        ${this._saveError
-          ? html`<div class="error">${this._saveError}</div>`
-          : ""}
+        ${this._loadError ? html`<div class="error">Failed to load curves</div>` : ''}
+        ${this._saveError ? html`<div class="error">${this._saveError}</div>` : ''}
       </div>
     `;
   }
@@ -380,6 +364,6 @@ export class LightenerCurveCard extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lightener-curve-card": LightenerCurveCard;
+    'lightener-curve-card': LightenerCurveCard;
   }
 }

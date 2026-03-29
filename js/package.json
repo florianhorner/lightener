@@ -6,7 +6,9 @@
   "scripts": {
     "build": "rollup -c rollup.config.mjs",
     "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix"
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/"
   },
   "dependencies": {
     "lit": "^3.2.0"
@@ -16,6 +18,7 @@
     "@rollup/plugin-terser": "^0.4.0",
     "@rollup/plugin-typescript": "^12.1.0",
     "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
     "rollup": "^4.24.0",
     "tslib": "^2.7.0",
     "typescript": "^5.5.0",

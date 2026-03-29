@@ -1,8 +1,8 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import { LightCurve } from "../utils/types.js";
+import { LitElement, html, css } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import { LightCurve } from '../utils/types.js';
 
-@customElement("curve-legend")
+@customElement('curve-legend')
 export class CurveLegend extends LitElement {
   @property({ type: Array }) curves: LightCurve[] = [];
   @property({ type: String }) selectedCurveId: string | null = null;
@@ -27,7 +27,9 @@ export class CurveLegend extends LitElement {
       user-select: none;
       padding: 4px 8px;
       border-radius: 6px;
-      transition: background 0.15s ease, opacity 0.2s ease;
+      transition:
+        background 0.15s ease,
+        opacity 0.2s ease;
       font-size: 13px;
       color: var(--text-color, #e1e1e1);
     }
@@ -69,7 +71,7 @@ export class CurveLegend extends LitElement {
 
   private _select(entityId: string) {
     this.dispatchEvent(
-      new CustomEvent("select-curve", {
+      new CustomEvent('select-curve', {
         detail: { entityId },
         bubbles: true,
         composed: true,
@@ -80,7 +82,7 @@ export class CurveLegend extends LitElement {
   private _toggle(e: Event, entityId: string) {
     e.stopPropagation();
     this.dispatchEvent(
-      new CustomEvent("toggle-curve", {
+      new CustomEvent('toggle-curve', {
         detail: { entityId },
         bubbles: true,
         composed: true,
@@ -94,19 +96,17 @@ export class CurveLegend extends LitElement {
         ${this.curves.map(
           (curve) => html`
             <div
-              class="legend-item ${curve.visible ? "" : "hidden"} ${
-                this.selectedCurveId === curve.entityId ? "selected" : ""
-              }"
+              class="legend-item ${curve.visible ? '' : 'hidden'} ${this.selectedCurveId ===
+              curve.entityId
+                ? 'selected'
+                : ''}"
               @click=${() => this._select(curve.entityId)}
               title="${curve.friendlyName}"
               style="${this.selectedCurveId === curve.entityId
                 ? `--selection-bg: ${curve.color}25; --selection-border: ${curve.color}`
-                : ""}"
+                : ''}"
             >
-              <span
-                class="color-dot"
-                style="background: ${curve.color}"
-              ></span>
+              <span class="color-dot" style="background: ${curve.color}"></span>
               <span class="name">${curve.friendlyName}</span>
               <svg
                 class="eye-icon"
@@ -124,8 +124,12 @@ export class CurveLegend extends LitElement {
                       <circle cx="12" cy="12" r="3" />
                     `
                   : html`
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                      <path
+                        d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
+                      />
+                      <path
+                        d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
+                      />
                       <line x1="1" y1="1" x2="23" y2="23" />
                     `}
               </svg>
@@ -139,6 +143,6 @@ export class CurveLegend extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "curve-legend": CurveLegend;
+    'curve-legend': CurveLegend;
   }
 }

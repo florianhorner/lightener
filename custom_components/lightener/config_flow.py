@@ -146,9 +146,9 @@ class LightenerFlow:
             )
 
         if user_input is not None:
-            controlled_entities = self.local_data[
-                "controlled_entities"
-            ] = user_input.get("controlled_entities")
+            controlled_entities = self.local_data["controlled_entities"] = (
+                user_input.get("controlled_entities")
+            )
 
             if not controlled_entities:
                 errors["controlled_entities"] = "controlled_entities_empty"
@@ -212,9 +212,9 @@ class LightenerFlow:
 
             if len(errors) == 0:
                 entities: dict = self.data.get(CONF_ENTITIES)
-                entities.get(self.local_data.get("current_light"))[
-                    CONF_BRIGHTNESS
-                ] = brightness
+                entities.get(self.local_data.get("current_light"))[CONF_BRIGHTNESS] = (
+                    brightness
+                )
 
                 if len(controlled_entities):
                     return await self.async_step_light_configuration()

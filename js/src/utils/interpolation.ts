@@ -1,4 +1,4 @@
-import { ControlPoint } from "./types.js";
+import { ControlPoint } from './types.js';
 
 /**
  * Linear interpolation from one range to another.
@@ -20,9 +20,7 @@ export function scaleRangedValue(
  * - Default 100 -> 100 if the maximum is missing
  * - Sort by lightener value ascending
  */
-export function prepareBrightnessConfig(
-  controlPoints: ControlPoint[]
-): ControlPoint[] {
+export function prepareBrightnessConfig(controlPoints: ControlPoint[]): ControlPoint[] {
   const map = new Map<number, number>();
 
   // Implicit zero endpoint
@@ -63,11 +61,7 @@ export function interpolateCurve(controlPoints: ControlPoint[]): number[] {
     const end = prepared[seg];
 
     for (let i = start.lightener + 1; i <= end.lightener; i++) {
-      result[i] = scaleRangedValue(
-        [start.lightener, end.lightener],
-        [start.target, end.target],
-        i
-      );
+      result[i] = scaleRangedValue([start.lightener, end.lightener], [start.target, end.target], i);
     }
   }
 

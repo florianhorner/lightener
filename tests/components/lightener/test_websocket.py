@@ -31,9 +31,7 @@ async def _setup_lightener(hass: HomeAssistant, entities: dict | None = None):
     return config_entry
 
 
-async def test_get_curves_returns_entities(
-    hass: HomeAssistant, hass_ws_client
-) -> None:
+async def test_get_curves_returns_entities(hass: HomeAssistant, hass_ws_client) -> None:
     """Test ws_get_curves returns the entities dict from the config entry."""
     entities = {
         "light.test1": {
@@ -56,9 +54,7 @@ async def test_get_curves_returns_entities(
     assert result["result"]["entities"] == entities
 
 
-async def test_get_curves_invalid_entity(
-    hass: HomeAssistant, hass_ws_client
-) -> None:
+async def test_get_curves_invalid_entity(hass: HomeAssistant, hass_ws_client) -> None:
     """Test ws_get_curves returns an error for a non-Lightener entity."""
     await _setup_lightener(hass)
 
@@ -76,9 +72,7 @@ async def test_get_curves_invalid_entity(
     assert result["error"]["code"] == "not_found"
 
 
-async def test_save_curves_updates_config(
-    hass: HomeAssistant, hass_ws_client
-) -> None:
+async def test_save_curves_updates_config(hass: HomeAssistant, hass_ws_client) -> None:
     """Test ws_save_curves updates the config entry data."""
     config_entry = await _setup_lightener(
         hass,
@@ -114,9 +108,7 @@ async def test_save_curves_updates_config(
     }
 
 
-async def test_save_curves_validates_range(
-    hass: HomeAssistant, hass_ws_client
-) -> None:
+async def test_save_curves_validates_range(hass: HomeAssistant, hass_ws_client) -> None:
     """Test ws_save_curves rejects out-of-range brightness values."""
     await _setup_lightener(hass)
 

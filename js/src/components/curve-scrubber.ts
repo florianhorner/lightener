@@ -1,9 +1,9 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { LightCurve } from "../utils/types.js";
-import { interpolateCurve } from "../utils/interpolation.js";
+import { LitElement, html, css } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import { LightCurve } from '../utils/types.js';
+import { interpolateCurve } from '../utils/interpolation.js';
 
-@customElement("curve-scrubber")
+@customElement('curve-scrubber')
 export class CurveScrubber extends LitElement {
   @property({ type: Array }) curves: LightCurve[] = [];
   @property({ type: Boolean }) readOnly = false;
@@ -123,7 +123,12 @@ export class CurveScrubber extends LitElement {
     }
   `;
 
-  private _getInterpolatedValues(): { entityId: string; name: string; color: string; value: number }[] {
+  private _getInterpolatedValues(): {
+    entityId: string;
+    name: string;
+    color: string;
+    value: number;
+  }[] {
     const pos = Math.round(this._position);
     return this.curves
       .filter((c) => c.visible)
@@ -173,7 +178,7 @@ export class CurveScrubber extends LitElement {
     this._position = Math.max(0, Math.min(100, pct));
 
     this.dispatchEvent(
-      new CustomEvent("scrubber-move", {
+      new CustomEvent('scrubber-move', {
         detail: { position: Math.round(this._position) },
         bubbles: true,
         composed: true,
@@ -182,7 +187,7 @@ export class CurveScrubber extends LitElement {
   }
 
   protected firstUpdated(): void {
-    this._trackRef = this.renderRoot.querySelector(".track-area");
+    this._trackRef = this.renderRoot.querySelector('.track-area');
   }
 
   render() {
@@ -191,10 +196,7 @@ export class CurveScrubber extends LitElement {
 
     return html`
       <div class="scrubber-container">
-        <div
-          class="track-area"
-          @click=${this._onTrackClick}
-        >
+        <div class="track-area" @click=${this._onTrackClick}>
           <div class="track-line"></div>
           ${ticks.map(
             (t) => html`
@@ -203,7 +205,7 @@ export class CurveScrubber extends LitElement {
             `
           )}
           <div
-            class="diamond ${this._dragging ? "dragging" : ""}"
+            class="diamond ${this._dragging ? 'dragging' : ''}"
             style="left: ${this._position}%"
             @pointerdown=${this._onPointerDown}
             @pointermove=${this._onPointerMove}
@@ -222,12 +224,8 @@ export class CurveScrubber extends LitElement {
                     style="height: ${bar.value}%; background: ${bar.color}"
                   ></div>
                 </div>
-                <span class="bar-value" style="color: ${bar.color}"
-                  >${bar.value}%</span
-                >
-                <span class="bar-name" title="${bar.name}"
-                  >${bar.name}</span
-                >
+                <span class="bar-value" style="color: ${bar.color}">${bar.value}%</span>
+                <span class="bar-name" title="${bar.name}">${bar.name}</span>
               </div>
             `
           )}
@@ -239,6 +237,6 @@ export class CurveScrubber extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "curve-scrubber": CurveScrubber;
+    'curve-scrubber': CurveScrubber;
   }
 }

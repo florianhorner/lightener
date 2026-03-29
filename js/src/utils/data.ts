@@ -1,4 +1,4 @@
-import { ControlPoint, LightCurve } from "./types.js";
+import { ControlPoint, LightCurve } from './types.js';
 
 /**
  * Convert frontend LightCurve[] to the backend WebSocket payload format.
@@ -45,8 +45,7 @@ export function wsPayloadToCurves(
     controlPoints.sort((a, b) => a.lightener - b.lightener);
 
     const friendlyName =
-      hassStates[entityId]?.attributes?.friendly_name ??
-      entityId.replace("light.", "");
+      hassStates[entityId]?.attributes?.friendly_name ?? entityId.replace('light.', '');
 
     return {
       entityId,

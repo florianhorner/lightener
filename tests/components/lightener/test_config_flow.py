@@ -211,9 +211,9 @@ async def test_step_light_configuration_brightness_validation(
         )
 
         if must_pass is True:
-            assert (
-                result["type"] == "create_entry"
-            ), f"{value} => '{result['description_placeholders']['error_entry']}'"
+            assert result["type"] == "create_entry", (
+                f"{value} => '{result['description_placeholders']['error_entry']}'"
+            )
         else:
             assert result["errors"]["brightness"] == "invalid_brightness", value
             assert (

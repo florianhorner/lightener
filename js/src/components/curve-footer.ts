@@ -1,7 +1,7 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { LitElement, html, css } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 
-@customElement("curve-footer")
+@customElement('curve-footer')
 export class CurveFooter extends LitElement {
   @property({ type: Boolean }) dirty = false;
   @property({ type: Boolean }) readOnly = false;
@@ -45,7 +45,9 @@ export class CurveFooter extends LitElement {
       border-radius: 6px;
       padding: 6px 16px;
       cursor: pointer;
-      transition: background 0.15s ease, opacity 0.15s ease;
+      transition:
+        background 0.15s ease,
+        opacity 0.15s ease;
     }
     button:disabled {
       opacity: 0.5;
@@ -69,15 +71,11 @@ export class CurveFooter extends LitElement {
   `;
 
   private _onSave() {
-    this.dispatchEvent(
-      new CustomEvent("save-curves", { bubbles: true, composed: true })
-    );
+    this.dispatchEvent(new CustomEvent('save-curves', { bubbles: true, composed: true }));
   }
 
   private _onCancel() {
-    this.dispatchEvent(
-      new CustomEvent("cancel-curves", { bubbles: true, composed: true })
-    );
+    this.dispatchEvent(new CustomEvent('cancel-curves', { bubbles: true, composed: true }));
   }
 
   render() {
@@ -85,9 +83,15 @@ export class CurveFooter extends LitElement {
       return html`
         <div class="footer">
           <div class="read-only">
-            <svg class="lock-icon" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              class="lock-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
@@ -102,13 +106,9 @@ export class CurveFooter extends LitElement {
     return html`
       <div class="footer">
         <span class="unsaved-label">Unsaved changes</span>
-        <button class="btn-cancel"
-          @click=${this._onCancel}
-          ?disabled=${this.saving}>Cancel</button>
-        <button class="btn-save"
-          @click=${this._onSave}
-          ?disabled=${this.saving}>
-          ${this.saving ? "Saving..." : "Save"}
+        <button class="btn-cancel" @click=${this._onCancel} ?disabled=${this.saving}>Cancel</button>
+        <button class="btn-save" @click=${this._onSave} ?disabled=${this.saving}>
+          ${this.saving ? 'Saving...' : 'Save'}
         </button>
       </div>
     `;
@@ -117,6 +117,6 @@ export class CurveFooter extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "curve-footer": CurveFooter;
+    'curve-footer': CurveFooter;
   }
 }
