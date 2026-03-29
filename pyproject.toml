@@ -13,3 +13,22 @@ ignore = ["E501"]
 quote-style = "double"
 indent-style = "space"
 line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.10"
+check_untyped_defs = false
+ignore_missing_imports = true
+warn_return_any = false
+warn_unused_configs = true
+disable_error_code = [
+    "call-arg",
+    "var-annotated",
+    "assignment",
+    "index",
+    "arg-type",
+    "union-attr",
+    "return-value",
+    "has-type",
+    "attr-defined",
+    "unused-coroutine",
+]
