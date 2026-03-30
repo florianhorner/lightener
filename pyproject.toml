@@ -27,10 +27,8 @@ disable_error_code = [
     "index",
     "arg-type",
     "union-attr",
-    "return-value",
     "has-type",
     "attr-defined",
-    "unused-coroutine",
 ]
 
 [tool.pytest.ini_options]

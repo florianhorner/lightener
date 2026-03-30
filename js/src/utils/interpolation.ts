@@ -51,7 +51,7 @@ export function prepareBrightnessConfig(controlPoints: ControlPoint[]): ControlP
  */
 export function interpolateCurve(controlPoints: ControlPoint[]): number[] {
   const prepared = prepareBrightnessConfig(controlPoints);
-  const result = new Array<number>(101);
+  const result = new Array<number>(101).fill(0);
 
   // Set the zero point
   result[0] = 0;

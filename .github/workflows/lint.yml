@@ -22,7 +22,7 @@ jobs:
           python-version: "3.12"
 
       - name: "Install ruff"
-        run: python3 -m pip install ruff==0.14.0
+        run: python3 -m pip install ruff>=0.4.0
 
       - name: "Ruff check"
         run: python3 -m ruff check .

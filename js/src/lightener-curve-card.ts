@@ -356,6 +356,9 @@ export class LightenerCurveCard extends LitElement {
         curves: payload,
       });
       this._originalCurves = cloneCurves(this._curves);
+      // Re-fetch from backend in case reload normalised data
+      this._loaded = false;
+      this._tryLoadCurves();
       this._saveSuccess = true;
       this._saveSuccessTimer = setTimeout(() => {
         this._saveSuccess = false;

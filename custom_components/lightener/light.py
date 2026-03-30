@@ -69,7 +69,6 @@ async def async_setup_entry(
     """Set up entities for config entries."""
     unique_id = config_entry.entry_id
 
-    await async_migrate_entry(hass, config_entry)
 
     # The unique id of the light will simply match the config entry ID.
     async_add_entities([LightenerLight(hass, config_entry.data, unique_id)])

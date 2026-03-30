@@ -189,13 +189,7 @@ export class CurveScrubber extends LitElement {
     const pct = ((clientX - rect.left) / rect.width) * 100;
     this._position = Math.max(0, Math.min(100, pct));
 
-    this.dispatchEvent(
-      new CustomEvent('scrubber-move', {
-        detail: { position: Math.round(this._position) },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    // Scrubber position is reactive — bar gauges update via LitElement re-render
   }
 
   protected firstUpdated(): void {

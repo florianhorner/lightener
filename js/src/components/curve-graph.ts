@@ -217,7 +217,12 @@ export class CurveGraph extends LitElement {
     const coords = this._getSvgCoords(e);
     if (!coords) return;
 
-    const x = Math.round(clamp(coords.x, 1, 100));
+    // Clamp x to avoid colliding with adjacent control points
+    const curve = this.curves[this._dragCurveIdx];
+    const pts = curve?.controlPoints ?? [];
+    const prevX = this._dragPointIdx > 0 ? pts[this._dragPointIdx - 1].lightener + 1 : 1;
+    const nextX = this._dragPointIdx < pts.length - 1 ? pts[this._dragPointIdx + 1].lightener - 1 : 100;
+    const x = Math.round(clamp(coords.x, prevX, nextX));
     const y = Math.round(clamp(coords.y, 0, 100));
 
     this.dispatchEvent(

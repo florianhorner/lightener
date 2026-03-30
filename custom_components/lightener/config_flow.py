@@ -202,7 +202,7 @@ class LightenerFlow:
                     left = int(match.group(1))
                     right = int(match.group(2))
 
-                    if left >= 1 and left <= 100 and right <= 100:
+                    if left >= 1 and left <= 100 and right >= 0 and right <= 100:
                         brightness[str(left)] = str(right)
                         continue
 
