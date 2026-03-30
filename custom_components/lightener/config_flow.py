@@ -32,14 +32,14 @@ class LightenerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         super().__init__()
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
-        """Configure the lighener device name."""
+        """Configure the lightener device name."""
 
         return await self.lightener_flow.async_step_name(user_input)
 
     async def async_step_lights(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Manage the selection of the lights controlled by the Lighetner light."""
+        """Manage the selection of the lights controlled by the Lightener light."""
         return await self.lightener_flow.async_step_lights(user_input)
 
     async def async_step_light_configuration(
@@ -71,7 +71,7 @@ class LightenerOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Manage the selection of the lights controlled by the Lighetner light."""
+        """Manage the selection of the lights controlled by the Lightener light."""
         return await self.lightener_flow.async_step_lights(user_input)
 
     async def async_step_light_configuration(
@@ -99,7 +99,7 @@ class LightenerFlow:
         self.steps = steps
 
     async def async_step_name(self, user_input: dict[str, Any] | None = None):
-        """Configure the lighener device name."""
+        """Configure the lightener device name."""
 
         errors = {}
 
@@ -124,7 +124,7 @@ class LightenerFlow:
     async def async_step_lights(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Manage the selection of the lights controlled by the Lighetner light."""
+        """Manage the selection of the lights controlled by the Lightener light."""
 
         errors = {}
 

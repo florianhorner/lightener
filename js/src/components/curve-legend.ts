@@ -56,6 +56,7 @@ export class CurveLegend extends LitElement {
       flex-shrink: 0;
       opacity: 0.6;
       transition: opacity 0.15s ease;
+      margin-left: auto;
       padding: 4px;
       box-sizing: content-box;
     }
@@ -92,7 +93,7 @@ export class CurveLegend extends LitElement {
 
   render() {
     return html`
-      <div class="legend">
+      <div class="legend" role="listbox" aria-label="Light curves">
         ${this.curves.map(
           (curve) => html`
             <div
@@ -100,6 +101,8 @@ export class CurveLegend extends LitElement {
               curve.entityId
                 ? 'selected'
                 : ''}"
+              role="option"
+              aria-selected=${this.selectedCurveId === curve.entityId}
               @click=${() => this._select(curve.entityId)}
               title="${curve.friendlyName}"
               style="${this.selectedCurveId === curve.entityId
@@ -116,6 +119,8 @@ export class CurveLegend extends LitElement {
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
+                role="button"
+                aria-label="${curve.visible ? 'Hide' : 'Show'} ${curve.friendlyName}"
                 @click=${(e: Event) => this._toggle(e, curve.entityId)}
               >
                 ${curve.visible

@@ -132,7 +132,7 @@ async def test_migrate_entry_v1(hass: HomeAssistant) -> None:
     }
 
 
-async def test_migrate_unkown_version(hass: HomeAssistant) -> None:
+async def test_migrate_unknown_version(hass: HomeAssistant) -> None:
     """Test is the migration does nothing for an up-to-date configuration."""
 
     config_entry = ConfigEntry(
@@ -151,7 +151,7 @@ async def test_migrate_unkown_version(hass: HomeAssistant) -> None:
     with patch.object(logging.Logger, "error") as mock:
         assert await async_migrate_entry(hass, config_entry) is False
 
-    mock.assert_called_once_with('Unknow configuration version "%i"', 1000)
+    mock.assert_called_once_with('Unknown configuration version "%i"', 1000)
 
 
 async def test_remove_device(

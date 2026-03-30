@@ -75,7 +75,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     if config_entry.version == LightenerConfigFlow.VERSION:
         return True
 
-    _LOGGER.error('Unknow configuration version "%i"', version)
+    _LOGGER.error('Unknown configuration version "%i"', version)
     return False
 
 

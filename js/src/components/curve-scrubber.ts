@@ -121,6 +121,18 @@ export class CurveScrubber extends LitElement {
       max-width: 100%;
       text-align: center;
     }
+    .position-label {
+      position: absolute;
+      top: -14px;
+      font-size: 9px;
+      font-weight: 500;
+      color: var(--primary-color, #03a9f4);
+      transform: translateX(-50%);
+      user-select: none;
+      font-variant-numeric: tabular-nums;
+      opacity: 0.9;
+      pointer-events: none;
+    }
   `;
 
   private _getInterpolatedValues(): {
@@ -193,11 +205,22 @@ export class CurveScrubber extends LitElement {
   render() {
     const ticks = [0, 25, 50, 75, 100];
     const bars = this._getInterpolatedValues();
+    const pos = Math.round(this._position);
 
     return html`
       <div class="scrubber-container">
-        <div class="track-area" @click=${this._onTrackClick}>
+        <div
+          class="track-area"
+          role="slider"
+          aria-label="Brightness scrubber"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow=${pos}
+          aria-valuetext="${pos}% brightness"
+          @click=${this._onTrackClick}
+        >
           <div class="track-line"></div>
+          <div class="position-label" style="left: ${this._position}%">${pos}%</div>
           ${ticks.map(
             (t) => html`
               <div class="tick" style="left: ${t}%"></div>

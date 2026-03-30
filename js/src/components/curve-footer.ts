@@ -106,8 +106,20 @@ export class CurveFooter extends LitElement {
     return html`
       <div class="footer">
         <span class="unsaved-label">Unsaved changes</span>
-        <button class="btn-cancel" @click=${this._onCancel} ?disabled=${this.saving}>Cancel</button>
-        <button class="btn-save" @click=${this._onSave} ?disabled=${this.saving}>
+        <button
+          class="btn-cancel"
+          @click=${this._onCancel}
+          ?disabled=${this.saving}
+          aria-label="Cancel changes (Esc)"
+        >
+          Cancel
+        </button>
+        <button
+          class="btn-save"
+          @click=${this._onSave}
+          ?disabled=${this.saving}
+          aria-label="Save changes (Ctrl+S)"
+        >
           ${this.saving ? 'Saving...' : 'Save'}
         </button>
       </div>

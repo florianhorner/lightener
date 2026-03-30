@@ -508,6 +508,8 @@ export class CurveGraph extends LitElement {
       <svg
         viewBox="0 0 ${VB_W} ${VB_H}"
         preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label="Brightness curve editor graph"
         @pointermove=${this._onPointerMove}
         @pointerup=${this._onPointerUp}
         @dblclick=${this._onDblClick}
@@ -530,10 +532,14 @@ export class CurveGraph extends LitElement {
             />`
           : nothing}
         ${this.curves.map((c, i) => this._renderCurve(c, i))}
-        ${!this.readOnly && this.selectedCurveId !== null
-          ? svg`<text class="hint" text-anchor="end"
-              x="${PAD_LEFT + GRAPH_W}" y="${PAD_TOP + GRAPH_H + 28}"
-              >Double-click to add · Right-click to remove</text>`
+        ${!this.readOnly
+          ? this.selectedCurveId !== null
+            ? svg`<text class="hint" text-anchor="end"
+                x="${PAD_LEFT + GRAPH_W}" y="${PAD_TOP + GRAPH_H + 28}"
+                >Double-click to add · Right-click to remove</text>`
+            : svg`<text class="hint" text-anchor="end"
+                x="${PAD_LEFT + GRAPH_W}" y="${PAD_TOP + GRAPH_H + 28}"
+                >Select a light below to edit its curve</text>`
           : nothing}
       </svg>
     `;
