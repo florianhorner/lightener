@@ -31,16 +31,16 @@ export class CurveLegend extends LitElement {
         background 0.15s ease,
         opacity 0.2s ease;
       font-size: 13px;
-      color: var(--text-color, #e1e1e1);
+      color: var(--primary-text-color, #212121);
     }
     .legend-item:hover {
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba(128, 128, 128, 0.1);
     }
     .legend-item.hidden {
       opacity: 0.4;
     }
     .legend-item.selected {
-      background: var(--selection-bg, rgba(255, 255, 255, 0.1));
+      background: var(--selection-bg, rgba(128, 128, 128, 0.1));
       border-left: 3px solid var(--selection-border, currentColor);
       padding-left: 5px;
     }
@@ -67,6 +67,20 @@ export class CurveLegend extends LitElement {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+    @media (max-width: 500px) {
+      .legend-item {
+        padding: 8px 10px;
+        font-size: 14px;
+      }
+      .eye-icon {
+        width: 20px;
+        height: 20px;
+        padding: 8px;
+      }
+      .legend {
+        max-height: 120px;
+      }
     }
   `;
 

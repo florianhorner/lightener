@@ -59,7 +59,7 @@ export class CurveScrubber extends LitElement {
       width: 14px;
       height: 14px;
       background: var(--primary-color, #03a9f4);
-      border: 1.5px solid #fff;
+      border: 1.5px solid var(--card-background-color, #fff);
       transform: translateX(-50%) rotate(45deg);
       cursor: grab;
       border-radius: 2px;
@@ -92,7 +92,7 @@ export class CurveScrubber extends LitElement {
       width: 100%;
       max-width: 32px;
       height: 40px;
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(128, 128, 128, 0.08);
       border-radius: 4px 4px 0 0;
       position: relative;
       overflow: hidden;
@@ -132,6 +132,25 @@ export class CurveScrubber extends LitElement {
       font-variant-numeric: tabular-nums;
       opacity: 0.9;
       pointer-events: none;
+    }
+    @media (max-width: 500px) {
+      .bar-name {
+        font-size: 11px;
+      }
+      .bar-value {
+        font-size: 12px;
+      }
+      .tick-label {
+        font-size: 10px;
+      }
+      .position-label {
+        font-size: 11px;
+      }
+      .diamond {
+        width: 18px;
+        height: 18px;
+        top: 2px;
+      }
     }
   `;
 

@@ -116,8 +116,7 @@ async def ws_save_curves(hass, connection, msg):
     unknown = [eid for eid in curves if eid not in new_entities]
     if unknown:
         connection.send_error(
-            msg["id"], "unknown_entities",
-            f"Unknown entity IDs: {unknown}"
+            msg["id"], "unknown_entities", f"Unknown entity IDs: {unknown}"
         )
         return
 

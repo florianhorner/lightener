@@ -62,11 +62,17 @@ export class CurveFooter extends LitElement {
     }
     .btn-cancel {
       background: transparent;
-      color: var(--secondary-text, #9e9e9e);
-      border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.12));
+      color: var(--secondary-text, #727272);
+      border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
     }
     .btn-cancel:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba(128, 128, 128, 0.1);
+    }
+    @media (max-width: 500px) {
+      button {
+        padding: 10px 18px;
+        font-size: 14px;
+      }
     }
   `;
 

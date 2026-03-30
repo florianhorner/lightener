@@ -76,6 +76,7 @@ export class LightenerCurveCard extends LitElement {
 
   @state() private _hass: Hass | null = null;
   private _loaded = false;
+  private _loading = false;
   private _loadedEntityId: string | undefined = undefined;
   private _boundKeyHandler: ((e: KeyboardEvent) => void) | null = null;
   private _boundBeforeUnload: ((e: BeforeUnloadEvent) => void) | null = null;
@@ -83,11 +84,11 @@ export class LightenerCurveCard extends LitElement {
 
   static styles = css`
     :host {
-      --card-bg: var(--ha-card-background, #1c1c1c);
-      --text-color: var(--primary-text-color, #e1e1e1);
-      --secondary-text: var(--secondary-text-color, #9e9e9e);
-      --divider: var(--divider-color, rgba(255, 255, 255, 0.12));
-      --graph-bg: var(--card-background-color, #252525);
+      --card-bg: var(--ha-card-background, var(--card-background-color, #fff));
+      --text-color: var(--primary-text-color, #212121);
+      --secondary-text: var(--secondary-text-color, #727272);
+      --divider: var(--divider-color, rgba(0, 0, 0, 0.12));
+      --graph-bg: var(--card-background-color, var(--ha-card-background, #fafafa));
 
       display: block;
       font-family: var(--paper-font-body1_-_font-family, 'Roboto', sans-serif);
@@ -95,7 +96,7 @@ export class LightenerCurveCard extends LitElement {
     .card {
       background: var(--card-bg);
       border-radius: var(--ha-card-border-radius, 12px);
-      box-shadow: var(--ha-card-box-shadow, 0 2px 6px rgba(0, 0, 0, 0.3));
+      box-shadow: var(--ha-card-box-shadow, 0 2px 6px rgba(0, 0, 0, 0.15));
       padding: 16px;
       color: var(--text-color);
     }
@@ -127,13 +128,13 @@ export class LightenerCurveCard extends LitElement {
     }
     .error {
       font-size: 12px;
-      color: #ef5350;
+      color: var(--error-color, #db4437);
       padding: 8px 0 0;
       text-align: center;
     }
     .success {
       font-size: 12px;
-      color: #66bb6a;
+      color: var(--success-color, #43a047);
       padding: 8px 0 0;
       text-align: center;
       animation: fade-in 0.2s ease;
@@ -231,6 +232,7 @@ export class LightenerCurveCard extends LitElement {
   private async _tryLoadCurves(): Promise<void> {
     // Re-load if the entity changed since last load
     if (this._loaded && this._loadedEntityId === this._entityId) return;
+    if (this._loading) return;
 
     if (!this._hass || !this._entityId) {
       // No hass or entity yet — use mock data for dev/preview
@@ -243,6 +245,7 @@ export class LightenerCurveCard extends LitElement {
     }
 
     this._loadError = null;
+    this._loading = true;
 
     try {
       const result = await this._hass.callWS<{
@@ -261,6 +264,8 @@ export class LightenerCurveCard extends LitElement {
       console.error('[Lightener] Failed to load curves:', err);
       this._loadError = String(err);
       // _loaded stays false so the next hass update can retry.
+    } finally {
+      this._loading = false;
     }
   }
 

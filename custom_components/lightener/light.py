@@ -34,7 +34,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util.color import value_to_brightness
 
-from . import async_migrate_data, async_migrate_entry
+from . import async_migrate_data
 from .const import DOMAIN, TYPE_ONOFF
 from .util import get_light_type
 
@@ -68,7 +68,6 @@ async def async_setup_entry(
 ) -> None:
     """Set up entities for config entries."""
     unique_id = config_entry.entry_id
-
 
     # The unique id of the light will simply match the config entry ID.
     async_add_entities([LightenerLight(hass, config_entry.data, unique_id)])
@@ -141,7 +140,7 @@ class LightenerLight(LightGroup):
         )
 
     @property
-    def color_mode(self) -> str:
+    def color_mode(self) -> str | None:
         """Return the color mode of the light."""
 
         if not self.is_on:
@@ -302,13 +301,13 @@ class LightenerLight(LightGroup):
         self.async_update_group_state()
         self.async_write_ha_state()
 
-    def turn_on(self, **kwargs: Any) -> None:
-        """Turn the lights controlled by this Lightener on. There is no guarantee that this method is synchronous."""
-        self.async_turn_on(**kwargs)
+    async def turn_on(self, **kwargs: Any) -> None:
+        """Turn the lights controlled by this Lightener on."""
+        await self.async_turn_on(**kwargs)
 
-    def turn_off(self, **kwargs: Any) -> None:
-        """Turn the lights controlled by this Lightener off. There is no guarantee that this method is synchronous."""
-        self.async_turn_off(**kwargs)
+    async def turn_off(self, **kwargs: Any) -> None:
+        """Turn the lights controlled by this Lightener off."""
+        await self.async_turn_off(**kwargs)
 
     @callback
     def async_update_group_state(self) -> None:
@@ -447,7 +446,7 @@ class LightenerControlledLight:
         except HomeAssistantError:
             return None
 
-    def translate_brightness(self, brightness: int) -> int:
+    def translate_brightness(self, brightness: int) -> int | None:
         """Calculate the entitiy brightness for the give Lightener brightness level."""
 
         level = self.levels.get(int(brightness))
@@ -457,7 +456,7 @@ class LightenerControlledLight:
 
         return level
 
-    def translate_brightness_back(self, brightness: int) -> list[int]:
+    def translate_brightness_back(self, brightness: int | None) -> list[int]:
         """Calculate all possible Lightener brightness levels for a give entity brightness."""
 
         if brightness is None:
@@ -468,7 +467,7 @@ class LightenerControlledLight:
         if self.type == TYPE_ONOFF:
             return self.to_lightener_levels_on_off[int(brightness)]
 
-        return levels
+        return levels or []
 
 
 def translate_config_to_brightness(config: dict) -> dict:

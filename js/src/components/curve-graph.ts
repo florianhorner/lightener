@@ -95,8 +95,9 @@ export class CurveGraph extends LitElement {
       height: auto;
       display: block;
       border-radius: 8px;
-      background: var(--graph-bg, #252525);
-      border: 1px solid var(--divider-color, transparent);
+      touch-action: none;
+      background: var(--graph-bg, var(--card-background-color, #fafafa));
+      border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
     }
     .grid-line {
       stroke: var(--secondary-text, #9e9e9e);
@@ -165,13 +166,19 @@ export class CurveGraph extends LitElement {
       stroke-width: 0.75;
       stroke-dasharray: 3 3;
     }
+    @media (max-width: 500px) {
+      svg {
+        min-height: 180px;
+      }
+    }
     .tooltip-bg {
-      fill: rgba(0, 0, 0, 0.7);
+      fill: var(--primary-text-color, #212121);
       rx: 3;
       ry: 3;
+      opacity: 0.85;
     }
     .tooltip-text {
-      fill: #ffffff;
+      fill: var(--card-background-color, #fff);
       font-size: 9.5px;
       font-family: inherit;
     }
@@ -221,7 +228,8 @@ export class CurveGraph extends LitElement {
     const curve = this.curves[this._dragCurveIdx];
     const pts = curve?.controlPoints ?? [];
     const prevX = this._dragPointIdx > 0 ? pts[this._dragPointIdx - 1].lightener + 1 : 1;
-    const nextX = this._dragPointIdx < pts.length - 1 ? pts[this._dragPointIdx + 1].lightener - 1 : 100;
+    const nextX =
+      this._dragPointIdx < pts.length - 1 ? pts[this._dragPointIdx + 1].lightener - 1 : 100;
     const x = Math.round(clamp(coords.x, prevX, nextX));
     const y = Math.round(clamp(coords.y, 0, 100));
 
@@ -399,7 +407,8 @@ export class CurveGraph extends LitElement {
     if (!curve.visible || !curve.controlPoints.length) return nothing;
 
     const isSelected = this.selectedCurveId === null || curve.entityId === this.selectedCurveId;
-    const showPoints = isSelected && !this.readOnly;
+    const isInteractive = this._isCurveInteractive(curveIdx);
+    const showPoints = isInteractive && !this.readOnly;
 
     // Build smooth bezier path through the prepared control points
     const prepared = curve.controlPoints.slice().sort((a, b) => a.lightener - b.lightener);
@@ -536,12 +545,28 @@ export class CurveGraph extends LitElement {
               fill="transparent"
             />`
           : nothing}
-        ${this.curves.map((c, i) => this._renderCurve(c, i))}
+        ${(() => {
+          // Render the selected curve last so its hit circles are on top of other curves
+          const selectedIdx = this.selectedCurveId
+            ? this.curves.findIndex((c) => c.entityId === this.selectedCurveId)
+            : -1;
+          const order =
+            selectedIdx > 0
+              ? [
+                  ...this.curves.slice(0, selectedIdx).map((c, i) => ({ curve: c, idx: i })),
+                  ...this.curves
+                    .slice(selectedIdx + 1)
+                    .map((c, i) => ({ curve: c, idx: selectedIdx + 1 + i })),
+                  { curve: this.curves[selectedIdx], idx: selectedIdx },
+                ]
+              : this.curves.map((c, i) => ({ curve: c, idx: i }));
+          return order.map(({ curve, idx }) => this._renderCurve(curve, idx));
+        })()}
         ${!this.readOnly
           ? this.selectedCurveId !== null
             ? svg`<text class="hint" text-anchor="end"
                 x="${PAD_LEFT + GRAPH_W}" y="${PAD_TOP + GRAPH_H + 28}"
-                >Double-click to add · Right-click to remove</text>`
+                >Double-tap to add · Long-press to remove</text>`
             : svg`<text class="hint" text-anchor="end"
                 x="${PAD_LEFT + GRAPH_W}" y="${PAD_TOP + GRAPH_H + 28}"
                 >Select a light below to edit its curve</text>`

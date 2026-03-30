@@ -10,9 +10,23 @@ Lightener is a Home Assistant integration used to create virtual lights that can
 
 ## What This Fork Adds
 
-- **Interactive Curve Editor Card** (`custom:lightener-curve-card`) — visual editing of per-light brightness curves directly in the HA dashboard, instead of typing number pairs by hand
-- **WebSocket API** — `lightener/get_curves` and `lightener/save_curves` for reading and writing brightness configs from the frontend
-- **Frontend asset serving** — the card JS is served via `async_setup`
+### Curve Editor Card (`custom:lightener-curve-card`)
+
+A visual editor for per-light brightness curves, directly in your HA dashboard — no more typing number pairs by hand.
+
+- **Drag control points** on smooth bezier curves to shape each light's response
+- **Double-tap to add** a point, **long-press to remove** one
+- **Brightness scrubber** shows real-time bar gauges for each light at any Lightener level
+- **Colorblind-accessible** dash patterns distinguish overlapping curves
+- **Keyboard shortcuts**: Ctrl+S to save, Esc to cancel, with an unsaved-changes guard
+- **Theme-aware**: adapts to both HA light and dark modes
+- **Mobile-friendly**: touch-optimised controls with responsive layout
+- **Admin-only editing**: non-admin users see curves in read-only mode
+
+### WebSocket API
+
+- `lightener/get_curves` — read brightness configs (all authenticated users)
+- `lightener/save_curves` — write brightness configs (admin only)
 
 ### Upstream Status
 
