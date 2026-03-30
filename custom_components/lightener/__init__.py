@@ -19,23 +19,33 @@ PLATFORMS = [Platform.LIGHT]
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Lightener integration."""
-    from homeassistant.components.http import StaticPathConfig
-
     from . import websocket
 
     websocket.async_register_commands(hass)
 
-    # Serve the frontend card JS (hass.http may be unavailable in tests)
-    if hass.http:
-        await hass.http.async_register_static_paths(
-            [
-                StaticPathConfig(
-                    "/lightener/lightener-curve-card.js",
-                    str(Path(__file__).parent / "frontend" / "lightener-curve-card.js"),
-                    cache_headers=False,
-                )
-            ]
-        )
+    # Serve the frontend card JS.
+    # hass.http is unavailable during tests and StaticPathConfig may not
+    # exist in older HA versions, so guard both the import and the call.
+    try:
+        from homeassistant.components.http import StaticPathConfig
+
+        if getattr(hass, "http", None) is not None:
+            await hass.http.async_register_static_paths(
+                [
+                    StaticPathConfig(
+                        "/lightener/lightener-curve-card.js",
+                        str(
+                            Path(__file__).parent
+                            / "frontend"
+                            / "lightener-curve-card.js"
+                        ),
+                        cache_headers=False,
+                    )
+                ]
+            )
+    except Exception:
+        _LOGGER.debug("Could not register static paths for frontend card")
+
     return True
 
 
