@@ -25,16 +25,17 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     websocket.async_register_commands(hass)
 
-    # Serve the frontend card JS
-    await hass.http.async_register_static_paths(
-        [
-            StaticPathConfig(
-                "/lightener/lightener-curve-card.js",
-                str(Path(__file__).parent / "frontend" / "lightener-curve-card.js"),
-                cache_headers=False,
-            )
-        ]
-    )
+    # Serve the frontend card JS (hass.http may be unavailable in tests)
+    if hass.http:
+        await hass.http.async_register_static_paths(
+            [
+                StaticPathConfig(
+                    "/lightener/lightener-curve-card.js",
+                    str(Path(__file__).parent / "frontend" / "lightener-curve-card.js"),
+                    cache_headers=False,
+                )
+            ]
+        )
     return True
 
 
@@ -92,10 +93,10 @@ async def async_migrate_data(
         for entity, brightness in data.get("entities", {}).items():
             new_data.get("entities")[entity] = {"brightness": brightness}
 
-        return new_data
+        return MappingProxyType(new_data)
 
     # Otherwise return a copy of the data.
-    return dict(data)
+    return MappingProxyType(dict(data))
 
 
 async def async_remove_config_entry_device(

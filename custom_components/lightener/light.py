@@ -34,7 +34,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util.color import value_to_brightness
 
-from . import async_migrate_data, async_migrate_entry
+from . import async_migrate_data
 from .const import DOMAIN, TYPE_ONOFF
 from .util import get_light_type
 
