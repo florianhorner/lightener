@@ -6,17 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## [2.8.1-beta.1] - 2026-04-03
+## [2.8.1] - 2026-04-04
 
 ### Fixed
 
-- Home Assistant regression in Lightener setup for migrated configs
-- Incorrect double-wrapping of brightness mappings during v1-to-v2 migration
-- `configuration.yaml` setup path crash caused by mutating immutable migrated data
-
-### Notes
-
-- This is a development release intended for HACS pre-release testing on Home Assistant Green before `2.8.1` stable
+- Restored Lightener setup for migrated configurations
+- Fixed brightness mapping migration handling to avoid double-wrapping
+- Fixed the `configuration.yaml` setup path when using migrated config data
 
 ### Added
 
@@ -46,6 +42,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Dirty-state indicator not clearing after save
 - Small hit targets making control points hard to grab
 - Timer leak when card is removed from the DOM
+
+### Also includes
+
+- Recent UI polish, theming, mobile, and release-readiness improvements validated in the release candidate
 
 ## [2.4.0] - Upstream
 
