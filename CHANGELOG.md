@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.8.1] - 2026-04-04
+
+### Fixed
+
+- Restored Lightener setup for migrated configurations
+- Fixed brightness mapping migration handling to avoid double-wrapping
+- Fixed the `configuration.yaml` setup path when using migrated config data
+
 ### Added
 
 - Interactive brightness curve editor card (`custom:lightener-curve-card`)
@@ -34,6 +42,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Dirty-state indicator not clearing after save
 - Small hit targets making control points hard to grab
 - Timer leak when card is removed from the DOM
+
+### Also includes
+
+- Recent UI polish, theming, mobile, and release-readiness improvements validated in the release candidate
 
 ## [2.4.0] - Upstream
 

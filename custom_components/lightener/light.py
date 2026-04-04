@@ -84,7 +84,7 @@ async def async_setup_platform(
     lights = []
 
     for object_id, entity_config in config[CONF_LIGHTS].items():
-        data = await async_migrate_data(entity_config, 1)
+        data = dict(await async_migrate_data(entity_config, 1))
         data["entity_id"] = object_id
 
         lights.append(LightenerLight(hass, data))

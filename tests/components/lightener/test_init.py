@@ -132,6 +132,41 @@ async def test_migrate_entry_v1(hass: HomeAssistant) -> None:
     }
 
 
+async def test_migrate_entry_v1_already_wrapped(hass: HomeAssistant) -> None:
+    """Test migration preserves entries already using the v2 entity shape."""
+
+    config_v1 = {
+        "friendly_name": "Test",
+        "entities": {
+            "light.test1": {
+                "brightness": {
+                    "10": "20",
+                    "30": "40",
+                }
+            }
+        },
+    }
+
+    config_entry = ConfigEntry(
+        version=1,
+        minor_version=1,
+        title="lightener",
+        domain=DOMAIN,
+        data=config_v1,
+        source="user",
+        unique_id=None,
+        options=None,
+        discovery_keys=[],
+        subentries_data={},
+    )
+
+    with patch.object(hass.config_entries, "async_update_entry") as update_mock:
+        assert await async_migrate_entry(hass, config_entry) is True
+
+    assert update_mock.call_count == 1
+    assert update_mock.call_args.kwargs.get("data") == config_v1
+
+
 async def test_migrate_unknown_version(hass: HomeAssistant) -> None:
     """Test is the migration does nothing for an up-to-date configuration."""
 

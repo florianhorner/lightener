@@ -1,6 +1,7 @@
 """Lightener Integration."""
 
 import logging
+from collections.abc import Mapping
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any
@@ -101,7 +102,18 @@ async def async_migrate_data(
             new_data["friendly_name"] = data["friendly_name"]
 
         for entity, brightness in data.get("entities", {}).items():
-            new_data.get("entities")[entity] = {"brightness": brightness}
+            if (
+                isinstance(brightness, Mapping)
+                and "brightness" in brightness
+                and isinstance(brightness["brightness"], Mapping)
+            ):
+                normalized_brightness = dict(brightness["brightness"])
+            elif isinstance(brightness, Mapping):
+                normalized_brightness = dict(brightness)
+            else:
+                normalized_brightness = brightness
+
+            new_data.get("entities")[entity] = {"brightness": normalized_brightness}
 
         return MappingProxyType(new_data)
 

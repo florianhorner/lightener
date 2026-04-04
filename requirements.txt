@@ -7,3 +7,5 @@ ruff>=0.4.0
 pytest==8.4.2
 pytest-asyncio==1.2.0
 pytest_homeassistant_custom_component==0.13.286
+# aiodns used by the HA test stack is incompatible with pycares 5.x on Python 3.13.
+pycares<5
