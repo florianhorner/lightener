@@ -15,59 +15,65 @@ export class CurveScrubber extends LitElement {
   static styles = css`
     :host {
       display: block;
-      padding: 4px 0;
     }
-    .scrubber-container {
-      padding: 0 16px;
+    .scrubber-panel {
+      border-radius: 12px;
+      padding: 14px 16px 12px;
+      margin-bottom: 12px;
+      background: color-mix(
+        in srgb,
+        var(--ha-card-background, var(--card-background-color, #fff)) 95%,
+        var(--secondary-text-color, #616161) 5%
+      );
+    }
+    .scrubber-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--secondary-text-color, #616161);
+      opacity: 0.7;
+      margin-bottom: 10px;
     }
     .track-area {
       position: relative;
-      height: 24px;
+      height: 28px;
       cursor: pointer;
       touch-action: none;
     }
-    .track-line {
+    .track-bg {
       position: absolute;
-      top: 11px;
+      top: 12px;
       left: 0;
       right: 0;
-      height: 2px;
-      background: var(--secondary-text, #616161);
-      opacity: 0.3;
-      border-radius: 1px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--divider-color, rgba(127, 127, 127, 0.15));
     }
-    .tick {
+    .track-fill {
+      position: absolute;
+      top: 12px;
+      left: 0;
+      height: 4px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, rgba(37, 99, 235, 0.15), #2563eb);
+      transition: width 0.05s linear;
+    }
+    .thumb {
       position: absolute;
       top: 6px;
-      width: 1px;
-      height: 12px;
-      background: var(--secondary-text, #616161);
-      opacity: 0.2;
-    }
-    .tick-label {
-      position: absolute;
-      top: 20px;
-      font-size: 8px;
-      color: var(--secondary-text, #616161);
-      opacity: 0.5;
+      width: 16px;
+      height: 16px;
+      background: #2563eb;
+      border-radius: 50%;
       transform: translateX(-50%);
-      user-select: none;
-    }
-    .diamond {
-      position: absolute;
-      top: 4px;
-      width: 14px;
-      height: 14px;
-      background: var(--primary-color, #03a9f4);
-      border: 1.5px solid var(--ha-card-background, var(--card-background-color, #fff));
-      transform: translateX(-50%) rotate(45deg);
       cursor: grab;
-      border-radius: 2px;
+      border: 2px solid var(--ha-card-background, var(--card-background-color, #fff));
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
       transition: box-shadow 0.15s ease;
       z-index: 2;
     }
-    /* Invisible larger touch target around diamond */
-    .diamond::after {
+    .thumb::after {
       content: '';
       position: absolute;
       top: -14px;
@@ -75,100 +81,76 @@ export class CurveScrubber extends LitElement {
       right: -14px;
       bottom: -14px;
     }
-    .diamond:hover {
-      box-shadow: 0 0 8px var(--primary-color, #03a9f4);
+    .thumb:hover {
+      box-shadow: 0 2px 10px rgba(37, 99, 235, 0.45);
     }
-    .diamond.dragging {
+    .thumb.dragging {
       cursor: grabbing;
-      box-shadow: 0 0 12px var(--primary-color, #03a9f4);
-    }
-    .bars-container {
-      display: flex;
-      justify-content: space-evenly;
-      align-items: flex-end;
-      height: 64px;
-      padding: 8px 0 0;
-      gap: 4px;
-    }
-    .bar-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      flex: 1;
-      min-width: 0;
-    }
-    .bar-track {
-      width: 100%;
-      max-width: 32px;
-      height: 40px;
-      background: rgba(128, 128, 128, 0.08);
-      border-radius: 4px 4px 0 0;
-      position: relative;
-      overflow: hidden;
-    }
-    .bar-fill {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      border-radius: 4px 4px 0 0;
-      transition: height 0.15s ease;
-      opacity: 0.8;
-    }
-    .bar-value {
-      font-size: 10px;
-      font-weight: 500;
-      margin-top: 2px;
-      font-variant-numeric: tabular-nums;
-    }
-    .bar-name {
-      font-size: 8px;
-      color: var(--secondary-text, #616161);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 100%;
-      text-align: center;
+      box-shadow: 0 2px 14px rgba(37, 99, 235, 0.5);
     }
     .position-label {
       position: absolute;
-      top: -14px;
-      font-size: 9px;
-      font-weight: 500;
-      color: var(--primary-color, #03a9f4);
+      top: -10px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #2563eb;
       transform: translateX(-50%);
       user-select: none;
       font-variant-numeric: tabular-nums;
-      opacity: 0.9;
       pointer-events: none;
+    }
+    .value-badges {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      background: rgba(128, 128, 128, 0.06);
+    }
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .badge-name {
+      font-weight: 400;
+      opacity: 0.5;
+      margin-left: 2px;
     }
     @media (max-width: 500px) {
       .track-area {
         height: 36px;
       }
-      .track-line {
+      .track-bg {
         top: 17px;
       }
-      .tick {
-        top: 12px;
+      .track-fill {
+        top: 17px;
       }
-      .tick-label {
-        top: 30px;
-        font-size: 10px;
-      }
-      .bar-name {
-        font-size: 11px;
-      }
-      .bar-value {
-        font-size: 12px;
+      .thumb {
+        width: 20px;
+        height: 20px;
+        top: 8px;
       }
       .position-label {
-        font-size: 11px;
+        font-size: 12px;
       }
-      .diamond {
-        width: 18px;
-        height: 18px;
-        top: 8px;
+      .badge {
+        font-size: 13px;
+        padding: 5px 10px;
+      }
+      .scrubber-label {
+        font-size: 11px;
       }
     }
   `;
@@ -253,12 +235,12 @@ export class CurveScrubber extends LitElement {
   }
 
   render() {
-    const ticks = [0, 25, 50, 75, 100];
     const bars = this._getInterpolatedValues();
     const pos = Math.round(this._position);
 
     return html`
-      <div class="scrubber-container">
+      <div class="scrubber-panel">
+        <div class="scrubber-label">Preview at brightness</div>
         <div
           class="track-area"
           role="slider"
@@ -271,16 +253,11 @@ export class CurveScrubber extends LitElement {
           @click=${this._onTrackClick}
           @keydown=${this._onKeyDown}
         >
-          <div class="track-line"></div>
+          <div class="track-bg"></div>
+          <div class="track-fill" style="width: ${this._position}%"></div>
           <div class="position-label" style="left: ${this._position}%">${pos}%</div>
-          ${ticks.map(
-            (t) => html`
-              <div class="tick" style="left: ${t}%"></div>
-              <div class="tick-label" style="left: ${t}%">${t}%</div>
-            `
-          )}
           <div
-            class="diamond ${this._dragging ? 'dragging' : ''}"
+            class="thumb ${this._dragging ? 'dragging' : ''}"
             style="left: ${this._position}%"
             @pointerdown=${this._onPointerDown}
             @pointermove=${this._onPointerMove}
@@ -289,18 +266,13 @@ export class CurveScrubber extends LitElement {
           ></div>
         </div>
 
-        <div class="bars-container">
+        <div class="value-badges">
           ${bars.map(
             (bar) => html`
-              <div class="bar-item">
-                <div class="bar-track">
-                  <div
-                    class="bar-fill"
-                    style="height: ${bar.value}%; background: ${bar.color}"
-                  ></div>
-                </div>
-                <span class="bar-value" style="color: ${bar.color}">${bar.value}%</span>
-                <span class="bar-name" title="${bar.name}">${bar.name}</span>
+              <div class="badge">
+                <span class="badge-dot" style="background: ${bar.color}"></span>
+                <span style="color: ${bar.color}">${bar.value}%</span>
+                <span class="badge-name">${bar.name}</span>
               </div>
             `
           )}

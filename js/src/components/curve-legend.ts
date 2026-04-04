@@ -11,39 +11,53 @@ export class CurveLegend extends LitElement {
     :host {
       display: block;
     }
+    .legend-panel {
+      border-radius: 12px;
+      padding: 8px;
+      background: color-mix(
+        in srgb,
+        var(--ha-card-background, var(--card-background-color, #fff)) 95%,
+        var(--secondary-text-color, #616161) 5%
+      );
+    }
     .legend {
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      padding: 8px 0 0;
+      gap: 2px;
       max-height: 140px;
       overflow-y: auto;
     }
     .legend-item {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       cursor: pointer;
       user-select: none;
-      padding: 4px 8px;
-      border-radius: 6px;
+      padding: 8px 10px;
+      border-radius: 8px;
       transition:
         background 0.15s ease,
         opacity 0.2s ease;
       font-size: var(--text-md, 13px);
       font-weight: 500;
       color: var(--primary-text-color, #212121);
+      position: relative;
     }
     .legend-item:hover {
-      background: rgba(128, 128, 128, 0.1);
+      background: rgba(128, 128, 128, 0.08);
     }
     .legend-item.hidden {
       opacity: 0.4;
     }
-    .legend-item.selected {
-      background: var(--selection-bg, rgba(128, 128, 128, 0.1));
-      border-left: 3px solid var(--selection-border, currentColor);
-      padding-left: 5px;
+    .legend-item.selected::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 10px;
+      right: 10px;
+      height: 2px;
+      border-radius: 1px;
+      background: var(--accent-color, currentColor);
     }
     .color-dot {
       width: 10px;
@@ -80,14 +94,15 @@ export class CurveLegend extends LitElement {
       width: 16px;
       height: 16px;
       flex-shrink: 0;
-      opacity: 0.6;
+      opacity: 0.35;
       transition: opacity 0.15s ease;
       margin-left: auto;
       padding: 4px;
       box-sizing: content-box;
     }
-    .legend-item:hover .eye-icon {
-      opacity: 1;
+    .legend-item:hover .eye-icon,
+    .legend-item.hidden .eye-icon {
+      opacity: 0.7;
     }
     .name {
       white-space: nowrap;
@@ -140,57 +155,57 @@ export class CurveLegend extends LitElement {
 
   render() {
     return html`
-      <div class="legend" role="listbox" aria-label="Light curves">
-        ${this.curves.map(
-          (curve, idx) => html`
-            <div
-              class="legend-item ${curve.visible ? '' : 'hidden'} ${this.selectedCurveId ===
-              curve.entityId
-                ? 'selected'
-                : ''}"
-              role="option"
-              aria-selected=${this.selectedCurveId === curve.entityId}
-              @click=${() => this._select(curve.entityId)}
-              title="${curve.friendlyName}"
-              style="${this.selectedCurveId === curve.entityId
-                ? `--selection-bg: ${curve.color}25; --selection-border: ${curve.color}`
-                : ''}"
-            >
-              <span
-                class="color-dot shape-${CurveLegend._shapes[idx % CurveLegend._shapes.length]}"
-                style="background: ${curve.color}; --dot-color: ${curve.color}"
-              ></span>
-              <span class="name">${curve.friendlyName}</span>
-              <svg
-                class="eye-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                role="button"
-                aria-label="${curve.visible ? 'Hide' : 'Show'} ${curve.friendlyName}"
-                @click=${(e: Event) => this._toggle(e, curve.entityId)}
+      <div class="legend-panel">
+        <div class="legend" role="listbox" aria-label="Light curves">
+          ${this.curves.map(
+            (curve, idx) => html`
+              <div
+                class="legend-item ${curve.visible ? '' : 'hidden'} ${this.selectedCurveId ===
+                curve.entityId
+                  ? 'selected'
+                  : ''}"
+                role="option"
+                aria-selected=${this.selectedCurveId === curve.entityId}
+                @click=${() => this._select(curve.entityId)}
+                title="${curve.friendlyName}"
+                style="--accent-color: ${curve.color}"
               >
-                ${curve.visible
-                  ? html`
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    `
-                  : html`
-                      <path
-                        d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
-                      />
-                      <path
-                        d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
-                      />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    `}
-              </svg>
-            </div>
-          `
-        )}
+                <span
+                  class="color-dot shape-${CurveLegend._shapes[idx % CurveLegend._shapes.length]}"
+                  style="background: ${curve.color}; --dot-color: ${curve.color}"
+                ></span>
+                <span class="name">${curve.friendlyName}</span>
+                <svg
+                  class="eye-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  role="button"
+                  aria-label="${curve.visible ? 'Hide' : 'Show'} ${curve.friendlyName}"
+                  @click=${(e: Event) => this._toggle(e, curve.entityId)}
+                >
+                  ${curve.visible
+                    ? html`
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      `
+                    : html`
+                        <path
+                          d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
+                        />
+                        <path
+                          d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
+                        />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      `}
+                </svg>
+              </div>
+            `
+          )}
+        </div>
       </div>
     `;
   }

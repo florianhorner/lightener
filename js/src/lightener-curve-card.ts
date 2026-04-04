@@ -105,46 +105,50 @@ export class LightenerCurveCard extends LitElement {
       --secondary-text: var(--secondary-text-color, #616161);
       --divider: var(--divider-color, rgba(127, 127, 127, 0.2));
       --graph-bg: var(--card-background-color, var(--ha-card-background, #fafafa));
+      --panel-bg: color-mix(in srgb, var(--card-bg) 95%, var(--secondary-text, #616161) 5%);
       --text-xs: 9px;
       --text-sm: 12px;
       --text-md: 13px;
-      --text-lg: 16px;
+      --text-lg: 14px;
 
       display: block;
       font-family: var(--paper-font-body1_-_font-family, 'Roboto', sans-serif);
     }
     .card {
       background: var(--card-bg);
-      border-radius: var(--ha-card-border-radius, 12px);
-      box-shadow: var(--ha-card-box-shadow, 0 2px 6px rgba(0, 0, 0, 0.15));
-      padding: 16px;
+      border-radius: var(--ha-card-border-radius, 16px);
+      box-shadow: var(
+        --ha-card-box-shadow,
+        0 1px 3px rgba(0, 0, 0, 0.08),
+        0 8px 24px rgba(0, 0, 0, 0.06)
+      );
+      padding: 20px;
       color: var(--text-color);
     }
     .header {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
     .header-icon {
-      width: 20px;
-      height: 20px;
-      opacity: 0.7;
+      width: 18px;
+      height: 18px;
+      opacity: 0.5;
     }
     h2 {
       margin: 0;
       font-size: var(--text-lg);
       font-weight: 600;
-      letter-spacing: 0.01em;
+      letter-spacing: -0.01em;
     }
-    .graph-container {
-      border-radius: 8px;
+    .graph-panel {
+      border-radius: 12px;
+      padding: 12px;
+      background: var(--panel-bg);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
       overflow: hidden;
-    }
-    .divider {
-      border: none;
-      border-top: 1px solid var(--divider);
-      margin: 12px 0 4px;
+      margin-bottom: 12px;
     }
     .error {
       font-size: var(--text-sm);
@@ -467,7 +471,7 @@ export class LightenerCurveCard extends LitElement {
 
         ${this._loading
           ? html`<div class="loading-indicator">Loading curves...</div>`
-          : html`<div class="graph-container">
+          : html`<div class="graph-panel">
               <curve-graph
                 .curves=${this._curves}
                 .selectedCurveId=${this._selectedCurveId}
@@ -480,8 +484,6 @@ export class LightenerCurveCard extends LitElement {
             </div>`}
 
         <curve-scrubber .curves=${this._curves} .readOnly=${!this._isAdmin}></curve-scrubber>
-
-        <div class="divider"></div>
 
         <curve-legend
           .curves=${this._curves}

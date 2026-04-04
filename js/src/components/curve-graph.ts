@@ -94,10 +94,8 @@ export class CurveGraph extends LitElement {
       width: 100%;
       height: auto;
       display: block;
-      border-radius: 8px;
+      border-radius: 6px;
       touch-action: none;
-      background: var(--graph-bg, var(--card-background-color, var(--ha-card-background, #fafafa)));
-      border: 1px solid var(--divider, rgba(127, 127, 127, 0.2));
     }
     .grid-line {
       stroke: var(--secondary-text, #616161);
