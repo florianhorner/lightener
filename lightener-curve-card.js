@@ -130,7 +130,7 @@ function t(t,e,i,r){var s,o=arguments.length,n=o<3?e:null===r?r=Object.getOwnPro
                 fill="${t?.color??"currentColor"}"
                 >Editing: ${t?.friendlyName??""}</text>
               <text class="hint" text-anchor="end"
-                x="${344}" y="${240}"
+                x="${340}" y="${206}"
                 >Double-click to add · Right-click to remove</text>`})()}
       </svg>
     `}};function Pt(t,e,i){const[r,s]=t,[o,n]=e;return o+(i-r)*(n-o)/(s-r)}function Et(t){const e=function(t){const e=new Map;e.set(0,0);for(const i of t)e.set(i.lightener,i.target);e.has(100)||e.set(100,100);const i=[];for(const[t,r]of e)i.push({lightener:t,target:r});return i.sort((t,e)=>t.lightener-e.lightener),i}(t),i=new Array(101).fill(0);i[0]=0;for(let t=1;t<e.length;t++){const r=e[t-1],s=e[t];for(let t=r.lightener+1;t<=s.lightener;t++)i[t]=Pt([r.lightener,s.lightener],[r.target,s.target],t)}return i}At.styles=n`
