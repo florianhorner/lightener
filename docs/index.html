@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lightener Curve Editor - Live Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 16px;
+        background: #111;
+        font-family: "Roboto", "Segoe UI", sans-serif;
+        color: #ccc;
+        min-height: 100vh;
+      }
+      .demo-header {
+        text-align: center;
+        max-width: 860px;
+        margin: 0 auto 24px;
+      }
+      .demo-header h1 {
+        font-size: 22px;
+        font-weight: 600;
+        color: #fff;
+        margin: 0 0 6px;
+      }
+      .demo-header p {
+        font-size: 13px;
+        color: #888;
+        margin: 0 0 4px;
+        line-height: 1.5;
+      }
+      .demo-header a {
+        color: #42a5f5;
+        text-decoration: none;
+      }
+      .demo-header a:hover {
+        text-decoration: underline;
+      }
+      .demo-hints {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+      .hint-pill {
+        font-size: 11px;
+        color: #aaa;
+        background: rgba(255, 255, 255, 0.06);
+        padding: 4px 10px;
+        border-radius: 12px;
+        white-space: nowrap;
+      }
+      .hint-pill kbd {
+        font-family: inherit;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-size: 10px;
+      }
+      .cards-container {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 32px;
+        flex-wrap: wrap;
+      }
+      .preview-container {
+        width: 400px;
+        max-width: 100%;
+      }
+      .label {
+        color: #555;
+        font-size: 11px;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .light-theme {
+        --primary-text-color: #212121;
+        --secondary-text-color: #616161;
+        --card-background-color: #fff;
+        --ha-card-background: #fff;
+        --divider-color: rgba(0, 0, 0, 0.12);
+        --ha-card-border-radius: 12px;
+        --ha-card-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        --primary-color: #03a9f4;
+        --error-color: #db4437;
+        --success-color: #2563eb;
+        --warning-color: #ffa726;
+      }
+      .dark-theme {
+        --primary-text-color: #e1e1e1;
+        --secondary-text-color: #9e9e9e;
+        --card-background-color: #1c1c1c;
+        --ha-card-background: #1c1c1c;
+        --divider-color: rgba(255, 255, 255, 0.12);
+        --ha-card-border-radius: 12px;
+        --ha-card-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+        --primary-color: #03a9f4;
+        --error-color: #ef5350;
+        --success-color: #2563eb;
+        --warning-color: #ffa726;
+      }
+      @media (max-width: 860px) {
+        .cards-container {
+          flex-direction: column;
+          align-items: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-header">
+      <h1>Lightener Curve Editor</h1>
+      <p>
+        Interactive brightness curve editor for
+        <a href="https://www.home-assistant.io/">Home Assistant</a>.
+        Map group brightness to individual light levels with draggable control points.
+      </p>
+      <div class="demo-hints">
+        <span class="hint-pill">Click a light to select</span>
+        <span class="hint-pill">Drag points to edit</span>
+        <span class="hint-pill">Double-click to add</span>
+        <span class="hint-pill">Right-click to remove</span>
+        <span class="hint-pill"><kbd>Ctrl+S</kbd> Save</span>
+        <span class="hint-pill"><kbd>Esc</kbd> Cancel</span>
+      </div>
+    </div>
+
+    <div class="cards-container">
+      <div class="preview-container light-theme">
+        <div class="label">Light Mode</div>
+        <lightener-curve-card id="card-light"></lightener-curve-card>
+      </div>
+      <div class="preview-container dark-theme">
+        <div class="label">Dark Mode</div>
+        <lightener-curve-card id="card-dark"></lightener-curve-card>
+      </div>
+    </div>
+
+    <script type="module">
+      import "./lightener-curve-card.js";
+
+      await customElements.whenDefined("lightener-curve-card");
+
+      const hass = {
+        user: { is_admin: true },
+        states: {},
+        language: "en",
+        themes: { default_theme: "default" },
+      };
+
+      const cards = document.querySelectorAll("lightener-curve-card");
+      for (const card of cards) {
+        card.setConfig({ type: "custom:lightener-curve-card" });
+        setTimeout(() => {
+          card.hass = hass;
+        }, 0);
+      }
+
+      // Sync both cards
+      const cardLight = document.getElementById("card-light");
+      const cardDark = document.getElementById("card-dark");
+      let syncing = false;
+      function syncCards(source, target) {
+        if (syncing) return;
+        syncing = true;
+        target._curves = JSON.parse(JSON.stringify(source._curves));
+        target._selectedCurveId = source._selectedCurveId;
+        target._originalCurves = JSON.parse(JSON.stringify(source._originalCurves));
+        target.requestUpdate();
+        syncing = false;
+      }
+      for (const evt of ["pointerup", "click", "dblclick", "contextmenu", "keyup"]) {
+        cardLight.addEventListener(evt, () =>
+          requestAnimationFrame(() => syncCards(cardLight, cardDark))
+        );
+        cardDark.addEventListener(evt, () =>
+          requestAnimationFrame(() => syncCards(cardDark, cardLight))
+        );
+      }
+    </script>
+  </body>
+</html>

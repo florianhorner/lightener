@@ -8,6 +8,8 @@
 
 Lightener is a Home Assistant integration used to create virtual lights that can control a group of lights. It offers the added benefit of controlling the state (on/off) and brightness level of each light independently.
 
+**[Try the live demo](https://florianhorner.github.io/lightener-curve-editor/)** — fully interactive, no install needed.
+
 ## What This Fork Adds
 
 ### Curve Editor Card (`custom:lightener-curve-card`)
