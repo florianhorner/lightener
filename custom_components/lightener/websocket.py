@@ -87,8 +87,22 @@ async def ws_save_curves(
         return
 
     # Validate curves
-    for _controlled_entity_id, entity_data in curves.items():
+    for controlled_entity_id, entity_data in curves.items():
+        if not isinstance(entity_data, dict):
+            connection.send_error(
+                msg["id"],
+                "invalid_format",
+                f"Curve payload for {controlled_entity_id} must be an object",
+            )
+            return
         brightness = entity_data.get("brightness", {})
+        if not isinstance(brightness, dict):
+            connection.send_error(
+                msg["id"],
+                "invalid_format",
+                f"Brightness payload for {controlled_entity_id} must be an object",
+            )
+            return
         for k, v in brightness.items():
             try:
                 key = int(k)

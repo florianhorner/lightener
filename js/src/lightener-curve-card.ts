@@ -164,6 +164,11 @@ export class LightenerCurveCard extends LitElement {
       cursor: pointer;
       text-decoration: underline;
       opacity: 0.8;
+      background: none;
+      border: none;
+      font: inherit;
+      color: inherit;
+      padding: 0;
     }
     .error .retry-link:hover {
       opacity: 1;
@@ -470,7 +475,9 @@ export class LightenerCurveCard extends LitElement {
         </div>
 
         ${this._loading
-          ? html`<div class="loading-indicator">Loading curves...</div>`
+          ? html`<div class="loading-indicator" role="status" aria-live="polite">
+              Loading curves...
+            </div>`
           : html`<div class="graph-panel">
               <curve-graph
                 .curves=${this._curves}
@@ -501,7 +508,7 @@ export class LightenerCurveCard extends LitElement {
         ></curve-footer>
 
         ${this._saveSuccess
-          ? html`<div class="success">
+          ? html`<div class="success" role="status" aria-live="polite">
               <svg
                 class="status-icon"
                 viewBox="0 0 24 24"
@@ -517,15 +524,17 @@ export class LightenerCurveCard extends LitElement {
             </div>`
           : nothing}
         ${this._loadError
-          ? html`<div class="error">
+          ? html`<div class="error" role="alert">
               ${WARNING_ICON} Failed to load curves
-              <span class="retry-link" @click=${this._retryLoad}>Tap to retry</span>
+              <button type="button" class="retry-link" @click=${this._retryLoad}>
+                Tap to retry
+              </button>
             </div>`
           : nothing}
         ${this._saveError
-          ? html`<div class="error">
+          ? html`<div class="error" role="alert">
               ${WARNING_ICON} Save failed
-              <span class="retry-link" @click=${this._onSave}>Tap to retry</span>
+              <button type="button" class="retry-link" @click=${this._onSave}>Tap to retry</button>
             </div>`
           : nothing}
       </div>

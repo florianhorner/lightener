@@ -151,6 +151,27 @@ export class CurveLegend extends LitElement {
     );
   }
 
+  private _onItemKeyDown(e: KeyboardEvent, entityId: string) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      this._select(entityId);
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const items = [...this.renderRoot.querySelectorAll<HTMLElement>('.legend-item')];
+      const idx = items.indexOf(e.currentTarget as HTMLElement);
+      const next = e.key === 'ArrowDown' ? idx + 1 : idx - 1;
+      items[next]?.focus();
+    }
+  }
+
+  private _onToggleKeyDown(e: KeyboardEvent, entityId: string) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      this._toggle(e, entityId);
+    }
+  }
+
   private static readonly _shapes = ['circle', 'square', 'diamond', 'triangle', 'bar'] as const;
 
   render() {
@@ -165,8 +186,10 @@ export class CurveLegend extends LitElement {
                   ? 'selected'
                   : ''}"
                 role="option"
+                tabindex="0"
                 aria-selected=${this.selectedCurveId === curve.entityId}
                 @click=${() => this._select(curve.entityId)}
+                @keydown=${(e: KeyboardEvent) => this._onItemKeyDown(e, curve.entityId)}
                 title="${curve.friendlyName}"
                 style="--accent-color: ${curve.color}"
               >
@@ -184,8 +207,10 @@ export class CurveLegend extends LitElement {
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   role="button"
+                  tabindex="0"
                   aria-label="${curve.visible ? 'Hide' : 'Show'} ${curve.friendlyName}"
                   @click=${(e: Event) => this._toggle(e, curve.entityId)}
+                  @keydown=${(e: KeyboardEvent) => this._onToggleKeyDown(e, curve.entityId)}
                 >
                   ${curve.visible
                     ? html`
