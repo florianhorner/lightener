@@ -16,76 +16,192 @@
       }
       body {
         margin: 0;
-        padding: 32px 16px;
-        background: #111;
+        padding: 0;
+        background: #0a0a0f;
         font-family: "Roboto", "Segoe UI", sans-serif;
         color: #ccc;
         min-height: 100vh;
+        overflow-x: hidden;
       }
+
+      /* Ambient background glow */
+      .bg-glow {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .bg-glow::before {
+        content: "";
+        position: absolute;
+        top: -40%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 900px;
+        height: 600px;
+        background: radial-gradient(ellipse, rgba(3, 169, 244, 0.08) 0%, transparent 70%);
+      }
+      .bg-glow::after {
+        content: "";
+        position: absolute;
+        bottom: -20%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 1200px;
+        height: 500px;
+        background: radial-gradient(ellipse, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+      }
+
+      /* Subtle dot grid */
+      .bg-grid {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 32px 32px;
+      }
+
+      .page-content {
+        position: relative;
+        z-index: 1;
+        padding: 56px 24px 48px;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      /* Header */
       .demo-header {
         text-align: center;
-        max-width: 860px;
-        margin: 0 auto 24px;
+        max-width: 600px;
+        margin: 0 auto 40px;
       }
       .demo-header h1 {
-        font-size: 22px;
+        font-size: 32px;
         font-weight: 600;
         color: #fff;
-        margin: 0 0 6px;
+        margin: 0 0 10px;
+        letter-spacing: -0.02em;
+      }
+      .demo-header h1 span {
+        background: linear-gradient(135deg, #42a5f5, #7c4dff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
       .demo-header p {
-        font-size: 13px;
-        color: #888;
-        margin: 0 0 4px;
-        line-height: 1.5;
+        font-size: 15px;
+        color: #777;
+        margin: 0;
+        line-height: 1.6;
       }
       .demo-header a {
-        color: #42a5f5;
+        color: #64b5f6;
         text-decoration: none;
+        border-bottom: 1px solid rgba(100, 181, 246, 0.3);
+        transition: border-color 0.2s;
       }
       .demo-header a:hover {
-        text-decoration: underline;
+        border-color: #64b5f6;
       }
+
+      /* Hint pills */
       .demo-hints {
         display: flex;
         justify-content: center;
-        gap: 16px;
-        margin-top: 12px;
+        gap: 10px;
+        margin-top: 20px;
         flex-wrap: wrap;
       }
       .hint-pill {
         font-size: 11px;
-        color: #aaa;
-        background: rgba(255, 255, 255, 0.06);
-        padding: 4px 10px;
-        border-radius: 12px;
+        color: #999;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 5px 12px;
+        border-radius: 20px;
         white-space: nowrap;
+        transition: background 0.2s, color 0.2s;
+      }
+      .hint-pill:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #bbb;
       }
       .hint-pill kbd {
         font-family: inherit;
-        background: rgba(255, 255, 255, 0.1);
-        padding: 1px 5px;
-        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 2px 6px;
+        border-radius: 4px;
         font-size: 10px;
+        font-weight: 500;
       }
+
+      /* Cards area */
       .cards-container {
         display: flex;
         justify-content: center;
         align-items: flex-start;
-        gap: 32px;
+        gap: 40px;
         flex-wrap: wrap;
       }
       .preview-container {
         width: 400px;
         max-width: 100%;
+        position: relative;
       }
+
+      /* Glow behind cards */
+      .preview-container::before {
+        content: "";
+        position: absolute;
+        inset: 20px -10px -10px -10px;
+        border-radius: 20px;
+        z-index: -1;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+      }
+      .preview-container.light-theme::before {
+        background: radial-gradient(ellipse at center, rgba(66, 165, 245, 0.12) 0%, transparent 70%);
+      }
+      .preview-container.dark-theme::before {
+        background: radial-gradient(ellipse at center, rgba(124, 77, 255, 0.10) 0%, transparent 70%);
+      }
+      .preview-container:hover::before {
+        opacity: 1;
+      }
+
       .label {
-        color: #555;
-        font-size: 11px;
-        margin-bottom: 6px;
+        color: #666;
+        font-size: 10px;
+        font-weight: 500;
+        margin-bottom: 8px;
         text-transform: uppercase;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.12em;
       }
+      .label::before {
+        content: "";
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
+        position: relative;
+        top: -1px;
+      }
+      .light-theme .label::before {
+        background: #42a5f5;
+        box-shadow: 0 0 6px rgba(66, 165, 245, 0.5);
+      }
+      .dark-theme .label::before {
+        background: #7c4dff;
+        box-shadow: 0 0 6px rgba(124, 77, 255, 0.5);
+      }
+
+      /* Theme variables */
       .light-theme {
         --primary-text-color: #212121;
         --secondary-text-color: #616161;
@@ -93,7 +209,7 @@
         --ha-card-background: #fff;
         --divider-color: rgba(0, 0, 0, 0.12);
         --ha-card-border-radius: 12px;
-        --ha-card-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        --ha-card-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 8px 32px rgba(0, 0, 0, 0.08);
         --primary-color: #03a9f4;
         --error-color: #db4437;
         --success-color: #2563eb;
@@ -106,46 +222,94 @@
         --ha-card-background: #1c1c1c;
         --divider-color: rgba(255, 255, 255, 0.12);
         --ha-card-border-radius: 12px;
-        --ha-card-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+        --ha-card-box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 2px 8px rgba(0, 0, 0, 0.3), 0 8px 32px rgba(0, 0, 0, 0.2);
         --primary-color: #03a9f4;
         --error-color: #ef5350;
         --success-color: #2563eb;
         --warning-color: #ffa726;
       }
+
+      /* Footer */
+      .demo-footer {
+        margin-top: 48px;
+        text-align: center;
+        padding: 24px;
+      }
+      .demo-footer a {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #555;
+        text-decoration: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        transition: color 0.2s, border-color 0.2s;
+      }
+      .demo-footer a:hover {
+        color: #999;
+        border-color: rgba(255, 255, 255, 0.12);
+      }
+      .demo-footer svg {
+        width: 16px;
+        height: 16px;
+        fill: currentColor;
+      }
+
       @media (max-width: 860px) {
+        .page-content {
+          padding: 36px 16px 32px;
+        }
+        .demo-header h1 {
+          font-size: 24px;
+        }
         .cards-container {
           flex-direction: column;
           align-items: center;
+          gap: 28px;
         }
       }
     </style>
   </head>
   <body>
-    <div class="demo-header">
-      <h1>Lightener Curve Editor</h1>
-      <p>
-        Interactive brightness curve editor for
-        <a href="https://www.home-assistant.io/">Home Assistant</a>.
-        Map group brightness to individual light levels with draggable control points.
-      </p>
-      <div class="demo-hints">
-        <span class="hint-pill">Click a light to select</span>
-        <span class="hint-pill">Drag points to edit</span>
-        <span class="hint-pill">Double-click to add</span>
-        <span class="hint-pill">Right-click to remove</span>
-        <span class="hint-pill"><kbd>Ctrl+S</kbd> Save</span>
-        <span class="hint-pill"><kbd>Esc</kbd> Cancel</span>
-      </div>
-    </div>
+    <div class="bg-glow"></div>
+    <div class="bg-grid"></div>
 
-    <div class="cards-container">
-      <div class="preview-container light-theme">
-        <div class="label">Light Mode</div>
-        <lightener-curve-card id="card-light"></lightener-curve-card>
+    <div class="page-content">
+      <div class="demo-header">
+        <h1>Lightener <span>Curve Editor</span></h1>
+        <p>
+          Interactive brightness curve editor for
+          <a href="https://www.home-assistant.io/">Home Assistant</a>.
+          Map group brightness to individual light levels with draggable control points.
+        </p>
+        <div class="demo-hints">
+          <span class="hint-pill">Click a light to select</span>
+          <span class="hint-pill">Drag points to edit</span>
+          <span class="hint-pill">Double-click to add</span>
+          <span class="hint-pill">Right-click to remove</span>
+          <span class="hint-pill"><kbd>Ctrl+S</kbd> Save</span>
+          <span class="hint-pill"><kbd>Esc</kbd> Cancel</span>
+        </div>
       </div>
-      <div class="preview-container dark-theme">
-        <div class="label">Dark Mode</div>
-        <lightener-curve-card id="card-dark"></lightener-curve-card>
+
+      <div class="cards-container">
+        <div class="preview-container light-theme">
+          <div class="label">Light Mode</div>
+          <lightener-curve-card id="card-light"></lightener-curve-card>
+        </div>
+        <div class="preview-container dark-theme">
+          <div class="label">Dark Mode</div>
+          <lightener-curve-card id="card-dark"></lightener-curve-card>
+        </div>
+      </div>
+
+      <div class="demo-footer">
+        <a href="https://github.com/florianhorner/lightener-curve-editor">
+          <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          View on GitHub
+        </a>
       </div>
     </div>
 
@@ -169,27 +333,60 @@
         }, 0);
       }
 
-      // Sync both cards
+      // Sync both cards — poll every frame since shadow DOM events don't bubble
       const cardLight = document.getElementById("card-light");
       const cardDark = document.getElementById("card-dark");
       let syncing = false;
+
+      function getScrubber(card) {
+        return card.renderRoot?.querySelector("curve-scrubber");
+      }
+
       function syncCards(source, target) {
         if (syncing) return;
         syncing = true;
         target._curves = JSON.parse(JSON.stringify(source._curves));
         target._selectedCurveId = source._selectedCurveId;
         target._originalCurves = JSON.parse(JSON.stringify(source._originalCurves));
+        const ss = getScrubber(source);
+        const ts = getScrubber(target);
+        if (ss && ts) {
+          ts._position = ss._position;
+          ts.requestUpdate();
+        }
         target.requestUpdate();
         syncing = false;
       }
-      for (const evt of ["pointerup", "click", "dblclick", "contextmenu", "keyup"]) {
-        cardLight.addEventListener(evt, () =>
-          requestAnimationFrame(() => syncCards(cardLight, cardDark))
-        );
-        cardDark.addEventListener(evt, () =>
-          requestAnimationFrame(() => syncCards(cardDark, cardLight))
-        );
+
+      function fingerprint(card) {
+        const s = getScrubber(card);
+        return JSON.stringify(card._curves || null) + "|" + (card._selectedCurveId ?? "") + "|" + (s ? s._position : 0);
       }
+
+      // Wait for hass to be set and curves to exist before starting poll
+      setTimeout(() => {
+        let knownLight = fingerprint(cardLight);
+        let knownDark = fingerprint(cardDark);
+        function pollSync() {
+          if (!syncing) {
+            const lf = fingerprint(cardLight);
+            const df = fingerprint(cardDark);
+            if (lf !== df) {
+              if (lf !== knownLight) {
+                syncCards(cardLight, cardDark);
+                knownLight = knownDark = fingerprint(cardLight);
+              } else if (df !== knownDark) {
+                syncCards(cardDark, cardLight);
+                knownLight = knownDark = fingerprint(cardDark);
+              }
+            } else {
+              knownLight = knownDark = lf;
+            }
+          }
+          requestAnimationFrame(pollSync);
+        }
+        requestAnimationFrame(pollSync);
+      }, 100);
     </script>
   </body>
 </html>
