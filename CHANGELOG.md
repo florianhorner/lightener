@@ -18,8 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Retry buttons on load and save errors with `role="alert"` for screen readers
 - Keyboard support: arrow keys on scrubber slider, Enter/Space on legend items, Ctrl+S to save, Esc to cancel
 - Live demo via GitHub Pages
-- Scenario switcher in dev.html for testing 2-light, 3-light, 20-light, and long entity ID edge cases
-- 32 unit tests for data conversion and interpolation utilities
+- Scenario switcher in dev mode for testing 2-light, 3-light, 20-light, and long entity ID edge cases
+- 32 unit tests covering data conversion and interpolation
 
 ### Changed
 

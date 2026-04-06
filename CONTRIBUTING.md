@@ -31,6 +31,8 @@ js/                            # TypeScript — Lit 3.x frontend card
     components/                # Sub-components (graph, legend, scrubber, footer)
     utils/                     # Data helpers, interpolation, types
 
+docs/                          # GitHub Pages demo site (live demo)
+
 tests/                         # pytest — backend unit tests
 ```
 
@@ -51,7 +53,7 @@ For a manual setup:
 
 ```sh
 # Backend
-pip install -r requirements_test.txt   # or: pip install pytest pytest-asyncio pytest_homeassistant_custom_component
+pip install -r requirements.txt   # or: pip install pytest pytest-asyncio pytest_homeassistant_custom_component
 scripts/setup                          # if available
 
 # Frontend
@@ -78,6 +80,7 @@ Configuration lives in `pyproject.toml`.
 | ESLint   | Linting     | `npm run lint`         |
 | Prettier | Formatting  | `npm run format`       |
 | tsc      | Type check  | `npx tsc --noEmit`     |
+| Vitest   | Unit tests  | `npm test`             |
 | Rollup   | Build       | `npm run build`        |
 
 After changing any TypeScript file, run `npm run build` inside `js/` to
