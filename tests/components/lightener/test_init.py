@@ -1,7 +1,7 @@
 """Tests for __init__."""
 
 import logging
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
@@ -14,10 +14,68 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.lightener import (
     async_migrate_entry,
+    async_setup,
     async_unload_entry,
 )
 from custom_components.lightener.config_flow import LightenerConfigFlow
 from custom_components.lightener.const import DOMAIN
+
+
+async def test_async_setup_registers_websocket_and_static_path(
+    hass: HomeAssistant,
+) -> None:
+    """Test integration setup registers websocket handlers and static frontend path."""
+
+    hass.http = MagicMock()
+    hass.http.async_register_static_paths = AsyncMock()
+
+    with patch(
+        "custom_components.lightener.websocket.async_register_commands"
+    ) as register_commands:
+        assert await async_setup(hass, {}) is True
+
+    register_commands.assert_called_once_with(hass)
+    hass.http.async_register_static_paths.assert_awaited_once()
+
+    paths = hass.http.async_register_static_paths.await_args.args[0]
+    assert len(paths) == 1
+    assert paths[0].url_path == "/lightener/lightener-curve-card.js"
+    assert paths[0].path.endswith(
+        "/custom_components/lightener/frontend/lightener-curve-card.js"
+    )
+    assert paths[0].cache_headers is False
+
+
+async def test_async_setup_continues_when_static_path_registration_fails(
+    hass: HomeAssistant,
+) -> None:
+    """Test integration setup succeeds even if static path setup fails."""
+
+    hass.http = MagicMock()
+    hass.http.async_register_static_paths = AsyncMock(side_effect=RuntimeError)
+
+    with patch(
+        "custom_components.lightener.websocket.async_register_commands"
+    ) as register_commands:
+        assert await async_setup(hass, {}) is True
+
+    register_commands.assert_called_once_with(hass)
+    hass.http.async_register_static_paths.assert_awaited_once()
+
+
+async def test_async_setup_continues_when_http_component_is_unavailable(
+    hass: HomeAssistant,
+) -> None:
+    """Test integration setup succeeds when hass.http is unavailable."""
+
+    hass.http = None
+
+    with patch(
+        "custom_components.lightener.websocket.async_register_commands"
+    ) as register_commands:
+        assert await async_setup(hass, {}) is True
+
+    register_commands.assert_called_once_with(hass)
 
 
 async def test_async_setup_entry(hass):
