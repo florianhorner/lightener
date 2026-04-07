@@ -1,8 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { LightCurve } from '../utils/types.js';
-import { prepareBrightnessConfig } from '../utils/interpolation.js';
-import { PAD_LEFT, PAD_RIGHT, VB_W, sampleSmoothCurveAt } from '../utils/graph-math.js';
+import { PAD_LEFT, PAD_RIGHT, VB_W, sampleCurveAt } from '../utils/graph-math.js';
 
 @customElement('curve-scrubber')
 export class CurveScrubber extends LitElement {
@@ -177,13 +176,11 @@ export class CurveScrubber extends LitElement {
     return this.curves
       .filter((c) => c.visible)
       .map((c) => {
-        const prepared = prepareBrightnessConfig(c.controlPoints);
-        const pathPoints = prepared.map((cp) => ({ x: cp.lightener, y: cp.target }));
         return {
           entityId: c.entityId,
           name: c.friendlyName,
           color: c.color,
-          value: Math.round(sampleSmoothCurveAt(pathPoints, pos)),
+          value: Math.round(sampleCurveAt(c.controlPoints, pos)),
         };
       });
   }
@@ -193,13 +190,13 @@ export class CurveScrubber extends LitElement {
     e.preventDefault();
     this._dragging = true;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    this._updatePosition(e);
+    this._updatePositionFromClient(e.clientX);
   }
 
   private _onPointerMove(e: PointerEvent): void {
     if (!this._dragging) return;
     e.preventDefault();
-    this._updatePosition(e);
+    this._updatePositionFromClient(e.clientX);
   }
 
   private _onPointerUp(): void {
@@ -231,10 +228,6 @@ export class CurveScrubber extends LitElement {
     }
 
     this._emitPosition();
-  }
-
-  private _updatePosition(e: PointerEvent): void {
-    this._updatePositionFromClient(e.clientX);
   }
 
   private _updatePositionFromClient(clientX: number): void {

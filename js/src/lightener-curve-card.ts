@@ -2,7 +2,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { LightCurve, Hass } from './utils/types.js';
 import { curvesToWsPayload, wsPayloadToCurves, cloneCurves, curvesEqual } from './utils/data.js';
-import { easeOutCubic } from './utils/graph-math.js';
+import { easeOutCubic, CURVE_COLORS } from './utils/graph-math.js';
 import './components/curve-graph.js';
 import './components/curve-scrubber.js';
 import './components/curve-legend.js';
@@ -26,19 +26,6 @@ const WARNING_ICON = html`<svg
   <line x1="12" y1="9" x2="12" y2="13"></line>
   <line x1="12" y1="17" x2="12.01" y2="17"></line>
 </svg>`;
-
-const CURVE_COLORS = [
-  '#42a5f5',
-  '#ef5350',
-  '#5c6bc0',
-  '#ffa726',
-  '#ab47bc',
-  '#1565c0',
-  '#ec407a',
-  '#8d6e63',
-  '#ffca28',
-  '#7e57c2',
-];
 
 function createMockCurves(): LightCurve[] {
   return [

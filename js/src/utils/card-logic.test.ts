@@ -8,22 +8,9 @@
 import { describe, it, expect } from 'vitest';
 import { LightCurve, ControlPoint } from './types.js';
 import { cloneCurves, curvesEqual } from './data.js';
-import { DASH_PATTERNS, LEGEND_SHAPES, easeOutCubic } from './graph-math.js';
+import { DASH_PATTERNS, LEGEND_SHAPES, easeOutCubic, CURVE_COLORS } from './graph-math.js';
 
 // ── Helpers: replicate card logic as pure functions ────────────────
-
-const CURVE_COLORS = [
-  '#42a5f5',
-  '#ef5350',
-  '#5c6bc0',
-  '#ffa726',
-  '#ab47bc',
-  '#26c6da',
-  '#ec407a',
-  '#8d6e63',
-  '#ffca28',
-  '#7e57c2',
-];
 
 function makeCurve(overrides: Partial<LightCurve> = {}): LightCurve {
   return {

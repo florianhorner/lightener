@@ -53,9 +53,6 @@ export function interpolateCurve(controlPoints: ControlPoint[]): number[] {
   const prepared = prepareBrightnessConfig(controlPoints);
   const result = new Array<number>(101).fill(0);
 
-  // Set the zero point
-  result[0] = 0;
-
   for (let seg = 1; seg < prepared.length; seg++) {
     const start = prepared[seg - 1];
     const end = prepared[seg];

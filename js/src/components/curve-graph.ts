@@ -18,6 +18,7 @@ import {
   clamp,
   computeMonotoneTangents,
   sampleSmoothCurveAt,
+  sampleCurveAt,
   buildSmoothPath,
   DASH_PATTERNS,
 } from '../utils/graph-math.js';
@@ -156,7 +157,7 @@ export class CurveGraph extends LitElement {
 
   private _svgRef: SVGSVGElement | null = null;
 
-  private _getSvgCoords(e: PointerEvent): { x: number; y: number } | null {
+  private _getSvgCoords(e: MouseEvent): { x: number; y: number } | null {
     const svgEl = this._svgRef;
     if (!svgEl) return null;
     const ctm = svgEl.getScreenCTM();
@@ -296,18 +297,10 @@ export class CurveGraph extends LitElement {
     if (this.readOnly) return;
     if (this._wasDragging) return;
 
-    // Convert dblclick to SVG coords
-    const svgEl = this._svgRef;
-    if (!svgEl) return;
-    const ctm = svgEl.getScreenCTM();
-    if (!ctm) return;
-    const inv = ctm.inverse();
-    const pt = svgEl.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
-    const svgPt = pt.matrixTransform(inv);
-    const x = Math.round(clamp(fromSvgX(svgPt.x), 1, 100));
-    const y = Math.round(clamp(fromSvgY(svgPt.y), 0, 100));
+    const coords = this._getSvgCoords(e);
+    if (!coords) return;
+    const x = Math.round(clamp(coords.x, 1, 100));
+    const y = Math.round(clamp(coords.y, 0, 100));
 
     this.dispatchEvent(
       new CustomEvent('point-add', {
@@ -433,10 +426,7 @@ export class CurveGraph extends LitElement {
     const dots = this.curves
       .filter((c) => c.visible)
       .map((c) => {
-        const prepared = prepareBrightnessConfig(c.controlPoints);
-        const pathPoints = prepared.map((cp) => ({ x: cp.lightener, y: cp.target }));
-        const value = sampleSmoothCurveAt(pathPoints, pos);
-        const cy = toSvgY(value);
+        const cy = toSvgY(sampleCurveAt(c.controlPoints, pos));
 
         return svg`
           <circle

@@ -3,6 +3,9 @@
  * Extracted so they can be unit-tested without a DOM.
  */
 
+import { ControlPoint } from './types.js';
+import { prepareBrightnessConfig } from './interpolation.js';
+
 // Graph coordinate system: SVG viewBox with padding for axis labels.
 export const PAD_LEFT = 44;
 export const PAD_RIGHT = 12;
@@ -101,6 +104,30 @@ export function sampleSmoothCurveAt(points: { x: number; y: number }[], targetX:
   const mt = 1 - t;
   return mt * mt * mt * p0y + 3 * mt * mt * t * p1y + 3 * mt * t * t * p2y + t * t * t * p3y;
 }
+
+/**
+ * Convenience: prepare control points and sample the smooth curve at a position.
+ * Used by both the graph scrubber dots and the scrubber badge values.
+ */
+export function sampleCurveAt(controlPoints: ControlPoint[], position: number): number {
+  const prepared = prepareBrightnessConfig(controlPoints);
+  const pathPoints = prepared.map((cp) => ({ x: cp.lightener, y: cp.target }));
+  return sampleSmoothCurveAt(pathPoints, position);
+}
+
+/** Colorblind-safe curve palette — shared between card and tests. */
+export const CURVE_COLORS = [
+  '#42a5f5',
+  '#ef5350',
+  '#5c6bc0',
+  '#ffa726',
+  '#ab47bc',
+  '#1565c0',
+  '#ec407a',
+  '#8d6e63',
+  '#ffca28',
+  '#7e57c2',
+];
 
 /**
  * Build a smooth SVG cubic-bezier path through control points.
