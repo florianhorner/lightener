@@ -472,10 +472,7 @@ describe('cancel animation interpolation', () => {
 // ── Bug fix: undo/cancel must preserve visible state ─────────────
 
 describe('undo preserves visible state', () => {
-  function animateCurvesTo(
-    currentCurves: LightCurve[],
-    endCurves: LightCurve[]
-  ): LightCurve[] {
+  function animateCurvesTo(currentCurves: LightCurve[], endCurves: LightCurve[]): LightCurve[] {
     // Simulates the final frame of _animateCurvesTo (t=1) with the fix applied
     const startCurves = cloneCurves(currentCurves);
     return endCurves.map((ec, i) => ({
