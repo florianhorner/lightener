@@ -132,6 +132,19 @@ export class CurveGraph extends LitElement {
       svg {
         min-height: 180px;
       }
+      .axis-label,
+      .tick-label {
+        font-size: 12px;
+      }
+      .hint {
+        font-size: 12px;
+      }
+      .editing-label {
+        font-size: 12px;
+      }
+      .tooltip-text {
+        font-size: 11px;
+      }
     }
     .scrubber-line {
       stroke: var(--secondary-text, #616161);
@@ -516,7 +529,7 @@ export class CurveGraph extends LitElement {
                 class="hit-circle"
                 cx="${toSvgX(cp.lightener)}"
                 cy="${toSvgY(cp.target)}"
-                r="20"
+                r="22"
                 fill="transparent"
                 pointer-events="all"
                 style="touch-action: none; -webkit-touch-callout: none"
@@ -637,7 +650,7 @@ export class CurveGraph extends LitElement {
                 >Editing: ${selected?.friendlyName ?? ''}</text>
               <text class="hint" text-anchor="end"
                 x="${PAD_LEFT + GRAPH_W - 4}" y="${PAD_TOP + GRAPH_H - 6}"
-                >Double-tap to add · Long-press to remove</text>`;
+                >Dbl-click to add · Right-click or long-press to remove</text>`;
         })()}
       </svg>
     `;

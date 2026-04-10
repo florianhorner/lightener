@@ -205,6 +205,7 @@ export class CurveLegend extends LitElement {
                   role="button"
                   tabindex="0"
                   aria-label="${curve.visible ? 'Hide' : 'Show'} ${curve.friendlyName}"
+                  aria-pressed=${!curve.visible}
                   @click=${(e: Event) => this._toggle(e, curve.entityId)}
                   @keydown=${(e: KeyboardEvent) => this._onToggleKeyDown(e, curve.entityId)}
                 >
