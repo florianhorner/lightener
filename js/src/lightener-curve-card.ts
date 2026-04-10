@@ -2,7 +2,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { LightCurve, Hass } from './utils/types.js';
 import { curvesToWsPayload, wsPayloadToCurves, cloneCurves, curvesEqual } from './utils/data.js';
-import { easeOutCubic, CURVE_COLORS } from './utils/graph-math.js';
+import { easeOutCubic, sampleCurveAt, CURVE_COLORS } from './utils/graph-math.js';
 import './components/curve-graph.js';
 import './components/curve-scrubber.js';
 import './components/curve-legend.js';
@@ -96,7 +96,6 @@ export class LightenerCurveCardEditor extends LitElement {
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-    select,
     input {
       padding: 8px 12px;
       border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
@@ -106,7 +105,6 @@ export class LightenerCurveCardEditor extends LitElement {
       font-size: 14px;
       font-family: inherit;
     }
-    select:focus,
     input:focus {
       outline: none;
       border-color: #2563eb;
@@ -127,17 +125,6 @@ export class LightenerCurveCardEditor extends LitElement {
     this._hass = hass;
   }
 
-  private _getLightEntities(): { id: string; name: string }[] {
-    if (!this._hass?.states) return [];
-    return Object.keys(this._hass.states)
-      .filter((id) => id.startsWith('light.'))
-      .map((id) => ({
-        id,
-        name: this._hass!.states[id]?.attributes?.friendly_name ?? id,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }
-
   private _fireConfigChanged(): void {
     this.dispatchEvent(
       new CustomEvent('config-changed', {
@@ -148,8 +135,8 @@ export class LightenerCurveCardEditor extends LitElement {
     );
   }
 
-  private _onEntityChange(e: Event): void {
-    const value = (e.target as HTMLSelectElement).value;
+  private _onEntityChange(e: CustomEvent): void {
+    const value = e.detail?.value ?? '';
     this._config = { ...this._config, entity: value || undefined };
     this._fireConfigChanged();
   }
@@ -161,7 +148,6 @@ export class LightenerCurveCardEditor extends LitElement {
   }
 
   render() {
-    const entities = this._getLightEntities();
     const currentEntity = (this._config.entity as string) ?? '';
     const currentTitle = (this._config.title as string) ?? '';
 
@@ -169,14 +155,13 @@ export class LightenerCurveCardEditor extends LitElement {
       <div class="form">
         <div class="field">
           <label>Entity</label>
-          <select .value=${currentEntity} @change=${this._onEntityChange}>
-            <option value="">Select a lightener entity...</option>
-            ${entities.map(
-              (e) => html`
-                <option value=${e.id} ?selected=${e.id === currentEntity}>${e.name}</option>
-              `
-            )}
-          </select>
+          <ha-entity-picker
+            .hass=${this._hass}
+            .value=${currentEntity}
+            .includeDomains=${['light']}
+            allow-custom-entity
+            @value-changed=${this._onEntityChange}
+          ></ha-entity-picker>
           <span class="hint"
             >Choose the lightener group whose brightness curves you want to edit.</span
           >
@@ -218,6 +203,9 @@ export class LightenerCurveCard extends LitElement {
   private _boundBeforeUnload: ((e: BeforeUnloadEvent) => void) | null = null;
   private _saveSuccessTimer: ReturnType<typeof setTimeout> | null = null;
   private _cancelAnimFrame: number | null = null;
+  private _previewActive = false;
+  private _previewRafPending = false;
+  private _previewRestoreBrightness: Map<string, number | null> = new Map();
 
   static styles = css`
     :host {
@@ -304,7 +292,21 @@ export class LightenerCurveCard extends LitElement {
       align-items: center;
       justify-content: center;
       gap: 6px;
-      animation: fade-in 0.2s ease;
+      animation: success-fade 2s ease forwards;
+    }
+    @keyframes success-fade {
+      0% {
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      70% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+      }
     }
     .status-icon {
       width: 14px;
@@ -449,6 +451,7 @@ export class LightenerCurveCard extends LitElement {
   private _onBeforeUnload(e: BeforeUnloadEvent): void {
     if (this._isDirty) {
       e.preventDefault();
+      e.returnValue = '';
     }
   }
 
@@ -507,6 +510,66 @@ export class LightenerCurveCard extends LitElement {
 
   private _onScrubberMove(e: CustomEvent): void {
     this._scrubberPosition = e.detail.position;
+    this._previewLights(e.detail.position);
+  }
+
+  private _onScrubberStart(): void {
+    if (!this._hass || this._previewActive) return;
+    this._previewActive = true;
+    // Snapshot current brightness for each controlled light so we can restore on release
+    this._previewRestoreBrightness.clear();
+    for (const curve of this._curves) {
+      const state = this._hass.states[curve.entityId];
+      if (state) {
+        this._previewRestoreBrightness.set(
+          curve.entityId,
+          state.state === 'off' ? null : (state.attributes.brightness ?? null)
+        );
+      }
+    }
+  }
+
+  private _onScrubberEnd(): void {
+    if (!this._previewActive || !this._hass) return;
+    this._previewActive = false;
+    // Restore original brightness for each light
+    for (const [entityId, brightness] of this._previewRestoreBrightness) {
+      if (brightness === null) {
+        this._hass.callService('light', 'turn_off', { entity_id: entityId }).catch(() => {});
+      } else {
+        this._hass
+          .callService('light', 'turn_on', { entity_id: entityId, brightness })
+          .catch(() => {});
+      }
+    }
+    this._previewRestoreBrightness.clear();
+  }
+
+  /** Push interpolated brightness to physical lights, throttled to once per frame. */
+  private _previewLights(position: number): void {
+    if (!this._previewActive || !this._hass || this._previewRafPending) return;
+    this._previewRafPending = true;
+
+    requestAnimationFrame(() => {
+      this._previewRafPending = false;
+      if (!this._previewActive || !this._hass) return;
+
+      for (const curve of this._curves) {
+        if (!curve.visible) continue;
+        const value = Math.round(sampleCurveAt(curve.controlPoints, position));
+        // Convert 0-100% to HA brightness 0-255
+        const brightness = Math.round((value / 100) * 255);
+        if (brightness === 0) {
+          this._hass
+            .callService('light', 'turn_off', { entity_id: curve.entityId })
+            .catch(() => {});
+        } else {
+          this._hass
+            .callService('light', 'turn_on', { entity_id: curve.entityId, brightness })
+            .catch(() => {});
+        }
+      }
+    });
   }
 
   private _onSelectCurve(e: CustomEvent): void {
@@ -735,7 +798,7 @@ export class LightenerCurveCard extends LitElement {
           >
             <path d="M2 20 C6 20, 8 4, 12 4 S18 20, 22 20" />
           </svg>
-          <h2>Brightness Curves</h2>
+          <h2>${(this._config.title as string) ?? 'Brightness Curves'}</h2>
         </div>
 
         ${this._loading
@@ -759,6 +822,8 @@ export class LightenerCurveCard extends LitElement {
           .curves=${this._curves}
           .readOnly=${!this._isAdmin}
           @scrubber-move=${this._onScrubberMove}
+          @scrubber-start=${this._onScrubberStart}
+          @scrubber-end=${this._onScrubberEnd}
         ></curve-scrubber>
 
         <curve-legend

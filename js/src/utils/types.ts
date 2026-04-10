@@ -15,5 +15,9 @@ export interface LightCurve {
 export interface Hass {
   user: { is_admin: boolean };
   callWS: <T>(msg: Record<string, unknown>) => Promise<T>;
-  states: Record<string, { attributes: { friendly_name?: string } }>;
+  callService: (domain: string, service: string, data?: Record<string, unknown>) => Promise<void>;
+  states: Record<
+    string,
+    { attributes: { friendly_name?: string; brightness?: number }; state: string }
+  >;
 }
