@@ -1,11 +1,17 @@
 """WebSocket API for Lightener curve editor."""
 
+import logging
+from time import monotonic
+
 import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 
 from .const import DOMAIN
+from .observability import end_span, entity_ref, log_event, metric, start_span
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def async_register_commands(hass: HomeAssistant) -> None:
@@ -31,12 +37,34 @@ def ws_get_curves(
 ) -> None:
     """Return brightness curves for a Lightener entity."""
     entity_id = msg["entity_id"]
+    op_started = monotonic()
+    span = start_span(
+        _LOGGER,
+        "lightener.ws.get_curves",
+        message_id=msg["id"],
+        lightener_entity_ref=entity_ref(entity_id),
+    )
 
     # Find the config entry for this entity
     entity_registry = async_get_entity_registry(hass)
     entry = entity_registry.async_get(entity_id)
 
     if entry is None or entry.platform != DOMAIN:
+        metric(
+            _LOGGER,
+            "lightener.ws.get_curves.not_found_total",
+            "counter",
+            1,
+        )
+        log_event(
+            _LOGGER,
+            logging.WARNING,
+            "lightener.ws.get_curves.not_found",
+            trace_id=span.trace_id,
+            span_id=span.span_id,
+            lightener_entity_ref=entity_ref(entity_id),
+        )
+        end_span(_LOGGER, span, status="error", error_code="not_found")
         connection.send_error(
             msg["id"], "not_found", f"Entity {entity_id} is not a Lightener entity"
         )
@@ -44,12 +72,39 @@ def ws_get_curves(
 
     config_entry = hass.config_entries.async_get_entry(entry.config_entry_id)
     if config_entry is None:
+        metric(
+            _LOGGER,
+            "lightener.ws.get_curves.not_found_total",
+            "counter",
+            1,
+            cause="missing_config_entry",
+        )
+        end_span(_LOGGER, span, status="error", error_code="missing_config_entry")
         connection.send_error(msg["id"], "not_found", "Config entry not found")
         return
 
     entities = config_entry.data.get("entities", {})
+    duration_ms = (monotonic() - op_started) * 1000
 
     connection.send_result(msg["id"], {"entities": entities})
+    metric(
+        _LOGGER,
+        "lightener.ws.get_curves.duration_ms",
+        "histogram",
+        round(duration_ms, 2),
+    )
+    metric(
+        _LOGGER,
+        "lightener.ws.get_curves.entities_returned",
+        "gauge",
+        len(entities),
+    )
+    end_span(
+        _LOGGER,
+        span,
+        status="ok",
+        entities_returned=len(entities),
+    )
 
 
 @websocket_api.websocket_command(
@@ -64,6 +119,8 @@ def ws_list_entities(
     msg: dict,
 ) -> None:
     """Return all Lightener light entities."""
+    op_started = monotonic()
+    span = start_span(_LOGGER, "lightener.ws.list_entities", message_id=msg["id"])
     entity_registry = async_get_entity_registry(hass)
     entities = []
 
@@ -84,6 +141,25 @@ def ws_list_entities(
 
     entities.sort(key=lambda item: item["name"])
     connection.send_result(msg["id"], {"entities": entities})
+    duration_ms = (monotonic() - op_started) * 1000
+    metric(
+        _LOGGER,
+        "lightener.ws.list_entities.duration_ms",
+        "histogram",
+        round(duration_ms, 2),
+    )
+    metric(
+        _LOGGER,
+        "lightener.ws.list_entities.returned",
+        "gauge",
+        len(entities),
+    )
+    end_span(
+        _LOGGER,
+        span,
+        status="ok",
+        returned_entities=len(entities),
+    )
 
 
 @websocket_api.require_admin
@@ -103,12 +179,29 @@ async def ws_save_curves(
     """Save brightness curves for a Lightener entity."""
     entity_id = msg["entity_id"]
     curves = msg["curves"]
+    op_started = monotonic()
+    span = start_span(
+        _LOGGER,
+        "lightener.ws.save_curves",
+        message_id=msg["id"],
+        lightener_entity_ref=entity_ref(entity_id),
+        input_curve_entities=len(curves),
+    )
+    metric(_LOGGER, "lightener.ws.save_curves.requests_total", "counter", 1)
 
     # Find the config entry
     entity_registry = async_get_entity_registry(hass)
     entry = entity_registry.async_get(entity_id)
 
     if entry is None or entry.platform != DOMAIN:
+        metric(
+            _LOGGER,
+            "lightener.ws.save_curves.validation_errors_total",
+            "counter",
+            1,
+            error_code="not_found",
+        )
+        end_span(_LOGGER, span, status="error", error_code="not_found")
         connection.send_error(
             msg["id"],
             "not_found",
@@ -118,24 +211,58 @@ async def ws_save_curves(
 
     config_entry = hass.config_entries.async_get_entry(entry.config_entry_id)
     if config_entry is None:
+        metric(
+            _LOGGER,
+            "lightener.ws.save_curves.validation_errors_total",
+            "counter",
+            1,
+            error_code="missing_config_entry",
+        )
+        end_span(_LOGGER, span, status="error", error_code="missing_config_entry")
         connection.send_error(msg["id"], "not_found", "Config entry not found")
         return
 
     # Validate curves
     for controlled_entity_id, entity_data in curves.items():
         if not isinstance(entity_data, dict):
+            metric(
+                _LOGGER,
+                "lightener.ws.save_curves.validation_errors_total",
+                "counter",
+                1,
+                error_code="invalid_entity_payload",
+            )
             connection.send_error(
                 msg["id"],
                 "invalid_format",
                 f"Curve payload for {controlled_entity_id} must be an object",
             )
+            end_span(
+                _LOGGER,
+                span,
+                status="error",
+                error_code="invalid_entity_payload",
+            )
             return
         brightness = entity_data.get("brightness", {})
         if not isinstance(brightness, dict):
+            metric(
+                _LOGGER,
+                "lightener.ws.save_curves.validation_errors_total",
+                "counter",
+                1,
+                error_code="invalid_brightness_payload",
+            )
             connection.send_error(
                 msg["id"],
                 "invalid_format",
                 f"Brightness payload for {controlled_entity_id} must be an object",
+            )
+            end_span(
+                _LOGGER,
+                span,
+                status="error",
+                error_code="invalid_brightness_payload",
             )
             return
         for k, v in brightness.items():
@@ -143,25 +270,64 @@ async def ws_save_curves(
                 key = int(k)
                 value = int(v)
             except (ValueError, TypeError):
+                metric(
+                    _LOGGER,
+                    "lightener.ws.save_curves.validation_errors_total",
+                    "counter",
+                    1,
+                    error_code="non_numeric_curve_value",
+                )
                 connection.send_error(
                     msg["id"],
                     "invalid_format",
                     f"Brightness values must be numeric: {k}: {v}",
                 )
+                end_span(
+                    _LOGGER,
+                    span,
+                    status="error",
+                    error_code="non_numeric_curve_value",
+                )
                 return
 
             if key < 1 or key > 100:
+                metric(
+                    _LOGGER,
+                    "lightener.ws.save_curves.validation_errors_total",
+                    "counter",
+                    1,
+                    error_code="curve_level_out_of_range",
+                )
                 connection.send_error(
                     msg["id"],
                     "invalid_format",
                     f"Brightness level must be 1-100, got {key}",
                 )
+                end_span(
+                    _LOGGER,
+                    span,
+                    status="error",
+                    error_code="curve_level_out_of_range",
+                )
                 return
             if value < 0 or value > 100:
+                metric(
+                    _LOGGER,
+                    "lightener.ws.save_curves.validation_errors_total",
+                    "counter",
+                    1,
+                    error_code="curve_value_out_of_range",
+                )
                 connection.send_error(
                     msg["id"],
                     "invalid_format",
                     f"Brightness value must be 0-100, got {value}",
+                )
+                end_span(
+                    _LOGGER,
+                    span,
+                    status="error",
+                    error_code="curve_value_out_of_range",
                 )
                 return
 
@@ -172,9 +338,25 @@ async def ws_save_curves(
     # Reject unknown entity IDs instead of silently dropping them
     unknown = [eid for eid in curves if eid not in new_entities]
     if unknown:
+        metric(
+            _LOGGER,
+            "lightener.ws.save_curves.validation_errors_total",
+            "counter",
+            1,
+            error_code="unknown_entities",
+        )
+        log_event(
+            _LOGGER,
+            logging.WARNING,
+            "lightener.ws.save_curves.unknown_entities",
+            trace_id=span.trace_id,
+            span_id=span.span_id,
+            unknown_entities_count=len(unknown),
+        )
         connection.send_error(
             msg["id"], "unknown_entities", f"Unknown entity IDs: {unknown}"
         )
+        end_span(_LOGGER, span, status="error", error_code="unknown_entities")
         return
 
     for controlled_entity_id, entity_data in curves.items():
@@ -192,3 +374,31 @@ async def ws_save_curves(
     await hass.config_entries.async_reload(config_entry.entry_id)
 
     connection.send_result(msg["id"])
+    duration_ms = (monotonic() - op_started) * 1000
+    metric(
+        _LOGGER,
+        "lightener.ws.save_curves.duration_ms",
+        "histogram",
+        round(duration_ms, 2),
+    )
+    metric(
+        _LOGGER,
+        "lightener.ws.save_curves.updated_entities",
+        "gauge",
+        len(curves),
+    )
+    log_event(
+        _LOGGER,
+        logging.INFO,
+        "lightener.ws.save_curves.success",
+        trace_id=span.trace_id,
+        span_id=span.span_id,
+        updated_entities=len(curves),
+        duration_ms=round(duration_ms, 2),
+    )
+    end_span(
+        _LOGGER,
+        span,
+        status="ok",
+        updated_entities=len(curves),
+    )

@@ -8,6 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Structured observability layer (`observability.py`): every `turn_on`, `turn_off`, and WebSocket call now emits trace spans, counters, histograms, and structured log events that can be consumed by any log aggregator
+
+### Changed
+
+- `async_update_group_state` now uses an O(1) dict lookup (`_entities_by_id`) instead of a nested O(n) scan, with early exit once the common-level intersection empties — faster state convergence when controlling many lights
+- Brightness map construction is now cached via `lru_cache`: lights sharing an identical curve config reuse precomputed maps instead of rebuilding them at startup
+- Test dependency bumps: pytest 8→9, pytest-asyncio, pytest-homeassistant-custom-component (includes pycares constraint update)
+- JS dev dependency bumps: `@rollup/plugin-terser` 0.4→1.0 (fixes high-severity CVEs in serialize-javascript), vitest 4.1.2→4.1.4 (fixes path-traversal and WebSocket file-read CVEs in vite)
+
+### Fixed
+
+- `async_update_group_state` early-exit no longer skips `is_lightener_change` context detection for unprocessed entities; brightness display after a Lightener-initiated change now correctly uses the preferred level even when levels intersection empties before all entities are visited
+
+### Added
+
 - Visual card configuration editor (`lightener-curve-card-editor`) with HA-native entity picker and optional custom title
 - Live light preview: scrubbing the brightness slider pushes interpolated brightness to physical lights in real-time via `light.turn_on`/`turn_off`; brightness restores on release
 - Card header now renders from `config.title` with "Brightness Curves" as default
