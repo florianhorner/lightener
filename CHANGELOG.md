@@ -8,7 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Visual card configuration editor (`lightener-curve-card-editor`) with Lightener entity picker and optional custom title
+- Visual card configuration editor (`lightener-curve-card-editor`) with HA-native entity picker and optional custom title
+- Live light preview: scrubbing the brightness slider pushes interpolated brightness to physical lights in real-time via `light.turn_on`/`turn_off`; brightness restores on release
+- Card header now renders from `config.title` with "Brightness Curves" as default
 - `DEFAULT_BRIGHTNESS` constant in `const.py` for consistent default curves across config flow and light platform
 - Built-in config-flow curve presets (`linear`, `dim_accent`, `late_starter`, `night_mode`) for onboarding without manual curve authoring
 - Dedicated Home Assistant sidebar panel (`/lightener-editor`) that hosts the curve editor without requiring manual dashboard card setup
@@ -43,6 +45,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - WebSocket curve saves now reject unknown entities and malformed per-entity brightness payload shapes
 - Release workflow now injects tag version via shell env expansion so manifest version updates resolve reliably
 - Integration setup now tolerates sidebar panel registration failures without blocking startup
+- Badge text contrast: yellow and orange curve badges now use darkened text to pass WCAG AA
+- SVG axis labels and hints scale to 12px on mobile (was 9-10px)
+- Control point hit circles increased to 44px minimum touch target on small phones
+- Hint text now reads "Dbl-click to add, Right-click or long-press to remove" (was touch-only phrasing)
+- Success message fades in and out smoothly instead of disappearing abruptly
+- `beforeunload` dialog now works in Firefox (added `returnValue`)
+- Legend eye toggle now includes `aria-pressed` for screen reader toggle state
 
 ## [2.9.0] - 2026-04-06
 

@@ -10,6 +10,8 @@ Lightener is a Home Assistant integration used to create virtual lights that can
 
 **[Try the live demo](https://florianhorner.github.io/lightener-curve-editor/)** — interactive curve editor with light/dark theme toggle, no install needed.
 
+![Lightener Curve Editor — light and dark mode side by side](.github/assets/lightener-curve-editor-screenshot.png)
+
 ## What This Fork Adds
 
 ### Curve Editor Card (`custom:lightener-curve-card`)
@@ -27,7 +29,9 @@ A visual editor for per-light brightness curves, directly in your HA dashboard �
 - **Scales from 2 to 20+ lights**: badges cap at 2 rows and long names truncate cleanly
 - **Mobile-friendly**: touch-optimised controls with 44px touch targets
 - **Mobile long-press delete**: remove a control point by long-pressing it on touch devices
-- **Visual card editor**: Home Assistant card config UI with entity picker and optional title field
+- **Live light preview**: drag the scrubber to push real brightness to your physical lights in real-time, then release to restore
+- **Custom card title**: set a title in the card config or keep the default "Brightness Curves"
+- **Visual card editor**: Home Assistant card config UI with native entity picker and optional title field
 - **Admin-only editing**: non-admin users see curves in read-only mode
 
 ### WebSocket API
