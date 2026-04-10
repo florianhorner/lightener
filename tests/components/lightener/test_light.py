@@ -558,6 +558,24 @@ async def test_lightener_light_entity_calculated_levels(hass):
     assert light.levels[255] == 0
 
 
+async def test_lightener_light_entity_reuses_cached_maps_for_same_config(hass):
+    """Identical curve configs should reuse the derived brightness maps."""
+
+    config = {
+        "brightness": {
+            "10": "100",
+            "50": "25",
+        }
+    }
+
+    first = LightenerControlledLight("light.test1", config, hass)
+    second = LightenerControlledLight("light.test2", config, hass)
+
+    assert first.levels is second.levels
+    assert first.to_lightener_levels is second.to_lightener_levels
+    assert first.to_lightener_levels_on_off is second.to_lightener_levels_on_off
+
+
 async def test_lightener_light_entity_calculated_to_lightner_levels(hass):
     """Test the calculation of brigthness levels."""
 

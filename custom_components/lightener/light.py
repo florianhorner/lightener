@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from functools import lru_cache
+from time import monotonic
 from types import MappingProxyType
 from typing import Any
 
@@ -36,6 +38,7 @@ from homeassistant.util.color import value_to_brightness
 
 from . import async_migrate_data
 from .const import DOMAIN, TYPE_ONOFF
+from .observability import end_span, entity_ref, log_event, metric, start_span
 from .util import get_light_type
 
 _LOGGER = logging.getLogger(__name__)
@@ -133,6 +136,7 @@ class LightenerLight(LightGroup):
             )
 
         self._entities = entities
+        self._entities_by_id = {entity.entity_id: entity for entity in entities}
 
         _LOGGER.debug(
             "Created lightener `%s`",
@@ -206,18 +210,58 @@ class LightenerLight(LightGroup):
         else:
             self._prefered_brightness = brightness
 
-        _LOGGER.debug(
-            "[Turn On] Attempting to set brightness of `%s` to `%s`",
-            self.entity_id,
-            brightness,
+        operation_start = monotonic()
+        root_span = start_span(
+            _LOGGER,
+            "lightener.turn_on",
+            lightener_entity_ref=entity_ref(self.entity_id or "unknown"),
+            managed_entities=len(self._entities),
+            requested_brightness=brightness,
+        )
+
+        metric(
+            _LOGGER,
+            "lightener.turn_on.requests_total",
+            "counter",
+            1,
+            lightener_entity_ref=entity_ref(self.entity_id or "unknown"),
+        )
+        metric(
+            _LOGGER,
+            "lightener.turn_on.target_entities",
+            "gauge",
+            len(self._entities),
+            lightener_entity_ref=entity_ref(self.entity_id or "unknown"),
+        )
+        log_event(
+            _LOGGER,
+            logging.INFO,
+            "lightener.turn_on.start",
+            trace_id=root_span.trace_id,
+            span_id=root_span.span_id,
+            lightener_entity_ref=entity_ref(self.entity_id or "unknown"),
+            managed_entities=len(self._entities),
+            requested_brightness=brightness,
         )
 
         self._is_frozen = True
+        service_failures = 0
+        operation_error: Exception | None = None
 
         async def _safe_service_call(
             entity: LightenerControlledLight, service: str, entity_data: dict
         ) -> None:
             """Call a service for an entity, logging success and guarding failures."""
+            nonlocal service_failures
+            child_span = start_span(
+                _LOGGER,
+                "lightener.turn_on.service_call",
+                trace_id=root_span.trace_id,
+                parent_span_id=root_span.span_id,
+                service=service,
+                controlled_entity_ref=entity_ref(entity.entity_id),
+            )
+            call_started = monotonic()
             try:
                 await self.hass.services.async_call(
                     LIGHT_DOMAIN,
@@ -226,55 +270,123 @@ class LightenerLight(LightGroup):
                     blocking=True,
                     context=self._context,
                 )
-                _LOGGER.debug(
-                    "Service `%s` called for `%s` (%s) with `%s`",
-                    service,
-                    entity.entity_id,
-                    entity.type,
-                    entity_data,
+                duration_ms = (monotonic() - call_started) * 1000
+                metric(
+                    _LOGGER,
+                    "lightener.turn_on.service_call.duration_ms",
+                    "histogram",
+                    round(duration_ms, 2),
+                    service=service,
+                )
+                log_event(
+                    _LOGGER,
+                    logging.DEBUG,
+                    "lightener.turn_on.service_call.success",
+                    trace_id=root_span.trace_id,
+                    span_id=child_span.span_id,
+                    service=service,
+                    controlled_entity_ref=entity_ref(entity.entity_id),
+                    controlled_light_type=entity.type,
+                    duration_ms=round(duration_ms, 2),
+                )
+                end_span(
+                    _LOGGER,
+                    child_span,
+                    status="ok",
+                    controlled_entity_ref=entity_ref(entity.entity_id),
                 )
             except Exception as exc:
-                _LOGGER.exception(
-                    "Service `%s` for `%s` (%s) failed: %s; payload=%s",
-                    service,
-                    entity.entity_id,
-                    entity.type,
-                    exc,
-                    entity_data,
+                service_failures += 1
+                metric(
+                    _LOGGER,
+                    "lightener.turn_on.service_call.failures_total",
+                    "counter",
+                    1,
+                    service=service,
+                )
+                log_event(
+                    _LOGGER,
+                    logging.ERROR,
+                    "lightener.turn_on.service_call.failure",
+                    trace_id=root_span.trace_id,
+                    span_id=child_span.span_id,
+                    service=service,
+                    controlled_entity_ref=entity_ref(entity.entity_id),
+                    controlled_light_type=entity.type,
+                    error_type=type(exc).__name__,
+                )
+                _LOGGER.exception("lightener service call failure")
+                end_span(
+                    _LOGGER,
+                    child_span,
+                    status="error",
+                    controlled_entity_ref=entity_ref(entity.entity_id),
+                    error_type=type(exc).__name__,
                 )
 
-        async with asyncio.TaskGroup() as group:
-            for entity in self._entities:
-                service = SERVICE_TURN_ON
-                entity_brightness = None
+        try:
+            async with asyncio.TaskGroup() as group:
+                for entity in self._entities:
+                    service = SERVICE_TURN_ON
+                    entity_brightness = None
 
-                # If the brightness is being set in the lightener, translate it to the entity level.
-                if brightness is not None:
-                    entity_brightness = entity.translate_brightness(brightness)
-
-                # If the light brightness level is zero, we turn it off instead.
-                if entity_brightness == 0:
-                    service = SERVICE_TURN_OFF
-                    entity_data = {}
-
-                    # "Transition" is the only additional data allowed with the turn_off service.
-                    if ATTR_TRANSITION in data:
-                        entity_data[ATTR_TRANSITION] = data[ATTR_TRANSITION]
-                else:
-                    # Make a copy of the data being sent to the lightener call so we can modify it.
-                    entity_data = data.copy()
-
-                    # Set the translated brightness level.
+                    # If the brightness is being set in the lightener, translate it to the entity level.
                     if brightness is not None:
-                        entity_data[ATTR_BRIGHTNESS] = entity_brightness
+                        entity_brightness = entity.translate_brightness(brightness)
 
-                # Set the proper entity ID.
-                entity_data[ATTR_ENTITY_ID] = entity.entity_id
+                    # If the light brightness level is zero, we turn it off instead.
+                    if entity_brightness == 0:
+                        service = SERVICE_TURN_OFF
+                        entity_data = {}
 
-                # Submit the service call concurrently, guarded to avoid cancelling siblings on failure.
-                group.create_task(_safe_service_call(entity, service, entity_data))
+                        # "Transition" is the only additional data allowed with the turn_off service.
+                        if ATTR_TRANSITION in data:
+                            entity_data[ATTR_TRANSITION] = data[ATTR_TRANSITION]
+                    else:
+                        # Make a copy of the data being sent to the lightener call so we can modify it.
+                        entity_data = data.copy()
 
-        self._is_frozen = False
+                        # Set the translated brightness level.
+                        if brightness is not None:
+                            entity_data[ATTR_BRIGHTNESS] = entity_brightness
+
+                    # Set the proper entity ID.
+                    entity_data[ATTR_ENTITY_ID] = entity.entity_id
+
+                    # Submit the service call concurrently, guarded to avoid cancelling siblings on failure.
+                    group.create_task(_safe_service_call(entity, service, entity_data))
+        except Exception as exc:
+            operation_error = exc
+            raise
+        finally:
+            self._is_frozen = False
+
+            duration_ms = (monotonic() - operation_start) * 1000
+            metric(
+                _LOGGER,
+                "lightener.turn_on.duration_ms",
+                "histogram",
+                round(duration_ms, 2),
+                lightener_entity_ref=entity_ref(self.entity_id or "unknown"),
+            )
+            log_event(
+                _LOGGER,
+                logging.INFO,
+                "lightener.turn_on.complete",
+                trace_id=root_span.trace_id,
+                span_id=root_span.span_id,
+                lightener_entity_ref=entity_ref(self.entity_id or "unknown"),
+                service_failures=service_failures,
+                duration_ms=round(duration_ms, 2),
+                error_type=type(operation_error).__name__ if operation_error else None,
+            )
+            end_span(
+                _LOGGER,
+                root_span,
+                status="error" if service_failures or operation_error else "ok",
+                service_failures=service_failures,
+                error_type=type(operation_error).__name__ if operation_error else None,
+            )
 
         # Define a coroutine as a ha task.
         async def _async_refresh() -> None:
@@ -289,17 +401,52 @@ class LightenerLight(LightGroup):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off all lights controlled by this Lightener."""
+        root_span = start_span(
+            _LOGGER,
+            "lightener.turn_off",
+            lightener_entity_ref=entity_ref(self.entity_id or "unknown"),
+            managed_entities=len(self._entities),
+        )
+        op_started = monotonic()
+        op_error: Exception | None = None
         self._is_frozen = True
 
         self._prefered_brightness = self._attr_brightness
 
-        await super().async_turn_off(**kwargs)
+        try:
+            await super().async_turn_off(**kwargs)
+        except Exception as exc:
+            op_error = exc
+            raise
+        finally:
+            self._is_frozen = False
 
-        _LOGGER.debug("[Turn Off] Turned off `%s`", self.entity_id)
-
-        self._is_frozen = False
-        self.async_update_group_state()
-        self.async_write_ha_state()
+            self.async_update_group_state()
+            self.async_write_ha_state()
+            duration_ms = (monotonic() - op_started) * 1000
+            metric(
+                _LOGGER,
+                "lightener.turn_off.duration_ms",
+                "histogram",
+                round(duration_ms, 2),
+                lightener_entity_ref=entity_ref(self.entity_id or "unknown"),
+            )
+            log_event(
+                _LOGGER,
+                logging.INFO,
+                "lightener.turn_off.complete",
+                trace_id=root_span.trace_id,
+                span_id=root_span.span_id,
+                lightener_entity_ref=entity_ref(self.entity_id or "unknown"),
+                duration_ms=round(duration_ms, 2),
+                error_type=type(op_error).__name__ if op_error else None,
+            )
+            end_span(
+                _LOGGER,
+                root_span,
+                status="error" if op_error else "ok",
+                error_type=type(op_error).__name__ if op_error else None,
+            )
 
     async def turn_on(self, **kwargs: Any) -> None:
         """Turn the lights controlled by this Lightener on."""
@@ -330,52 +477,59 @@ class LightenerLight(LightGroup):
         if self.is_on:
             # Calculates the brighteness by checking if the current levels in al controlled lights
             # preciselly match one of the possible values for this lightener.
-            levels = []
+            common_levels: set[int] | None = None
             for entity_id in self._entity_ids:
                 state = self.hass.states.get(entity_id)
 
                 # State may return None if the entity is not available, so we ignore it.
                 if state is not None:
-                    for entity in self._entities:
-                        if entity.entity_id == state.entity_id:
-                            # Check if the entity state change is caused by this Lightener.
-                            is_lightener_change = (
-                                True
-                                if is_lightener_change
-                                else (
-                                    state.context
-                                    and self._context
-                                    and state.context.id == self._context.id
-                                )
-                            )
+                    entity = self._entities_by_id.get(state.entity_id)
+                    if entity is None:
+                        continue
 
-                            if state.state == STATE_ON:
-                                entity_brightness = state.attributes.get(
-                                    ATTR_BRIGHTNESS, 255
-                                )
-                            else:
-                                entity_brightness = 0
+                    # Check if the entity state change is caused by this Lightener.
+                    is_lightener_change = (
+                        True
+                        if is_lightener_change
+                        else (
+                            state.context
+                            and self._context
+                            and state.context.id == self._context.id
+                        )
+                    )
 
-                            _LOGGER.debug(
-                                "Current brightness of `%s` is `%s`",
-                                entity.entity_id,
-                                entity_brightness,
-                            )
+                    if state.state == STATE_ON:
+                        entity_brightness = state.attributes.get(ATTR_BRIGHTNESS, 255)
+                    else:
+                        entity_brightness = 0
 
-                            if entity_brightness is not None:
-                                levels.append(
-                                    entity.translate_brightness_back(entity_brightness)
-                                )
-                            else:
-                                levels.append([])
+                    _LOGGER.debug(
+                        "Current brightness of `%s` is `%s`",
+                        entity.entity_id,
+                        entity_brightness,
+                    )
 
-            if levels:
+                    if entity_brightness is not None:
+                        entity_levels = set(
+                            entity.translate_brightness_back(entity_brightness)
+                        )
+                    else:
+                        entity_levels = set()
+
+                    if common_levels is None:
+                        common_levels = entity_levels
+                    else:
+                        common_levels.intersection_update(entity_levels)
+
+                    if not common_levels:
+                        break
+
+            if common_levels:
                 # If the current lightener level is not present in the possible levels of the controlled lights.
-                if len({self._prefered_brightness}.intersection(*map(set, levels))) > 0:
+                if self._prefered_brightness in common_levels:
                     common_level = {self._prefered_brightness}
                 else:
-                    # Build a list of levels which are common for all lights.
-                    common_level = set.intersection(*map(set, levels))
+                    common_level = common_levels
 
         if common_level:
             # Use the common level if any was found.
@@ -429,12 +583,8 @@ class LightenerControlledLight:
         brightness_config = prepare_brightness_config(config.get("brightness", {}))
 
         # Create the brightness conversion maps (from lightener to entity and from entity to lightener).
-        self.levels = create_brightness_map(brightness_config)
-        self.to_lightener_levels = create_reverse_brightness_map(
-            brightness_config, self.levels
-        )
-        self.to_lightener_levels_on_off = create_reverse_brightness_map_on_off(
-            self.to_lightener_levels
+        self.levels, self.to_lightener_levels, self.to_lightener_levels_on_off = (
+            build_brightness_maps(tuple(brightness_config))
         )
 
     @property
@@ -520,6 +670,20 @@ def create_brightness_map(config: list) -> dict:
     return brightness_map
 
 
+@lru_cache(maxsize=128)
+def build_brightness_maps(
+    config: tuple[tuple[int, int], ...],
+) -> tuple[dict, dict, dict]:
+    """Build and cache brightness maps for identical curve configs."""
+    levels = create_brightness_map(config)
+    reverse_brightness_map = create_reverse_brightness_map(config, levels)
+    reverse_brightness_map_on_off = create_reverse_brightness_map_on_off(
+        reverse_brightness_map
+    )
+
+    return levels, reverse_brightness_map, reverse_brightness_map_on_off
+
+
 def create_reverse_brightness_map(config: list, lightener_levels: dict) -> dict:
     """Create a map with all entity level (from 0 to 255) to all possible lightener levels at each entity level.
 
@@ -558,7 +722,8 @@ def create_reverse_brightness_map_on_off(reverse_map: dict) -> dict:
     """Create a reversed map dedicated to on/off lights."""
 
     # Build the "on" state out of all levels which are not in the "off" state.
-    on_levels = [i for i in range(1, 256) if i not in reverse_map[0]]
+    off_levels = set(reverse_map[0])
+    on_levels = [i for i in range(1, 256) if i not in off_levels]
 
     # The "on" levels are possible for all non-zero levels.
     reverse_map_on_off = dict.fromkeys(range(1, 256), on_levels)
