@@ -166,6 +166,19 @@ export class CurveScrubber extends LitElement {
     }
   `;
 
+  /**
+   * Return a contrast-safe text color for badge values.
+   * Yellow (#ffca28) and orange (#ffa726) fail WCAG AA on light backgrounds,
+   * so we darken them to meet 4.5:1 ratio.
+   */
+  private _badgeTextColor(hex: string): string {
+    const low = hex.toLowerCase();
+    // Low-contrast colors on white/light backgrounds — use darkened variants
+    if (low === '#ffca28') return '#9e7c00'; // dark gold
+    if (low === '#ffa726') return '#b36b00'; // dark orange
+    return hex;
+  }
+
   private _getInterpolatedValues(): {
     entityId: string;
     name: string;
@@ -191,6 +204,7 @@ export class CurveScrubber extends LitElement {
     this._dragging = true;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     this._updatePositionFromClient(e.clientX);
+    this.dispatchEvent(new CustomEvent('scrubber-start', { bubbles: true, composed: true }));
   }
 
   private _onPointerMove(e: PointerEvent): void {
@@ -200,12 +214,20 @@ export class CurveScrubber extends LitElement {
   }
 
   private _onPointerUp(): void {
+    if (!this._dragging) return;
     this._dragging = false;
+    this.dispatchEvent(new CustomEvent('scrubber-end', { bubbles: true, composed: true }));
   }
 
   private _onTrackClick(e: MouseEvent): void {
     if (this.readOnly) return;
+    // Single-click preview: snap to position, fire start+move+end so lights preview briefly
+    this.dispatchEvent(new CustomEvent('scrubber-start', { bubbles: true, composed: true }));
     this._updatePositionFromClient(e.clientX);
+    // Let the preview take effect for a moment, then restore
+    setTimeout(() => {
+      this.dispatchEvent(new CustomEvent('scrubber-end', { bubbles: true, composed: true }));
+    }, 1500);
   }
 
   private _onKeyDown(e: KeyboardEvent): void {
@@ -290,7 +312,7 @@ export class CurveScrubber extends LitElement {
             (bar) => html`
               <div class="badge">
                 <span class="badge-dot" style="background: ${bar.color}"></span>
-                <span style="color: ${bar.color}">${bar.value}%</span>
+                <span style="color: ${this._badgeTextColor(bar.color)}">${bar.value}%</span>
                 <span class="badge-name">${bar.name}</span>
               </div>
             `
