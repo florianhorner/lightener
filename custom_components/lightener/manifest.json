@@ -3,7 +3,7 @@
   "name": "Lightener",
   "codeowners": ["@florianhorner"],
   "config_flow": true,
-  "dependencies": ["http", "frontend"],
+  "dependencies": ["http"],
   "documentation": "https://github.com/florianhorner/lightener-curve-editor#readme",
   "integration_type": "device",
   "iot_class": "local_push",
