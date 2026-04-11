@@ -8,6 +8,10 @@ class LightenerEditorPanel extends HTMLElement {
     this._cardScriptPromise = null;
     this._lightenerEntities = null;
     this._loadingEntities = false;
+    this._requestedConfigEntryId = null;
+    try {
+      this._requestedConfigEntryId = new URLSearchParams(window.location.search).get("config_entry");
+    } catch (err) {}
   }
 
   set hass(hass) {
@@ -49,8 +53,16 @@ class LightenerEditorPanel extends HTMLElement {
   }
 
   _getEditorEntities() {
-    if (Array.isArray(this._lightenerEntities) && this._lightenerEntities.length) {
-      return this._lightenerEntities;
+    if (Array.isArray(this._lightenerEntities)) {
+      if (this._requestedConfigEntryId) {
+        return this._lightenerEntities.filter((entity) => entity.config_entry_id === this._requestedConfigEntryId);
+      }
+      if (this._lightenerEntities.length) {
+        return this._lightenerEntities;
+      }
+    }
+    if (this._requestedConfigEntryId) {
+      return [];
     }
     return this._getFallbackEntities();
   }
@@ -92,8 +104,21 @@ class LightenerEditorPanel extends HTMLElement {
     await this._cardScriptPromise;
   }
 
+  _clearCard() {
+    const mount = this.shadowRoot.querySelector("#card-mount");
+    if (mount) {
+      mount.replaceChildren();
+    }
+    this._card = null;
+  }
+
   async _syncCard() {
-    if (!this._hass || !this._selectedEntity) {
+    if (!this._selectedEntity) {
+      this._clearCard();
+      return;
+    }
+
+    if (!this._hass) {
       return;
     }
 
@@ -104,6 +129,7 @@ class LightenerEditorPanel extends HTMLElement {
       if (mount) {
         mount.innerHTML = `<div class="error">Failed to load curve editor card. Check browser console.</div>`;
       }
+      this._card = null;
       return;
     }
 
@@ -124,65 +150,78 @@ class LightenerEditorPanel extends HTMLElement {
   _render() {
     const entities = this._getEditorEntities();
 
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-          padding: 16px;
-          box-sizing: border-box;
-        }
-        .shell {
-          max-width: 1100px;
-          margin: 0 auto;
-        }
-        h1 {
-          margin: 0 0 12px;
-          font-size: 1.35rem;
-          line-height: 1.2;
-        }
-        p {
-          margin: 0 0 12px;
-          color: var(--secondary-text-color);
-        }
-        label {
-          display: block;
-          margin: 0 0 6px;
-          font-size: 0.9rem;
-          color: var(--secondary-text-color);
-        }
-        select {
-          width: 100%;
-          max-width: 720px;
-          height: 40px;
-          padding: 0 10px;
-          border-radius: 8px;
-          border: 1px solid var(--divider-color);
-          background: var(--card-background-color);
-          color: var(--primary-text-color);
-          margin-bottom: 16px;
-        }
-        .hint {
-          font-size: 0.9rem;
-          margin-bottom: 16px;
-        }
-        .error {
-          color: var(--error-color);
-        }
-      </style>
-      <div class="shell">
-        <h1>Lightener Curve Editor</h1>
-        <p>Pick a Lightener light entity and edit its curves directly here.</p>
-        <label for="entity-select">Light entity</label>
-        <select id="entity-select"></select>
-        <div id="status-msg"></div>
-        <div id="card-mount"></div>
-      </div>
-    `;
+    // Build the DOM structure only once so that #card-mount and its contents
+    // (the curve editor card) are never wiped on subsequent hass updates.
+    if (!this.shadowRoot.querySelector("#entity-select")) {
+      this.shadowRoot.innerHTML = `
+        <style>
+          :host {
+            display: block;
+            padding: 16px;
+            box-sizing: border-box;
+          }
+          .shell {
+            max-width: 1100px;
+            margin: 0 auto;
+          }
+          h1 {
+            margin: 0 0 12px;
+            font-size: 1.35rem;
+            line-height: 1.2;
+          }
+          p {
+            margin: 0 0 12px;
+            color: var(--secondary-text-color);
+          }
+          label {
+            display: block;
+            margin: 0 0 6px;
+            font-size: 0.9rem;
+            color: var(--secondary-text-color);
+          }
+          select {
+            width: 100%;
+            max-width: 720px;
+            height: 40px;
+            padding: 0 10px;
+            border-radius: 8px;
+            border: 1px solid var(--divider-color);
+            background: var(--card-background-color);
+            color: var(--primary-text-color);
+            margin-bottom: 16px;
+          }
+          .hint {
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+          }
+          .error {
+            color: var(--error-color);
+          }
+        </style>
+        <div class="shell">
+          <h1>Lightener Curve Editor</h1>
+          <p>Pick a Lightener light entity and edit its curves directly here.</p>
+          <label for="entity-select">Light entity</label>
+          <select id="entity-select"></select>
+          <div id="status-msg"></div>
+          <div id="card-mount"></div>
+        </div>
+      `;
+
+      this.shadowRoot.querySelector("#entity-select").addEventListener("change", (ev) => {
+        this._selectedEntity = ev.target.value;
+        window.localStorage.setItem("lightener_editor_entity", this._selectedEntity);
+        this._syncCard();
+      });
+    }
 
     const select = this.shadowRoot.querySelector("#entity-select");
     const statusMsg = this.shadowRoot.querySelector("#status-msg");
 
+    // Update select options in-place without touching #card-mount.
+    select.innerHTML = "";
     if (entities.length) {
+      select.disabled = false;
       entities.forEach((entity) => {
         const opt = document.createElement("option");
         opt.value = entity.entity_id;
@@ -195,14 +234,10 @@ class LightenerEditorPanel extends HTMLElement {
     } else {
       select.disabled = true;
       statusMsg.className = "error";
-      statusMsg.textContent = "No Lightener entities found.";
+      statusMsg.textContent = this._requestedConfigEntryId
+        ? "No Lightener entity found for this integration entry."
+        : "No Lightener entities found.";
     }
-
-    select.addEventListener("change", (ev) => {
-      this._selectedEntity = ev.target.value;
-      window.localStorage.setItem("lightener_editor_entity", this._selectedEntity);
-      this._syncCard();
-    });
   }
 }
 
