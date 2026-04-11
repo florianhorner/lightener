@@ -123,14 +123,6 @@ class LightenerEditorPanel extends HTMLElement {
 
   _render() {
     const entities = this._getEditorEntities();
-    const options = entities
-      .map(
-        (entity) =>
-          `<option value="${entity.entity_id}" ${
-            entity.entity_id === this._selectedEntity ? "selected" : ""
-          }>${entity.name} (${entity.entity_id})</option>`
-      )
-      .join("");
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -181,26 +173,36 @@ class LightenerEditorPanel extends HTMLElement {
         <h1>Lightener Curve Editor</h1>
         <p>Pick a Lightener light entity and edit its curves directly here.</p>
         <label for="entity-select">Light entity</label>
-        <select id="entity-select" ${entities.length ? "" : "disabled"}>
-          ${options}
-        </select>
-        ${
-          entities.length
-            ? `<div class="hint">Select the Lightener group entity you want to edit.</div>`
-            : `<div class="error">No Lightener entities found.</div>`
-        }
+        <select id="entity-select"></select>
+        <div id="status-msg"></div>
         <div id="card-mount"></div>
       </div>
     `;
 
     const select = this.shadowRoot.querySelector("#entity-select");
-    if (select) {
-      select.addEventListener("change", (ev) => {
-        this._selectedEntity = ev.target.value;
-        window.localStorage.setItem("lightener_editor_entity", this._selectedEntity);
-        this._syncCard();
+    const statusMsg = this.shadowRoot.querySelector("#status-msg");
+
+    if (entities.length) {
+      entities.forEach((entity) => {
+        const opt = document.createElement("option");
+        opt.value = entity.entity_id;
+        opt.textContent = `${entity.name} (${entity.entity_id})`;
+        if (entity.entity_id === this._selectedEntity) opt.selected = true;
+        select.appendChild(opt);
       });
+      statusMsg.className = "hint";
+      statusMsg.textContent = "Select the Lightener group entity you want to edit.";
+    } else {
+      select.disabled = true;
+      statusMsg.className = "error";
+      statusMsg.textContent = "No Lightener entities found.";
     }
+
+    select.addEventListener("change", (ev) => {
+      this._selectedEntity = ev.target.value;
+      window.localStorage.setItem("lightener_editor_entity", this._selectedEntity);
+      this._syncCard();
+    });
   }
 }
 

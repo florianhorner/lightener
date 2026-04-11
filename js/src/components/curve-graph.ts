@@ -33,7 +33,9 @@ export class CurveGraph extends LitElement {
   @state() private _dragCurveIdx = -1;
   @state() private _dragPointIdx = -1;
   @state() private _hoveredPoint: { curve: number; point: number } | null = null;
+  @state() private _isMobile = false;
 
+  private _mql: MediaQueryList | null = null;
   private _wasDragging = false;
   private _longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private _longPressFired = false;
@@ -529,7 +531,7 @@ export class CurveGraph extends LitElement {
                 class="hit-circle"
                 cx="${toSvgX(cp.lightener)}"
                 cy="${toSvgY(cp.target)}"
-                r="22"
+                r="${this._isMobile ? 28 : 22}"
                 fill="transparent"
                 pointer-events="all"
                 style="touch-action: none; -webkit-touch-callout: none"
@@ -565,10 +567,23 @@ export class CurveGraph extends LitElement {
   // _svgRef is now a @query decorator — always resolves to the live SVG node.
   // No firstUpdated override needed.
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    this._mql = window.matchMedia('(max-width: 500px)');
+    this._isMobile = this._mql.matches;
+    this._mql.addEventListener('change', this._onMqlChange);
+  }
+
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this._clearLongPress();
+    this._mql?.removeEventListener('change', this._onMqlChange);
+    this._mql = null;
   }
+
+  private _onMqlChange = (e: MediaQueryListEvent): void => {
+    this._isMobile = e.matches;
+  };
 
   render() {
     return html`

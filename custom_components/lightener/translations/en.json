@@ -13,8 +13,10 @@
       },
       "lights": {
         "title": "Select lights",
+        "description": "Pick a preset curve for new lights. After setup, open **Lightener Editor** in the sidebar to fine-tune each curve interactively.",
         "data": {
-          "controlled_entities": "Lights to control"
+          "controlled_entities": "Lights to control",
+          "curve_preset": "Starting curve preset"
         }
       },
       "light_configuration": {
@@ -37,8 +39,10 @@
     "step": {
       "init": {
         "title": "Select lights",
+        "description": "Add or remove lights and pick a preset for new ones. Open **Lightener Editor** in the sidebar to drag and adjust curves visually.",
         "data": {
-          "controlled_entities": "Lights to control"
+          "controlled_entities": "Lights to control",
+          "curve_preset": "Starting curve preset"
         }
       },
       "light_configuration": {

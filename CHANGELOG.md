@@ -42,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Config and options flows now include a starter curve preset selector; selected preset is applied to newly added lights only
 - Both flows now guide users to the Lightener Curve Editor card for visual curve editing
 - Flow descriptions now point to both the sidebar panel and dashboard card for visual editing
+- Config and options flow now show curve preset label ("Starting curve preset") in both setup and edit flows
 - Scrubber now emits position events and stays in sync with the graph, including a vertical guide and per-curve value dots
 - Curve legend shape markers now use shared constants from graph math utilities for consistent rendering
 - Graph and scrubber now sample values through the same smooth-curve interpolation path for consistent badge and graph readouts
@@ -62,11 +63,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Integration setup now tolerates sidebar panel registration failures without blocking startup
 - Badge text contrast: yellow and orange curve badges now use darkened text to pass WCAG AA
 - SVG axis labels and hints scale to 12px on mobile (was 9-10px)
-- Control point hit circles increased to 44px minimum touch target on small phones
+- Control point hit circles use dynamic radius via `matchMedia` for reliable 44px+ touch targets on all mobile WebViews
 - Hint text now reads "Dbl-click to add, Right-click or long-press to remove" (was touch-only phrasing)
 - Success message fades in and out smoothly instead of disappearing abruptly
 - `beforeunload` dialog now works in Firefox (added `returnValue`)
 - Legend eye toggle now includes `aria-pressed` for screen reader toggle state
+- Sidebar panel entity picker now uses DOM API instead of innerHTML, preventing XSS via crafted entity names
+- GitHub Actions `hassfest` and `hacs/action` pinned to commit SHAs instead of mutable branch refs
 
 ## [2.9.0] - 2026-04-06
 
