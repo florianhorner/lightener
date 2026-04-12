@@ -211,26 +211,10 @@ class LightenerFlow:
                             "select": {
                                 "mode": "list",
                                 "options": [
-                                    {
-                                        "value": "linear",
-                                        "label": "Linear",
-                                        "description": "Equal brightness — what you set is what you get.",
-                                    },
-                                    {
-                                        "value": "dim_accent",
-                                        "label": "Dim accent",
-                                        "description": "Caps at ~45% max — great for mood or accent lighting that should never get harsh.",
-                                    },
-                                    {
-                                        "value": "late_starter",
-                                        "label": "Late starter",
-                                        "description": "Stays very dim until ~45%, then brightens quickly. Useful for lights that look ugly at low brightness.",
-                                    },
-                                    {
-                                        "value": "night_mode",
-                                        "label": "Night mode",
-                                        "description": "Caps at ~25% — barely bright even at full Lightener level. Good for hallways or sleep-safe areas.",
-                                    },
+                                    {"value": "linear", "label": "Linear"},
+                                    {"value": "dim_accent", "label": "Dim accent"},
+                                    {"value": "late_starter", "label": "Late starter"},
+                                    {"value": "night_mode", "label": "Night mode"},
                                 ],
                             }
                         }
