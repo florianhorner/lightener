@@ -658,6 +658,7 @@ export class LightenerCurveCard extends LitElement {
     if (entityChanged) {
       this._loaded = false;
       this._loadedEntityId = undefined;
+      this._showPresets = false;
       this._tryLoadCurves();
     }
   }
