@@ -33,6 +33,7 @@ A visual editor for per-light brightness curves, directly in your HA dashboard â
 - **Custom card title**: set a title in the card config or keep the default "Brightness Curves"
 - **Visual card editor**: Home Assistant card config UI with native entity picker and optional title field
 - **Admin-only editing**: non-admin users see curves in read-only mode
+- **Curve presets**: one-click presets panel (Linear, Dim accent, Late starter, Night mode) with miniature SVG previews â€” applies to selected light or all lights at once, fully undoable
 
 ### WebSocket API
 
