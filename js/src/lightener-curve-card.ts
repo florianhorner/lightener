@@ -27,6 +27,75 @@ const WARNING_ICON = html`<svg
   <line x1="12" y1="17" x2="12.01" y2="17"></line>
 </svg>`;
 
+interface PresetDef {
+  id: string;
+  name: string;
+  description: string;
+  controlPoints: Array<{ lightener: number; target: number }>;
+}
+
+const CURVE_PRESETS: PresetDef[] = [
+  {
+    id: 'linear',
+    name: 'Linear',
+    description: 'Equal brightness — what you set is what you get.',
+    controlPoints: [
+      { lightener: 0, target: 0 },
+      { lightener: 1, target: 1 },
+      { lightener: 100, target: 100 },
+    ],
+  },
+  {
+    id: 'dim_accent',
+    name: 'Dim accent',
+    description: 'Caps at ~45% max — great for mood or accent lighting.',
+    controlPoints: [
+      { lightener: 0, target: 0 },
+      { lightener: 1, target: 1 },
+      { lightener: 25, target: 8 },
+      { lightener: 50, target: 20 },
+      { lightener: 100, target: 45 },
+    ],
+  },
+  {
+    id: 'late_starter',
+    name: 'Late starter',
+    description: 'Stays very dim until ~45%, then brightens quickly.',
+    controlPoints: [
+      { lightener: 0, target: 0 },
+      { lightener: 1, target: 1 },
+      { lightener: 45, target: 1 },
+      { lightener: 70, target: 45 },
+      { lightener: 100, target: 100 },
+    ],
+  },
+  {
+    id: 'night_mode',
+    name: 'Night mode',
+    description: 'Caps at ~25% — barely bright even at full Lightener level.',
+    controlPoints: [
+      { lightener: 0, target: 0 },
+      { lightener: 1, target: 1 },
+      { lightener: 20, target: 3 },
+      { lightener: 50, target: 10 },
+      { lightener: 100, target: 25 },
+    ],
+  },
+];
+
+function presetPolylinePoints(preset: PresetDef): string {
+  const W = 64;
+  const H = 40;
+  const pad = 4;
+  return preset.controlPoints
+    .map((cp) => {
+      const x = pad + (cp.lightener / 100) * (W - 2 * pad);
+      const y = H - pad - (cp.target / 100) * (H - 2 * pad);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+}
+
 function createMockCurves(): LightCurve[] {
   return [
     {
@@ -204,6 +273,7 @@ export class LightenerCurveCard extends LitElement {
   private _saveSuccessTimer: ReturnType<typeof setTimeout> | null = null;
   private _cancelAnimFrame: number | null = null;
   @state() private _previewActive = false;
+  @state() private _showPresets = false;
   private _previewRafPending = false;
   private _lastPreviewTime = 0;
   private _previewRestoreBrightness: Map<string, number | null> = new Map();
@@ -495,6 +565,81 @@ export class LightenerCurveCard extends LitElement {
         --curve-graph-min-height: 240px;
       }
     }
+    .presets-btn {
+      margin-left: auto;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      background: transparent;
+      border: 1px solid var(--divider);
+      border-radius: 6px;
+      color: var(--secondary-text);
+      cursor: pointer;
+      font-family: inherit;
+      transition:
+        border-color 0.15s ease,
+        color 0.15s ease,
+        background 0.15s ease;
+      flex-shrink: 0;
+    }
+    .presets-btn:hover {
+      border-color: #2563eb;
+      color: #2563eb;
+      background: rgba(37, 99, 235, 0.04);
+    }
+    .presets-btn.active {
+      border-color: #2563eb;
+      color: #2563eb;
+    }
+    .presets-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding-bottom: 8px;
+      animation: fade-in 0.15s ease;
+    }
+    .presets-header {
+      grid-column: 1 / -1;
+      font-size: 11px;
+      color: var(--secondary-text);
+      opacity: 0.7;
+      padding-bottom: 2px;
+    }
+    .preset-option {
+      border: 1px solid var(--divider);
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      background: transparent;
+      text-align: left;
+      font-family: inherit;
+      transition:
+        border-color 0.15s ease,
+        background 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .preset-option:hover {
+      border-color: #2563eb;
+      background: rgba(37, 99, 235, 0.04);
+    }
+    .preset-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+    .preset-desc {
+      font-size: 10px;
+      color: var(--secondary-text);
+      opacity: 0.75;
+      line-height: 1.35;
+    }
+    .preset-preview {
+      display: block;
+      opacity: 0.65;
+      margin-bottom: 2px;
+    }
   `;
 
   // --- HA card interface ---
@@ -602,6 +747,61 @@ export class LightenerCurveCard extends LitElement {
     }
   }
 
+  private _togglePresets(): void {
+    this._showPresets = !this._showPresets;
+  }
+
+  private _applyPreset(preset: PresetDef): void {
+    if (this._cancelAnimating) return;
+    this._pushUndo();
+    const pts = preset.controlPoints.map((cp) => ({ ...cp }));
+    if (this._selectedCurveId !== null) {
+      this._curves = this._curves.map((c) =>
+        c.entityId === this._selectedCurveId ? { ...c, controlPoints: pts } : c
+      );
+    } else {
+      this._curves = this._curves.map((c) => ({ ...c, controlPoints: pts }));
+    }
+    this._showPresets = false;
+  }
+
+  private _renderPresetsPanel() {
+    const targetLabel =
+      this._selectedCurveId !== null
+        ? `Applying to: ${this._curves.find((c) => c.entityId === this._selectedCurveId)?.friendlyName ?? 'selected light'}`
+        : `Applying to: all lights`;
+
+    return html`
+      <div class="presets-panel">
+        <div class="presets-header">${targetLabel}</div>
+        ${CURVE_PRESETS.map(
+          (preset) => html`
+            <button class="preset-option" @click=${() => this._applyPreset(preset)}>
+              <svg
+                class="preset-preview"
+                viewBox="0 0 64 40"
+                width="64"
+                height="40"
+                aria-hidden="true"
+              >
+                <polyline
+                  points="${presetPolylinePoints(preset)}"
+                  fill="none"
+                  stroke="#2563eb"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <div class="preset-name">${preset.name}</div>
+              <div class="preset-desc">${preset.description}</div>
+            </button>
+          `
+        )}
+      </div>
+    `;
+  }
+
   private _onKeyDown(e: KeyboardEvent): void {
     // Only handle shortcuts when focus is inside this card (or nothing specific is focused)
     const focused = document.activeElement;
@@ -621,9 +821,12 @@ export class LightenerCurveCard extends LitElement {
         this._undo();
       }
     }
-    // Escape to cancel
+    // Escape to close presets panel or cancel edits
     if (e.key === 'Escape') {
-      if (this._isDirty && !this._saving && !this._cancelAnimating) {
+      if (this._showPresets) {
+        e.preventDefault();
+        this._showPresets = false;
+      } else if (this._isDirty && !this._saving && !this._cancelAnimating) {
         e.preventDefault();
         this._onCancel();
       }
@@ -860,6 +1063,7 @@ export class LightenerCurveCard extends LitElement {
 
   private _onPointMove(e: CustomEvent): void {
     if (this._cancelAnimating) return;
+    this._showPresets = false;
     // Push undo once at start of each drag gesture
     if (!this._dragUndoPushed) {
       this._pushUndo();
@@ -1019,7 +1223,18 @@ export class LightenerCurveCard extends LitElement {
             <path d="M2 20 C6 20, 8 4, 12 4 S18 20, 22 20" />
           </svg>
           <h2>${(this._config.title as string) ?? 'Brightness Curves'}</h2>
+          ${!this._loading && this._isAdmin
+            ? html`<button
+                class="presets-btn ${this._showPresets ? 'active' : ''}"
+                @click=${this._togglePresets}
+                aria-expanded=${this._showPresets}
+              >
+                Presets
+              </button>`
+            : nothing}
         </div>
+
+        ${this._showPresets ? this._renderPresetsPanel() : nothing}
 
         <div class="workspace">
           <div class="main-stack">
