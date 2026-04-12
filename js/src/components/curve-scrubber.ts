@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { customElement, property, query, state } from 'lit/decorators.js';
 import { LightCurve } from '../utils/types.js';
 import { PAD_LEFT, PAD_RIGHT, VB_W, sampleCurveAt } from '../utils/graph-math.js';
 
@@ -9,8 +9,14 @@ export class CurveScrubber extends LitElement {
   @property({ type: Boolean }) readOnly = false;
 
   @state() private _position = 50; // 0-100
+  @state() private _overflowCount = 0;
+
+  @query('.value-badges') private _badgesRef!: HTMLElement | null;
+
   private _dragging = false;
   private _trackRef: HTMLElement | null = null;
+  private _resizeObserver: ResizeObserver | null = null;
+  private _observedBadgesRef: HTMLElement | null = null;
 
   static styles = css`
     :host {
@@ -103,10 +109,13 @@ export class CurveScrubber extends LitElement {
       font-variant-numeric: tabular-nums;
       pointer-events: none;
     }
+    .value-badges-wrap {
+      position: relative;
+      margin-top: 10px;
+    }
     .value-badges {
       display: flex;
       gap: 4px 6px;
-      margin-top: 10px;
       flex-wrap: wrap;
       max-height: var(--curve-scrubber-badges-max-height, 46px);
       overflow: hidden;
@@ -137,6 +146,29 @@ export class CurveScrubber extends LitElement {
       overflow: hidden;
       text-overflow: ellipsis;
       max-width: 80px;
+    }
+    .overflow-indicator {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--secondary-text-color, #616161);
+      background: linear-gradient(
+        90deg,
+        transparent,
+        color-mix(
+            in srgb,
+            var(--ha-card-background, var(--card-background-color, #fff)) 94%,
+            var(--secondary-text-color, #616161) 6%
+          )
+          28%
+      );
+      pointer-events: none;
     }
     @media (max-width: 500px) {
       .track-area {
@@ -271,8 +303,52 @@ export class CurveScrubber extends LitElement {
     );
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    this._resizeObserver = new ResizeObserver(() => this._measureBadgeOverflow());
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this._resizeObserver?.disconnect();
+    this._resizeObserver = null;
+    this._observedBadgesRef = null;
+  }
+
   protected firstUpdated(): void {
     this._trackRef = this.renderRoot.querySelector('.track-area');
+    this._bindBadgeObserver();
+    this._measureBadgeOverflow();
+  }
+
+  protected updated(): void {
+    this._bindBadgeObserver();
+    this._measureBadgeOverflow();
+  }
+
+  private _bindBadgeObserver(): void {
+    if (!this._resizeObserver || !this._badgesRef || this._observedBadgesRef === this._badgesRef) {
+      return;
+    }
+
+    this._resizeObserver.disconnect();
+    this._resizeObserver.observe(this._badgesRef);
+    this._observedBadgesRef = this._badgesRef;
+  }
+
+  private _measureBadgeOverflow(): void {
+    const container = this._badgesRef;
+    if (!container) return;
+
+    const maxVisibleBottom = container.clientHeight + 1;
+    const badges = [...container.querySelectorAll<HTMLElement>('.badge[data-value-badge="true"]')];
+    const hiddenCount = badges.filter(
+      (badge) => badge.offsetTop + badge.offsetHeight > maxVisibleBottom
+    ).length;
+
+    if (hiddenCount !== this._overflowCount) {
+      this._overflowCount = hiddenCount;
+    }
   }
 
   render() {
@@ -307,16 +383,21 @@ export class CurveScrubber extends LitElement {
           ></div>
         </div>
 
-        <div class="value-badges">
-          ${bars.map(
-            (bar) => html`
-              <div class="badge">
-                <span class="badge-dot" style="background: ${bar.color}"></span>
-                <span style="color: ${this._badgeTextColor(bar.color)}">${bar.value}%</span>
-                <span class="badge-name">${bar.name}</span>
-              </div>
-            `
-          )}
+        <div class="value-badges-wrap">
+          <div class="value-badges">
+            ${bars.map(
+              (bar) => html`
+                <div class="badge" data-value-badge="true">
+                  <span class="badge-dot" style="background: ${bar.color}"></span>
+                  <span style="color: ${this._badgeTextColor(bar.color)}">${bar.value}%</span>
+                  <span class="badge-name">${bar.name}</span>
+                </div>
+              `
+            )}
+          </div>
+          ${this._overflowCount > 0
+            ? html`<div class="overflow-indicator">+${this._overflowCount} more</div>`
+            : null}
         </div>
       </div>
     `;

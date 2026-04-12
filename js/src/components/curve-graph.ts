@@ -33,6 +33,7 @@ export class CurveGraph extends LitElement {
   @state() private _dragCurveIdx = -1;
   @state() private _dragPointIdx = -1;
   @state() private _hoveredPoint: { curve: number; point: number } | null = null;
+  @state() private _focusedPoint: { curve: number; point: number } | null = null;
   @state() private _isMobile = false;
 
   private _mql: MediaQueryList | null = null;
@@ -91,7 +92,8 @@ export class CurveGraph extends LitElement {
         filter 0.15s ease;
     }
     .control-point:hover,
-    .control-point.hovered {
+    .control-point.hovered,
+    .control-point.focused {
       r: 7.5;
       filter: drop-shadow(0 0 6px var(--glow-color, #42a5f5));
     }
@@ -103,6 +105,9 @@ export class CurveGraph extends LitElement {
     .control-point.fixed {
       cursor: default;
       opacity: 0.5;
+    }
+    .hit-circle:focus-visible {
+      outline: none;
     }
     .hit-area {
       fill: transparent;
@@ -192,6 +197,164 @@ export class CurveGraph extends LitElement {
     if (this.readOnly) return false;
     if (this.selectedCurveId === null) return true;
     return this.curves[curveIdx]?.entityId === this.selectedCurveId;
+  }
+
+  private _focusCurve(entityId: string): void {
+    this.dispatchEvent(
+      new CustomEvent('focus-curve', {
+        detail: { entityId },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  private _onPointFocus(curveIdx: number, pointIdx: number): void {
+    const curve = this.curves[curveIdx];
+    if (!curve) return;
+    this._focusedPoint = { curve: curveIdx, point: pointIdx };
+    this._hoveredPoint = { curve: curveIdx, point: pointIdx };
+    this._focusCurve(curve.entityId);
+  }
+
+  private _onPointBlur(curveIdx: number, pointIdx: number): void {
+    if (this._focusedPoint?.curve === curveIdx && this._focusedPoint?.point === pointIdx) {
+      this._focusedPoint = null;
+    }
+    if (this._hoveredPoint?.curve === curveIdx && this._hoveredPoint?.point === pointIdx) {
+      this._hoveredPoint = null;
+    }
+  }
+
+  private _dispatchKeyboardMove(
+    curveIdx: number,
+    pointIdx: number,
+    lightener: number,
+    target: number
+  ): void {
+    this.dispatchEvent(
+      new CustomEvent('point-move', {
+        detail: { curveIndex: curveIdx, pointIndex: pointIdx, lightener, target },
+        bubbles: true,
+        composed: true,
+      })
+    );
+    this.dispatchEvent(
+      new CustomEvent('point-drop', {
+        detail: { curveIndex: curveIdx, pointIndex: pointIdx },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  private _getKeyboardInsertPoint(curve: LightCurve, pointIdx: number): ControlPoint | null {
+    const current = curve.controlPoints[pointIdx];
+    const next = curve.controlPoints[pointIdx + 1];
+    const previous = curve.controlPoints[pointIdx - 1];
+
+    if (next && next.lightener - current.lightener > 1) {
+      return {
+        lightener: Math.round((current.lightener + next.lightener) / 2),
+        target: Math.round((current.target + next.target) / 2),
+      };
+    }
+
+    if (previous && current.lightener - previous.lightener > 1) {
+      return {
+        lightener: Math.round((previous.lightener + current.lightener) / 2),
+        target: Math.round((previous.target + current.target) / 2),
+      };
+    }
+
+    return null;
+  }
+
+  private _onPointKeyDown(e: KeyboardEvent, curveIdx: number, pointIdx: number): void {
+    const curve = this.curves[curveIdx];
+    const point = curve?.controlPoints[pointIdx];
+    if (!curve || !point) return;
+
+    this._focusCurve(curve.entityId);
+
+    const step = e.shiftKey ? 10 : 1;
+    const prevX = pointIdx > 0 ? curve.controlPoints[pointIdx - 1].lightener + 1 : point.lightener;
+    const nextX =
+      pointIdx < curve.controlPoints.length - 1
+        ? curve.controlPoints[pointIdx + 1].lightener - 1
+        : 100;
+
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      this._dispatchKeyboardMove(
+        curveIdx,
+        pointIdx,
+        Math.min(nextX, point.lightener + step),
+        point.target
+      );
+      return;
+    }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      this._dispatchKeyboardMove(
+        curveIdx,
+        pointIdx,
+        Math.max(prevX, point.lightener - step),
+        point.target
+      );
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      this._dispatchKeyboardMove(
+        curveIdx,
+        pointIdx,
+        point.lightener,
+        Math.min(100, point.target + step)
+      );
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      this._dispatchKeyboardMove(
+        curveIdx,
+        pointIdx,
+        point.lightener,
+        Math.max(0, point.target - step)
+      );
+      return;
+    }
+    if (e.key === 'Enter') {
+      const insertPoint = this._getKeyboardInsertPoint(curve, pointIdx);
+      if (!insertPoint) return;
+      e.preventDefault();
+      this.dispatchEvent(
+        new CustomEvent('point-add', {
+          detail: {
+            entityId: curve.entityId,
+            lightener: insertPoint.lightener,
+            target: insertPoint.target,
+          },
+          bubbles: true,
+          composed: true,
+        })
+      );
+      return;
+    }
+    if (
+      (e.key === ' ' || e.key === 'Delete' || e.key === 'Backspace') &&
+      pointIdx > 0 &&
+      curve.controlPoints.length > 2
+    ) {
+      e.preventDefault();
+      this.dispatchEvent(
+        new CustomEvent('point-remove', {
+          detail: { curveIndex: curveIdx, pointIndex: pointIdx },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    }
   }
 
   private _onPointerDown(e: PointerEvent, curveIdx: number, pointIdx: number): void {
@@ -496,8 +659,15 @@ export class CurveGraph extends LitElement {
       let tooltipPoint: ControlPoint | null = null;
       if (isDraggingThisCurve && this._dragPointIdx >= 0) {
         tooltipPoint = curve.controlPoints[this._dragPointIdx];
-      } else if (this._hoveredPoint?.curve === curveIdx && showPoints) {
-        tooltipPoint = curve.controlPoints[this._hoveredPoint.point];
+      } else if (
+        (this._hoveredPoint?.curve === curveIdx || this._focusedPoint?.curve === curveIdx) &&
+        showPoints
+      ) {
+        const pointIdx =
+          this._focusedPoint?.curve === curveIdx
+            ? this._focusedPoint.point
+            : (this._hoveredPoint?.point ?? -1);
+        tooltipPoint = curve.controlPoints[pointIdx] ?? null;
       }
 
       return svg`
@@ -537,16 +707,26 @@ export class CurveGraph extends LitElement {
                 r="${this._isMobile ? 28 : 22}"
                 fill="transparent"
                 pointer-events="all"
+                tabindex="${isFixed ? -1 : 0}"
+                role="${isFixed ? 'presentation' : 'button'}"
+                aria-label="${curve.friendlyName} point ${cp.lightener}% group brightness to ${cp.target}% light brightness. Arrow keys move, Enter adds a nearby point, Space removes."
                 style="touch-action: none; -webkit-touch-callout: none"
                 @pointerdown=${(e: PointerEvent) => this._onPointerDown(e, curveIdx, pi)}
                 @contextmenu=${(e: MouseEvent) => this._onPointContextMenu(e, curveIdx, pi)}
                 @pointerenter=${() => (this._hoveredPoint = { curve: curveIdx, point: pi })}
                 @pointerleave=${() => (this._hoveredPoint = null)}
+                @focus=${() => this._onPointFocus(curveIdx, pi)}
+                @blur=${() => this._onPointBlur(curveIdx, pi)}
+                @keydown=${(e: KeyboardEvent) => this._onPointKeyDown(e, curveIdx, pi)}
               />
               <circle
                 class="control-point ${isFixed ? 'fixed' : ''} ${
                   isActive ? 'dragging' : ''
-                } ${isHovered ? 'hovered' : ''}"
+                } ${isHovered ? 'hovered' : ''} ${
+                  this._focusedPoint?.curve === curveIdx && this._focusedPoint?.point === pi
+                    ? 'focused'
+                    : ''
+                }"
                 cx="${toSvgX(cp.lightener)}"
                 cy="${toSvgY(cp.target)}"
                 r="6"

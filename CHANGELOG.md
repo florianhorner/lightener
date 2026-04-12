@@ -11,15 +11,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Config flow: area filter step between name and light picker — select a room first to narrow 100+ lights down to the relevant subset on mobile
 - Config flow: mode descriptions on all four curve presets (Linear, Dim accent, Late starter, Night mode) shown as radio cards with plain-language explanations
 - Brightness preview: "Previewing live — release to restore original brightness" notice shown in the status area while the scrubber is held
+- Keyboard-accessible graph point editing: focus curve points, move them with arrow keys, add with `Enter`, remove with `Space`
+- `DESIGN.md` documenting UI tokens, component patterns, and accessibility expectations for the editor
 
 ### Changed
 
 - Scrubber preview throttle increased from ~16ms (60fps RAF) to 300ms minimum interval, capping at ~3 commands/sec per light to prevent Zigbee/Matter/MQTT command backlog buildup
 - Graph hint text updated: "Select a light below — each gets its own curve" to clarify that curves are per-light
+- Editor panel empty state now explains what Lightener is, how to create a group, and links straight to Home Assistant Integrations
+- Embedded narrow-screen layout now keeps save and cancel actions in a sticky footer directly below the graph stack
+- Curve loading now uses a graph-shaped skeleton instead of pulsing text
 
 ### Fixed
 
 - SVG adds `user-select: none; -webkit-user-select: none` to prevent iOS from selecting text or triggering native gestures during long-press on control points
+- Entity switching in the sidebar panel no longer drops dirty curve edits silently; it now requires inline save or discard confirmation
+- Scrubber badge overflow now shows a `+N more` indicator instead of silently clipping extra values
 
 ## [2.11.0] - 2026-04-12
 

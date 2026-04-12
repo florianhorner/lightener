@@ -74,6 +74,7 @@ Use it to pick a Lightener entity and edit curves without manually adding a dash
 - [CHANGELOG.md](CHANGELOG.md) — release history
 - [CONTRIBUTING.md](CONTRIBUTING.md) — local setup, tooling, and workflow
 - [SECURITY.md](SECURITY.md) — vulnerability reporting policy
+- [DESIGN.md](DESIGN.md) — UI tokens, patterns, and accessibility baseline
 - [CLAUDE.md](CLAUDE.md) — repository notes for AI-assisted contributors
 - [TODOS.md](TODOS.md) — tracked follow-up work
 
