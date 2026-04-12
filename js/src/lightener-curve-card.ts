@@ -203,8 +203,9 @@ export class LightenerCurveCard extends LitElement {
   private _boundBeforeUnload: ((e: BeforeUnloadEvent) => void) | null = null;
   private _saveSuccessTimer: ReturnType<typeof setTimeout> | null = null;
   private _cancelAnimFrame: number | null = null;
-  private _previewActive = false;
+  @state() private _previewActive = false;
   private _previewRafPending = false;
+  private _lastPreviewTime = 0;
   private _previewRestoreBrightness: Map<string, number | null> = new Map();
 
   private get _embedded(): boolean {
@@ -347,6 +348,15 @@ export class LightenerCurveCard extends LitElement {
       100% {
         opacity: 0;
       }
+    }
+    .preview-notice {
+      font-size: var(--text-sm);
+      color: var(--secondary-text-color, #616161);
+      padding: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      opacity: 0.8;
     }
     .status-icon {
       width: 14px;
@@ -606,14 +616,25 @@ export class LightenerCurveCard extends LitElement {
     this._previewRestoreBrightness.clear();
   }
 
-  /** Push interpolated brightness to physical lights, throttled to once per frame. */
+  /**
+   * Push interpolated brightness to physical lights.
+   * Throttled to at most once per 300 ms to avoid congesting Zigbee/Matter/MQTT buses.
+   * At 60 fps the unthrottled RAF approach issued ~300 commands/sec for 5 lights; this
+   * caps it at ~15 commands/sec which keeps the command backlog from piling up.
+   */
+  private readonly _PREVIEW_INTERVAL_MS = 300;
+
   private _previewLights(position: number): void {
-    if (!this._previewActive || !this._hass || this._previewRafPending) return;
+    if (!this._previewActive || !this._hass) return;
+    const now = Date.now();
+    if (now - this._lastPreviewTime < this._PREVIEW_INTERVAL_MS) return;
+    if (this._previewRafPending) return;
     this._previewRafPending = true;
 
     requestAnimationFrame(() => {
       this._previewRafPending = false;
       if (!this._previewActive || !this._hass) return;
+      this._lastPreviewTime = Date.now();
 
       for (const curve of this._curves) {
         if (!curve.visible) continue;
@@ -915,6 +936,11 @@ export class LightenerCurveCard extends LitElement {
         </div>
 
         <div class="status-stack">
+          ${this._previewActive
+            ? html`<div class="preview-notice" role="status" aria-live="polite">
+                Previewing live — release to restore original brightness
+              </div>`
+            : nothing}
           ${this._saveSuccess
             ? html`<div class="success" role="status" aria-live="polite">
                 <svg

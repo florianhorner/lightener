@@ -52,6 +52,8 @@ export class CurveGraph extends LitElement {
       display: block;
       border-radius: 6px;
       touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .grid-line {
       stroke: var(--secondary-text, #616161);
@@ -667,7 +669,7 @@ export class CurveGraph extends LitElement {
           if (this.selectedCurveId === null && this._dragCurveIdx < 0) {
             return svg`<text class="hint hint-select" text-anchor="middle"
                 x="${PAD_LEFT + GRAPH_W / 2}" y="${PAD_TOP + GRAPH_H / 2}"
-                >Select a light below to start editing</text>`;
+                >Select a light below — each gets its own curve</text>`;
           }
           const selected = this.curves.find((c) => c.entityId === this.selectedCurveId);
           return svg`
