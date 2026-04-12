@@ -4,11 +4,21 @@ class LightenerEditorPanel extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._hass = null;
     this._selectedEntity = null;
+    this._pendingEntity = null;
     this._card = null;
+    this._cardDirty = false;
+    this._switchSaving = false;
     this._cardScriptPromise = null;
     this._lightenerEntities = null;
     this._loadingEntities = false;
     this._requestedConfigEntryId = null;
+    this._onCardDirtyState = (event) => {
+      this._cardDirty = event.detail?.dirty === true;
+      if (!this._cardDirty && !this._switchSaving) {
+        this._pendingEntity = null;
+      }
+      this._renderPendingSwitch();
+    };
     try {
       this._requestedConfigEntryId = new URLSearchParams(window.location.search).get("config_entry");
     } catch (err) {}
@@ -22,13 +32,15 @@ class LightenerEditorPanel extends HTMLElement {
 
     const entities = this._getEditorEntities();
 
-    if (!this._selectedEntity || !entities.some((e) => e.entity_id === this._selectedEntity)) {
+    if (!this._selectedEntity || !entities.some((entity) => entity.entity_id === this._selectedEntity)) {
       const saved = window.localStorage.getItem("lightener_editor_entity");
-      if (saved && entities.some((e) => e.entity_id === saved)) {
+      if (saved && entities.some((entity) => entity.entity_id === saved)) {
         this._selectedEntity = saved;
       } else {
         this._selectedEntity = entities[0]?.entity_id ?? null;
       }
+      this._cardDirty = false;
+      this._pendingEntity = null;
     }
 
     this._render();
@@ -37,6 +49,10 @@ class LightenerEditorPanel extends HTMLElement {
 
   connectedCallback() {
     this._render();
+  }
+
+  disconnectedCallback() {
+    this._detachCardListeners();
   }
 
   _getFallbackEntities() {
@@ -65,6 +81,14 @@ class LightenerEditorPanel extends HTMLElement {
       return [];
     }
     return this._getFallbackEntities();
+  }
+
+  _getEntityLabel(entityId) {
+    const entity = this._getEditorEntities().find((item) => item.entity_id === entityId);
+    if (entity) {
+      return entity.name;
+    }
+    return entityId || "this Lightener entity";
   }
 
   async _loadLightenerEntities() {
@@ -98,17 +122,157 @@ class LightenerEditorPanel extends HTMLElement {
     await this._cardScriptPromise;
   }
 
+  _detachCardListeners() {
+    if (this._card) {
+      this._card.removeEventListener("curve-dirty-state", this._onCardDirtyState);
+    }
+  }
+
+  _attachCardListeners(card) {
+    if (this._card === card) {
+      return;
+    }
+    this._detachCardListeners();
+    this._card = card;
+    if (this._card) {
+      this._card.addEventListener("curve-dirty-state", this._onCardDirtyState);
+      this._cardDirty = this._card.dirty === true;
+    }
+    this._renderPendingSwitch();
+  }
+
   _clearCard() {
     const mount = this.shadowRoot.querySelector("#card-mount");
     if (mount) {
       mount.replaceChildren();
     }
+    this._detachCardListeners();
     this._card = null;
+    this._cardDirty = false;
+  }
+
+  _setSelectedEntity(entityId) {
+    this._selectedEntity = entityId;
+    this._pendingEntity = null;
+    this._switchSaving = false;
+    this._cardDirty = false;
+    if (entityId) {
+      window.localStorage.setItem("lightener_editor_entity", entityId);
+    } else {
+      window.localStorage.removeItem("lightener_editor_entity");
+    }
+    this._render();
+    this._syncCard();
+  }
+
+  async _confirmPendingSwitchSave() {
+    if (!this._pendingEntity || !this._card || this._switchSaving) {
+      return;
+    }
+
+    this._switchSaving = true;
+    this._renderPendingSwitch();
+
+    const saveCurves = typeof this._card.saveCurves === "function" ? this._card.saveCurves.bind(this._card) : null;
+    const saved = saveCurves ? await saveCurves() : false;
+
+    if (saved) {
+      this._setSelectedEntity(this._pendingEntity);
+      return;
+    }
+
+    this._switchSaving = false;
+    this._renderPendingSwitch();
+  }
+
+  _confirmPendingSwitchDiscard() {
+    if (!this._pendingEntity) {
+      return;
+    }
+    this._setSelectedEntity(this._pendingEntity);
+  }
+
+  _renderPendingSwitch() {
+    const guard = this.shadowRoot.querySelector("#switch-guard");
+    if (!guard) {
+      return;
+    }
+
+    const text = this.shadowRoot.querySelector("#switch-guard-text");
+    const saveButton = this.shadowRoot.querySelector("#switch-save");
+    const discardButton = this.shadowRoot.querySelector("#switch-discard");
+
+    if (!this._pendingEntity || !this._cardDirty) {
+      guard.hidden = true;
+      text.textContent = "";
+      saveButton.disabled = false;
+      saveButton.textContent = "Save";
+      discardButton.disabled = false;
+      return;
+    }
+
+    guard.hidden = false;
+    text.textContent = `Unsaved changes in ${this._getEntityLabel(this._selectedEntity)}. Save or discard before switching to ${this._getEntityLabel(this._pendingEntity)}.`;
+    saveButton.disabled = this._switchSaving;
+    saveButton.textContent = this._switchSaving ? "Saving..." : "Save";
+    discardButton.disabled = this._switchSaving;
+  }
+
+  _buildEmptyState() {
+    const section = document.createElement("section");
+    section.className = "empty-state";
+
+    const title = document.createElement("h2");
+    title.textContent = this._requestedConfigEntryId
+      ? "No editable Lightener group yet"
+      : "No Lightener entities found";
+
+    const body = document.createElement("p");
+    body.textContent =
+      "Lightener lets one virtual light control a group of real lights with per-light brightness curves. Set up a Lightener group first, then return here to shape how each light responds.";
+
+    const steps = document.createElement("ol");
+    steps.className = "empty-state-steps";
+    ["Open Home Assistant Integrations.", "Add or open the Lightener integration.", "Create a Lightener group and come back to this editor."].forEach(
+      (line) => {
+        const item = document.createElement("li");
+        item.textContent = line;
+        steps.appendChild(item);
+      }
+    );
+
+    const link = document.createElement("a");
+    link.className = "empty-state-link";
+    link.href = "/config/integrations";
+    link.textContent = "Open Integrations";
+
+    section.append(title, body, steps, link);
+    return section;
+  }
+
+  _renderEmptyState() {
+    const mount = this.shadowRoot.querySelector("#card-mount");
+    if (!mount) {
+      return;
+    }
+    mount.replaceChildren(this._buildEmptyState());
+  }
+
+  _renderCardLoadError() {
+    const mount = this.shadowRoot.querySelector("#card-mount");
+    if (!mount) {
+      return;
+    }
+    const error = document.createElement("div");
+    error.className = "error";
+    error.textContent = "Failed to load curve editor card. Check browser console.";
+    mount.replaceChildren(error);
   }
 
   async _syncCard() {
     if (!this._selectedEntity) {
       this._clearCard();
+      this._renderEmptyState();
       return;
     }
 
@@ -119,11 +283,8 @@ class LightenerEditorPanel extends HTMLElement {
     try {
       await this._ensureCardScriptLoaded();
     } catch (err) {
-      const mount = this.shadowRoot.querySelector("#card-mount");
-      if (mount) {
-        mount.innerHTML = `<div class="error">Failed to load curve editor card. Check browser console.</div>`;
-      }
-      this._card = null;
+      this._clearCard();
+      this._renderCardLoadError();
       return;
     }
 
@@ -133,7 +294,7 @@ class LightenerEditorPanel extends HTMLElement {
     }
 
     if (!this._card) {
-      this._card = document.createElement("lightener-curve-card");
+      this._attachCardListeners(document.createElement("lightener-curve-card"));
       mount.replaceChildren(this._card);
     }
 
@@ -145,11 +306,25 @@ class LightenerEditorPanel extends HTMLElement {
     this._card.hass = this._hass;
   }
 
+  _handleEntitySelectChange(event) {
+    const nextEntity = event.target.value || null;
+    if (!nextEntity || nextEntity === this._selectedEntity) {
+      return;
+    }
+
+    if (this._cardDirty) {
+      this._pendingEntity = nextEntity;
+      event.target.value = this._selectedEntity || "";
+      this._renderPendingSwitch();
+      return;
+    }
+
+    this._setSelectedEntity(nextEntity);
+  }
+
   _render() {
     const entities = this._getEditorEntities();
 
-    // Build the DOM structure only once so that #card-mount and its contents
-    // (the curve editor card) are never wiped on subsequent hass updates.
     if (!this.shadowRoot.querySelector("#entity-select")) {
       this.shadowRoot.innerHTML = `
         <style>
@@ -214,21 +389,112 @@ class LightenerEditorPanel extends HTMLElement {
           .hint {
             font-size: 0.9rem;
             margin-top: 10px;
+            color: var(--secondary-text-color);
           }
           .error {
             color: var(--error-color);
             margin-top: 10px;
           }
+          .switch-guard {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 14px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid color-mix(in srgb, var(--warning-color, #f59e0b) 35%, transparent);
+            background: color-mix(in srgb, var(--warning-color, #f59e0b) 10%, transparent);
+            color: var(--primary-text-color);
+          }
+          .switch-guard[hidden] {
+            display: none;
+          }
+          .switch-copy {
+            font-size: 0.92rem;
+            line-height: 1.4;
+          }
+          .switch-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+          }
+          .switch-button {
+            border: none;
+            border-radius: 999px;
+            padding: 9px 14px;
+            font: inherit;
+            cursor: pointer;
+          }
+          .switch-button.primary {
+            background: #2563eb;
+            color: #fff;
+          }
+          .switch-button.secondary {
+            background: transparent;
+            color: var(--primary-text-color);
+            border: 1px solid var(--lightener-panel-border);
+          }
+          .switch-button:disabled {
+            opacity: 0.6;
+            cursor: default;
+          }
           #card-mount {
             min-height: 320px;
+          }
+          .empty-state {
+            display: grid;
+            gap: 14px;
+            max-width: 720px;
+            padding: 28px;
+            border-radius: 22px;
+            border: 1px dashed var(--lightener-panel-border);
+            background:
+              radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent 30%),
+              linear-gradient(
+                180deg,
+                color-mix(in srgb, var(--lightener-panel-surface) 92%, transparent),
+                color-mix(in srgb, var(--lightener-panel-surface) 98%, transparent)
+              );
+          }
+          .empty-state h2 {
+            margin: 0;
+            font-size: 1.15rem;
+            letter-spacing: -0.01em;
+          }
+          .empty-state p {
+            margin: 0;
+            max-width: 56ch;
+          }
+          .empty-state-steps {
+            margin: 0;
+            padding-left: 1.2rem;
+            color: var(--secondary-text-color);
+          }
+          .empty-state-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: fit-content;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: #2563eb;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
           }
           @media (max-width: 900px) {
             :host {
               padding: 14px 14px 22px;
             }
-            .control-row {
+            .control-row,
+            .empty-state {
               padding: 14px;
               border-radius: 14px;
+            }
+            .switch-guard {
+              align-items: stretch;
+              flex-direction: column;
             }
           }
         </style>
@@ -239,41 +505,54 @@ class LightenerEditorPanel extends HTMLElement {
             <label for="entity-select">Light entity</label>
             <select id="entity-select"></select>
             <div id="status-msg"></div>
+            <div id="switch-guard" class="switch-guard" hidden>
+              <div id="switch-guard-text" class="switch-copy"></div>
+              <div class="switch-actions">
+                <button id="switch-save" class="switch-button primary" type="button">Save</button>
+                <button id="switch-discard" class="switch-button secondary" type="button">Discard</button>
+              </div>
+            </div>
           </div>
           <div id="card-mount"></div>
         </div>
       `;
 
-      this.shadowRoot.querySelector("#entity-select").addEventListener("change", (ev) => {
-        this._selectedEntity = ev.target.value;
-        window.localStorage.setItem("lightener_editor_entity", this._selectedEntity);
-        this._syncCard();
+      this.shadowRoot.querySelector("#entity-select").addEventListener("change", (event) => {
+        this._handleEntitySelectChange(event);
+      });
+      this.shadowRoot.querySelector("#switch-save").addEventListener("click", () => {
+        this._confirmPendingSwitchSave();
+      });
+      this.shadowRoot.querySelector("#switch-discard").addEventListener("click", () => {
+        this._confirmPendingSwitchDiscard();
       });
     }
 
     const select = this.shadowRoot.querySelector("#entity-select");
     const statusMsg = this.shadowRoot.querySelector("#status-msg");
 
-    // Update select options in-place without touching #card-mount.
     select.innerHTML = "";
     if (entities.length) {
       select.disabled = false;
       entities.forEach((entity) => {
-        const opt = document.createElement("option");
-        opt.value = entity.entity_id;
-        opt.textContent = `${entity.name} (${entity.entity_id})`;
-        if (entity.entity_id === this._selectedEntity) opt.selected = true;
-        select.appendChild(opt);
+        const option = document.createElement("option");
+        option.value = entity.entity_id;
+        option.textContent = `${entity.name} (${entity.entity_id})`;
+        option.selected = entity.entity_id === this._selectedEntity;
+        select.appendChild(option);
       });
       statusMsg.className = "hint";
       statusMsg.textContent = "Select the Lightener group entity you want to edit.";
     } else {
       select.disabled = true;
-      statusMsg.className = "error";
+      statusMsg.className = "hint";
       statusMsg.textContent = this._requestedConfigEntryId
-        ? "No Lightener entity found for this integration entry."
-        : "No Lightener entities found.";
+        ? "This Lightener integration does not have an editable group yet."
+        : "Set up a Lightener group, then return here to edit its curves.";
+      this._renderEmptyState();
     }
+
+    this._renderPendingSwitch();
   }
 }
 

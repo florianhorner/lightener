@@ -207,6 +207,7 @@ export class LightenerCurveCard extends LitElement {
   private _previewRafPending = false;
   private _lastPreviewTime = 0;
   private _previewRestoreBrightness: Map<string, number | null> = new Map();
+  private _lastEmittedDirtyState = false;
 
   private get _embedded(): boolean {
     return this._config.embedded === true;
@@ -274,6 +275,7 @@ export class LightenerCurveCard extends LitElement {
     }
     .main-stack,
     .side-rail,
+    .footer-slot,
     .status-stack {
       display: flex;
       flex-direction: column;
@@ -365,15 +367,59 @@ export class LightenerCurveCard extends LitElement {
     }
     .loading-indicator {
       display: flex;
-      align-items: center;
+      flex-direction: column;
       justify-content: center;
       min-height: 280px;
-      padding: 40px 0;
-      font-size: var(--text-sm);
-      color: var(--secondary-text);
-      animation: pulse 1.5s ease-in-out infinite;
+      gap: 16px;
+      padding: 28px 20px;
       border-radius: 12px;
       background: var(--panel-bg);
+    }
+    .loading-graph {
+      position: relative;
+      min-height: 240px;
+      border-radius: 10px;
+      overflow: hidden;
+      background:
+        linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent),
+        linear-gradient(rgba(128, 128, 128, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(128, 128, 128, 0.08) 1px, transparent 1px);
+      background-size:
+        200px 100%,
+        100% 25%,
+        25% 100%;
+      background-position:
+        -200px 0,
+        0 0,
+        0 0;
+      animation: shimmer 1.8s ease-in-out infinite;
+    }
+    .loading-graph::before,
+    .loading-graph::after {
+      content: '';
+      position: absolute;
+    }
+    .loading-graph::before {
+      inset: 18px 18px 18px 28px;
+      border-left: 1px solid rgba(128, 128, 128, 0.18);
+      border-bottom: 1px solid rgba(128, 128, 128, 0.18);
+      border-radius: 0 0 0 6px;
+    }
+    .loading-graph::after {
+      inset: auto 40px 52px 44px;
+      height: 90px;
+      border-radius: 999px;
+      background: linear-gradient(
+        120deg,
+        rgba(37, 99, 235, 0.08) 0%,
+        rgba(37, 99, 235, 0.3) 45%,
+        rgba(37, 99, 235, 0.08) 100%
+      );
+      clip-path: polygon(0% 78%, 18% 78%, 38% 45%, 62% 18%, 82% 22%, 100% 0, 100% 100%, 0 100%);
+    }
+    .loading-caption {
+      font-size: var(--text-sm);
+      color: var(--secondary-text);
     }
     @keyframes pulse {
       0%,
@@ -392,10 +438,36 @@ export class LightenerCurveCard extends LitElement {
         opacity: 1;
       }
     }
+    @keyframes shimmer {
+      0% {
+        background-position:
+          -200px 0,
+          0 0,
+          0 0;
+      }
+      100% {
+        background-position:
+          calc(100% + 200px) 0,
+          0 0,
+          0 0;
+      }
+    }
     @media (min-width: 1100px) {
       .card.embedded .workspace {
         grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.95fr);
         align-items: start;
+        grid-template-areas:
+          'main side'
+          'main footer';
+      }
+      .card.embedded .main-stack {
+        grid-area: main;
+      }
+      .card.embedded .side-rail {
+        grid-area: side;
+      }
+      .card.embedded .footer-slot {
+        grid-area: footer;
       }
     }
     @media (max-width: 1099px) {
@@ -403,6 +475,19 @@ export class LightenerCurveCard extends LitElement {
         --curve-graph-max-height: 420px;
         --curve-graph-min-height: 300px;
         --curve-legend-max-height: none;
+      }
+      .card.embedded .footer-slot {
+        order: 2;
+        position: sticky;
+        bottom: max(0px, env(safe-area-inset-bottom));
+        z-index: 3;
+        padding-top: 8px;
+        border-top: 1px solid var(--divider-color, rgba(127, 127, 127, 0.2));
+        background: color-mix(in srgb, var(--card-bg) 72%, transparent);
+        backdrop-filter: blur(14px);
+      }
+      .card.embedded .side-rail {
+        order: 3;
       }
     }
     @media (max-width: 700px) {
@@ -459,6 +544,10 @@ export class LightenerCurveCard extends LitElement {
     return !curvesEqual(this._curves, this._originalCurves);
   }
 
+  public get dirty(): boolean {
+    return this._isDirty;
+  }
+
   connectedCallback(): void {
     super.connectedCallback();
     // Reset load state on re-mount so data is refreshed
@@ -488,6 +577,28 @@ export class LightenerCurveCard extends LitElement {
       cancelAnimationFrame(this._cancelAnimFrame);
       this._cancelAnimFrame = null;
       this._cancelAnimating = false;
+    }
+  }
+
+  protected updated(changedProps: Map<PropertyKey, unknown>): void {
+    super.updated(changedProps);
+
+    if (
+      changedProps.has('_curves') ||
+      changedProps.has('_originalCurves') ||
+      changedProps.has('_cancelAnimating')
+    ) {
+      const dirty = this._isDirty;
+      if (dirty !== this._lastEmittedDirtyState) {
+        this._lastEmittedDirtyState = dirty;
+        this.dispatchEvent(
+          new CustomEvent('curve-dirty-state', {
+            detail: { dirty },
+            bubbles: true,
+            composed: true,
+          })
+        );
+      }
     }
   }
 
@@ -664,6 +775,14 @@ export class LightenerCurveCard extends LitElement {
     this._selectedCurveId = this._selectedCurveId === entityId ? null : entityId;
   }
 
+  private _onFocusCurve(e: CustomEvent): void {
+    if (this._cancelAnimating) return;
+    const { entityId } = e.detail;
+    const curve = this._curves.find((item) => item.entityId === entityId);
+    if (!curve || !curve.visible) return;
+    this._selectedCurveId = entityId;
+  }
+
   private _pushUndo(): void {
     this._undoStack.push(cloneCurves(this._curves));
     // Cap at 50 entries
@@ -821,8 +940,12 @@ export class LightenerCurveCard extends LitElement {
     }
   }
 
-  private async _onSave(): Promise<void> {
-    if (!this._hass || !this._entityId || this._saving || this._cancelAnimating) return;
+  public async saveCurves(): Promise<boolean> {
+    return this._onSave();
+  }
+
+  private async _onSave(): Promise<boolean> {
+    if (!this._hass || !this._entityId || this._saving || this._cancelAnimating) return false;
 
     this._saving = true;
     this._saveError = null;
@@ -843,9 +966,11 @@ export class LightenerCurveCard extends LitElement {
         this._saveSuccess = false;
         this._saveSuccessTimer = null;
       }, SAVE_SUCCESS_DISPLAY_MS);
+      return true;
     } catch (err) {
       console.error('[Lightener] Failed to save curves:', err);
       this._saveError = 'Save failed. Check connection.';
+      return false;
     } finally {
       this._saving = false;
     }
@@ -863,6 +988,15 @@ export class LightenerCurveCard extends LitElement {
     this._animateCurvesTo(cloneCurves(this._originalCurves), () => {
       this._selectedCurveId = null;
     });
+  }
+
+  private _renderLoadingSkeleton() {
+    return html`
+      <div class="loading-indicator" role="status" aria-live="polite">
+        <div class="loading-graph" aria-hidden="true"></div>
+        <div class="loading-caption">Loading curves…</div>
+      </div>
+    `;
   }
 
   render() {
@@ -890,9 +1024,7 @@ export class LightenerCurveCard extends LitElement {
         <div class="workspace">
           <div class="main-stack">
             ${this._loading
-              ? html`<div class="loading-indicator" role="status" aria-live="polite">
-                  Loading curves...
-                </div>`
+              ? this._renderLoadingSkeleton()
               : html`<div class="graph-panel">
                   <curve-graph
                     .curves=${this._curves}
@@ -903,6 +1035,7 @@ export class LightenerCurveCard extends LitElement {
                     @point-drop=${this._onPointDrop}
                     @point-add=${this._onPointAdd}
                     @point-remove=${this._onPointRemove}
+                    @focus-curve=${this._onFocusCurve}
                   ></curve-graph>
                 </div>`}
 
@@ -922,7 +1055,9 @@ export class LightenerCurveCard extends LitElement {
               @select-curve=${this._onSelectCurve}
               @toggle-curve=${this._onToggleCurve}
             ></curve-legend>
+          </div>
 
+          <div class="footer-slot">
             <curve-footer
               .dirty=${this._isDirty || this._cancelAnimating}
               .readOnly=${!this._isAdmin}
