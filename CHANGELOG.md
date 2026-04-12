@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [2.10.0] - 2026-04-12
 
 ### Added
 
@@ -70,6 +70,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Legend eye toggle now includes `aria-pressed` for screen reader toggle state
 - Sidebar panel entity picker now uses DOM API instead of innerHTML, preventing XSS via crafted entity names
 - GitHub Actions `hassfest` and `hacs/action` pinned to commit SHAs instead of mutable branch refs
+- Sidebar panel curve editor no longer goes blank after entity list loads: the shadow DOM structure is now built once and updated in-place, so the card mount point is never wiped by subsequent `hass` updates
+- `lightener/list_entities` WebSocket response now includes `config_entry_id` so the panel can filter entities by config entry when opened from the integration config flow
+- 16 new Vitest unit tests for the sidebar panel (`lightener-panel.test.ts`) covering entity selection, card lifecycle, and config-entry filtering
 
 ## [2.9.0] - 2026-04-06
 

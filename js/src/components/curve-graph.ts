@@ -47,7 +47,8 @@ export class CurveGraph extends LitElement {
     svg {
       width: 100%;
       height: auto;
-      max-height: 320px;
+      min-height: var(--curve-graph-min-height, 0);
+      max-height: var(--curve-graph-max-height, 320px);
       display: block;
       border-radius: 6px;
       touch-action: none;
@@ -585,6 +586,16 @@ export class CurveGraph extends LitElement {
     this._isMobile = e.matches;
   };
 
+  private _getSvgDescription(): string {
+    const visible = this.curves.filter((c) => c.visible);
+    if (!visible.length) return 'No curves displayed';
+    const items = visible.map((c) => {
+      const last = c.controlPoints[c.controlPoints.length - 1];
+      return `${c.friendlyName} (${c.controlPoints.length} points, max ${last?.target ?? 0}%)`;
+    });
+    return `${visible.length} curve${visible.length === 1 ? '' : 's'}: ${items.join(', ')}`;
+  }
+
   render() {
     return html`
       <svg
@@ -600,6 +611,7 @@ export class CurveGraph extends LitElement {
           if (!this.readOnly) e.preventDefault();
         }}
       >
+        <desc>${this._getSvgDescription()}</desc>
         ${this._renderGrid()}
 
         <!-- Invisible hit area for double-click -->

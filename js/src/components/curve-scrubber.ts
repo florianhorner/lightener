@@ -108,7 +108,7 @@ export class CurveScrubber extends LitElement {
       gap: 4px 6px;
       margin-top: 10px;
       flex-wrap: wrap;
-      max-height: 46px;
+      max-height: var(--curve-scrubber-badges-max-height, 46px);
       overflow: hidden;
     }
     .badge {

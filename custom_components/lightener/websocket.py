@@ -136,7 +136,11 @@ def ws_list_entities(
         )
 
         entities.append(
-            {"entity_id": entry.entity_id, "name": friendly_name or entry.entity_id}
+            {
+                "entity_id": entry.entity_id,
+                "name": friendly_name or entry.entity_id,
+                "config_entry_id": entry.config_entry_id,
+            }
         )
 
     entities.sort(key=lambda item: item["name"])

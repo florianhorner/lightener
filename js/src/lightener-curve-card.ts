@@ -207,6 +207,10 @@ export class LightenerCurveCard extends LitElement {
   private _previewRafPending = false;
   private _previewRestoreBrightness: Map<string, number | null> = new Map();
 
+  private get _embedded(): boolean {
+    return this._config.embedded === true;
+  }
+
   static styles = css`
     :host {
       --card-bg: var(--ha-card-background, var(--card-background-color, #fff));
@@ -235,6 +239,17 @@ export class LightenerCurveCard extends LitElement {
       padding: 20px;
       color: var(--text-color);
     }
+    .card.embedded {
+      --curve-graph-max-height: 520px;
+      --curve-graph-min-height: 360px;
+      --curve-legend-max-height: 440px;
+      --curve-scrubber-badges-max-height: 72px;
+
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+      padding: 0;
+    }
     .header {
       display: flex;
       align-items: center;
@@ -252,22 +267,49 @@ export class LightenerCurveCard extends LitElement {
       font-weight: 600;
       letter-spacing: -0.01em;
     }
+    .workspace {
+      display: grid;
+      gap: 14px;
+    }
+    .main-stack,
+    .side-rail,
+    .status-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
     .graph-panel {
       border-radius: 12px;
       padding: 12px;
       background: var(--panel-bg);
       box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
       overflow: hidden;
+    }
+    .card.embedded .header {
       margin-bottom: 12px;
+      padding-inline: 2px;
+    }
+    .card.embedded .graph-panel {
+      padding: 14px;
+      border: 1px solid color-mix(in srgb, var(--divider) 80%, transparent);
+      box-shadow: none;
+    }
+    .card.embedded .header-icon {
+      opacity: 0.42;
+    }
+    .card.embedded h2 {
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--secondary-text);
     }
     .error {
       font-size: var(--text-sm);
       color: var(--error-color, #db4437);
-      padding: 8px 0 0;
-      text-align: center;
+      padding: 0;
       display: flex;
       align-items: center;
-      justify-content: center;
       gap: 6px;
     }
     .error .retry-link {
@@ -286,11 +328,9 @@ export class LightenerCurveCard extends LitElement {
     .success {
       font-size: var(--text-sm);
       color: #2563eb;
-      padding: 8px 0 0;
-      text-align: center;
+      padding: 0;
       display: flex;
       align-items: center;
-      justify-content: center;
       gap: 6px;
       animation: success-fade 2s ease forwards;
     }
@@ -317,10 +357,13 @@ export class LightenerCurveCard extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
+      min-height: 280px;
       padding: 40px 0;
       font-size: var(--text-sm);
       color: var(--secondary-text);
       animation: pulse 1.5s ease-in-out infinite;
+      border-radius: 12px;
+      background: var(--panel-bg);
     }
     @keyframes pulse {
       0%,
@@ -337,6 +380,24 @@ export class LightenerCurveCard extends LitElement {
       }
       to {
         opacity: 1;
+      }
+    }
+    @media (min-width: 1100px) {
+      .card.embedded .workspace {
+        grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.95fr);
+        align-items: start;
+      }
+    }
+    @media (max-width: 1099px) {
+      .card.embedded {
+        --curve-graph-max-height: 420px;
+        --curve-graph-min-height: 300px;
+        --curve-legend-max-height: none;
+      }
+    }
+    @media (max-width: 700px) {
+      .card.embedded {
+        --curve-graph-min-height: 240px;
       }
     }
   `;
@@ -785,7 +846,11 @@ export class LightenerCurveCard extends LitElement {
 
   render() {
     return html`
-      <div class="card" role="region" aria-label="Brightness Curves Editor">
+      <div
+        class="card ${this._embedded ? 'embedded' : ''}"
+        role="region"
+        aria-label="Brightness Curves Editor"
+      >
         <div class="header">
           <svg
             class="header-icon"
@@ -801,78 +866,84 @@ export class LightenerCurveCard extends LitElement {
           <h2>${(this._config.title as string) ?? 'Brightness Curves'}</h2>
         </div>
 
-        ${this._loading
-          ? html`<div class="loading-indicator" role="status" aria-live="polite">
-              Loading curves...
-            </div>`
-          : html`<div class="graph-panel">
-              <curve-graph
-                .curves=${this._curves}
-                .selectedCurveId=${this._selectedCurveId}
-                .readOnly=${!this._isAdmin || this._cancelAnimating}
-                .scrubberPosition=${this._scrubberPosition}
-                @point-move=${this._onPointMove}
-                @point-drop=${this._onPointDrop}
-                @point-add=${this._onPointAdd}
-                @point-remove=${this._onPointRemove}
-              ></curve-graph>
-            </div>`}
+        <div class="workspace">
+          <div class="main-stack">
+            ${this._loading
+              ? html`<div class="loading-indicator" role="status" aria-live="polite">
+                  Loading curves...
+                </div>`
+              : html`<div class="graph-panel">
+                  <curve-graph
+                    .curves=${this._curves}
+                    .selectedCurveId=${this._selectedCurveId}
+                    .readOnly=${!this._isAdmin || this._cancelAnimating}
+                    .scrubberPosition=${this._scrubberPosition}
+                    @point-move=${this._onPointMove}
+                    @point-drop=${this._onPointDrop}
+                    @point-add=${this._onPointAdd}
+                    @point-remove=${this._onPointRemove}
+                  ></curve-graph>
+                </div>`}
 
-        <curve-scrubber
-          .curves=${this._curves}
-          .readOnly=${!this._isAdmin}
-          @scrubber-move=${this._onScrubberMove}
-          @scrubber-start=${this._onScrubberStart}
-          @scrubber-end=${this._onScrubberEnd}
-        ></curve-scrubber>
+            <curve-scrubber
+              .curves=${this._curves}
+              .readOnly=${!this._isAdmin}
+              @scrubber-move=${this._onScrubberMove}
+              @scrubber-start=${this._onScrubberStart}
+              @scrubber-end=${this._onScrubberEnd}
+            ></curve-scrubber>
+          </div>
 
-        <curve-legend
-          .curves=${this._curves}
-          .selectedCurveId=${this._selectedCurveId}
-          @select-curve=${this._onSelectCurve}
-          @toggle-curve=${this._onToggleCurve}
-        ></curve-legend>
+          <div class="side-rail">
+            <curve-legend
+              .curves=${this._curves}
+              .selectedCurveId=${this._selectedCurveId}
+              @select-curve=${this._onSelectCurve}
+              @toggle-curve=${this._onToggleCurve}
+            ></curve-legend>
 
-        <curve-footer
-          .dirty=${this._isDirty || this._cancelAnimating}
-          .readOnly=${!this._isAdmin}
-          .saving=${this._saving || this._cancelAnimating}
-          .canUndo=${this._undoStack.length > 0 && !this._cancelAnimating}
-          @save-curves=${this._onSave}
-          @cancel-curves=${this._onCancel}
-          @undo-curves=${() => this._undo()}
-        ></curve-footer>
+            <curve-footer
+              .dirty=${this._isDirty || this._cancelAnimating}
+              .readOnly=${!this._isAdmin}
+              .saving=${this._saving || this._cancelAnimating}
+              .canUndo=${this._undoStack.length > 0 && !this._cancelAnimating}
+              @save-curves=${this._onSave}
+              @cancel-curves=${this._onCancel}
+              @undo-curves=${() => this._undo()}
+            ></curve-footer>
+          </div>
+        </div>
 
-        ${this._saveSuccess
-          ? html`<div class="success" role="status" aria-live="polite">
-              <svg
-                class="status-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-              Saved successfully
-            </div>`
-          : nothing}
-        ${this._loadError
-          ? html`<div class="error" role="alert">
-              ${WARNING_ICON} Failed to load curves
-              <button type="button" class="retry-link" @click=${this._retryLoad}>
-                Tap to retry
-              </button>
-            </div>`
-          : nothing}
-        ${this._saveError
-          ? html`<div class="error" role="alert">
-              ${WARNING_ICON} Save failed
-              <button type="button" class="retry-link" @click=${this._onSave}>Tap to retry</button>
-            </div>`
-          : nothing}
+        <div class="status-stack">
+          ${this._saveSuccess
+            ? html`<div class="success" role="status" aria-live="polite">
+                <svg
+                  class="status-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Saved successfully
+              </div>`
+            : nothing}
+          ${this._loadError
+            ? html`<div class="error" role="alert">
+                ${WARNING_ICON} Failed to load curves
+                <button type="button" class="retry-link" @click=${this._retryLoad}>Retry</button>
+              </div>`
+            : nothing}
+          ${this._saveError
+            ? html`<div class="error" role="alert">
+                ${WARNING_ICON} Save failed
+                <button type="button" class="retry-link" @click=${this._onSave}>Retry</button>
+              </div>`
+            : nothing}
+        </div>
       </div>
     `;
   }

@@ -21,10 +21,21 @@ export class CurveLegend extends LitElement {
         var(--secondary-text-color, #616161) 5%
       );
     }
+    .legend-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--secondary-text-color, #616161);
+      opacity: 0.7;
+      padding: 6px 10px 4px;
+    }
     .legend {
       display: flex;
       flex-direction: column;
       gap: 2px;
+      max-height: var(--curve-legend-max-height, none);
+      overflow: auto;
     }
     .legend-item {
       display: flex;
@@ -173,6 +184,7 @@ export class CurveLegend extends LitElement {
   render() {
     return html`
       <div class="legend-panel">
+        <div class="legend-label">Lights</div>
         <div class="legend" role="listbox" aria-label="Light curves">
           ${this.curves.map(
             (curve, idx) => html`

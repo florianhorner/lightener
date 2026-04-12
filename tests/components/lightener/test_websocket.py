@@ -58,7 +58,7 @@ async def test_list_entities_returns_lightener_entities(
     hass: HomeAssistant, hass_ws_client
 ) -> None:
     """Test ws_list_entities returns only Lightener entities."""
-    await _setup_lightener(hass)
+    config_entry = await _setup_lightener(hass)
 
     ws = await hass_ws_client(hass)
     await ws.send_json(
@@ -72,7 +72,9 @@ async def test_list_entities_returns_lightener_entities(
     assert result["success"] is True
     assert isinstance(result["result"]["entities"], list)
     assert any(
-        item["entity_id"] == "light.test" for item in result["result"]["entities"]
+        item["entity_id"] == "light.test"
+        and item["config_entry_id"] == config_entry.entry_id
+        for item in result["result"]["entities"]
     )
 
 
