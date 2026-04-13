@@ -179,7 +179,12 @@ class LightenerEditorPanel extends HTMLElement {
     this._renderPendingSwitch();
 
     const saveCurves = typeof this._card.saveCurves === "function" ? this._card.saveCurves.bind(this._card) : null;
-    const saved = saveCurves ? await saveCurves() : false;
+    let saved = false;
+    try {
+      saved = saveCurves ? await saveCurves() : false;
+    } catch (err) {
+      console.error("[Lightener] Entity switch save failed:", err);
+    }
 
     if (saved) {
       this._setSelectedEntity(this._pendingEntity);
@@ -248,7 +253,8 @@ class LightenerEditorPanel extends HTMLElement {
 
     const link = document.createElement("a");
     link.className = "empty-state-link";
-    link.href = "/config/integrations";
+    const baseUrl = (this._hass?.config?.frontend_url || "").replace(/\/$/, "");
+    link.href = baseUrl + "/config/integrations";
     link.textContent = "Open Integrations";
 
     section.append(title, body, steps, link);
@@ -314,6 +320,12 @@ class LightenerEditorPanel extends HTMLElement {
   _handleEntitySelectChange(event) {
     const nextEntity = event.target.value || null;
     if (!nextEntity || nextEntity === this._selectedEntity) {
+      return;
+    }
+
+    // Ignore a second change while a switch is already pending (double-click race)
+    if (this._pendingEntity) {
+      event.target.value = this._selectedEntity || "";
       return;
     }
 
