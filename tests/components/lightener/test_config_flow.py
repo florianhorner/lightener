@@ -34,6 +34,14 @@ async def test_config_flow_steps(hass: HomeAssistant) -> None:
     )
 
     assert result["type"] == "form"
+    assert result["step_id"] == "area"
+    assert result["last_step"] is False
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={}
+    )
+
+    assert result["type"] == "form"
     assert result["step_id"] == "lights"
     assert result["last_step"] is True
 
@@ -52,6 +60,31 @@ async def test_config_flow_steps(hass: HomeAssistant) -> None:
     }
 
 
+async def test_config_flow_no_internal_keys_in_persisted_data(
+    hass: HomeAssistant,
+) -> None:
+    """Regression test: internal flow keys (prefixed with _) must not leak into the config entry."""
+
+    result = await hass.config_entries.flow.async_init(
+        const.DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"name": "Test"}
+    )
+    # area step — always writes _area_filter to self.data (None when skipped)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input={"controlled_entities": ["light.test1"]},
+    )
+
+    assert result["type"] == "create_entry"
+    for key in result["data"]:
+        assert not key.startswith("_"), f"Internal key '{key}' leaked into config entry"
+
+
 async def test_config_flow_multiple_lights(hass: HomeAssistant) -> None:
     """Test config flow with multiple lights — all get default curves."""
 
@@ -60,6 +93,9 @@ async def test_config_flow_multiple_lights(hass: HomeAssistant) -> None:
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={"name": "Test Name"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
@@ -86,6 +122,9 @@ async def test_config_flow_applies_selected_preset_to_new_lights(
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={"name": "Preset Test"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
@@ -214,6 +253,9 @@ async def test_step_lights_error_no_selection(hass: HomeAssistant) -> None:
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={"name": "Test Name"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={}
     )
 
     result = await hass.config_entries.flow.async_configure(

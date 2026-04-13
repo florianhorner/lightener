@@ -33,7 +33,8 @@ class LightenerEditorPanel extends HTMLElement {
     const entities = this._getEditorEntities();
 
     if (!this._selectedEntity || !entities.some((entity) => entity.entity_id === this._selectedEntity)) {
-      const saved = window.localStorage.getItem("lightener_editor_entity");
+      let saved = null;
+      try { saved = window.localStorage.getItem("lightener_editor_entity"); } catch { /* private browsing */ }
       if (saved && entities.some((entity) => entity.entity_id === saved)) {
         this._selectedEntity = saved;
       } else {
@@ -156,10 +157,14 @@ class LightenerEditorPanel extends HTMLElement {
     this._pendingEntity = null;
     this._switchSaving = false;
     this._cardDirty = false;
-    if (entityId) {
-      window.localStorage.setItem("lightener_editor_entity", entityId);
-    } else {
-      window.localStorage.removeItem("lightener_editor_entity");
+    try {
+      if (entityId) {
+        window.localStorage.setItem("lightener_editor_entity", entityId);
+      } else {
+        window.localStorage.removeItem("lightener_editor_entity");
+      }
+    } catch {
+      // Silently ignore — private browsing or quota-exceeded; entity selection just won't persist
     }
     this._render();
     this._syncCard();
@@ -174,7 +179,12 @@ class LightenerEditorPanel extends HTMLElement {
     this._renderPendingSwitch();
 
     const saveCurves = typeof this._card.saveCurves === "function" ? this._card.saveCurves.bind(this._card) : null;
-    const saved = saveCurves ? await saveCurves() : false;
+    let saved = false;
+    try {
+      saved = saveCurves ? await saveCurves() : false;
+    } catch (err) {
+      console.error("[Lightener] Entity switch save failed:", err);
+    }
 
     if (saved) {
       this._setSelectedEntity(this._pendingEntity);
@@ -243,7 +253,8 @@ class LightenerEditorPanel extends HTMLElement {
 
     const link = document.createElement("a");
     link.className = "empty-state-link";
-    link.href = "/config/integrations";
+    const baseUrl = (this._hass?.config?.frontend_url || "").replace(/\/$/, "");
+    link.href = baseUrl + "/config/integrations";
     link.textContent = "Open Integrations";
 
     section.append(title, body, steps, link);
@@ -309,6 +320,12 @@ class LightenerEditorPanel extends HTMLElement {
   _handleEntitySelectChange(event) {
     const nextEntity = event.target.value || null;
     if (!nextEntity || nextEntity === this._selectedEntity) {
+      return;
+    }
+
+    // Ignore a second change while a switch is already pending (double-click race)
+    if (this._pendingEntity) {
+      event.target.value = this._selectedEntity || "";
       return;
     }
 

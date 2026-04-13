@@ -230,15 +230,18 @@ class LightenerFlow:
         # We don't save it into the "options" key but always in "config",
         # no matter if the user called the config or the options flow.
 
+        # Strip internal flow-only keys (prefixed with _) before persisting.
+        persist_data = {k: v for k, v in self.data.items() if not k.startswith("_")}
+
         # If in a config flow, create the config entry.
         if self.config_entry is None:
             return self.flow_handler.async_create_entry(
-                title=self.data.get(CONF_FRIENDLY_NAME), data=self.data
+                title=persist_data.get(CONF_FRIENDLY_NAME), data=persist_data
             )
 
         # In an options flow, update the config entry.
         self.flow_handler.hass.config_entries.async_update_entry(
-            self.config_entry, data=self.data, options=self.config_entry.options
+            self.config_entry, data=persist_data, options=self.config_entry.options
         )
 
         await self.flow_handler.hass.config_entries.async_reload(

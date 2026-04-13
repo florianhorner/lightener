@@ -1153,15 +1153,22 @@ export class LightenerCurveCard extends LitElement {
   private async _onSave(): Promise<boolean> {
     if (!this._hass || !this._entityId || this._saving || this._cancelAnimating) return false;
 
+    const savedEntityId = this._entityId;
     this._saving = true;
     this._saveError = null;
     try {
       const payload = curvesToWsPayload(this._curves);
       await this._hass.callWS({
         type: 'lightener/save_curves',
-        entity_id: this._entityId,
+        entity_id: savedEntityId,
         curves: payload,
       });
+      // If user switched entity while save was in flight, don't corrupt the new entity's state.
+      // Clear undo stack so stale history for the old entity can't be replayed after a switch-back.
+      if (this._entityId !== savedEntityId) {
+        this._undoStack = [];
+        return false;
+      }
       this._originalCurves = cloneCurves(this._curves);
       this._undoStack = [];
       // Re-fetch from backend in case reload normalised data

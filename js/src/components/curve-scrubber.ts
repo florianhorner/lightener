@@ -17,6 +17,7 @@ export class CurveScrubber extends LitElement {
   private _trackRef: HTMLElement | null = null;
   private _resizeObserver: ResizeObserver | null = null;
   private _observedBadgesRef: HTMLElement | null = null;
+  private _clickPreviewTimer: ReturnType<typeof setTimeout> | null = null;
 
   static styles = css`
     :host {
@@ -257,7 +258,9 @@ export class CurveScrubber extends LitElement {
     this.dispatchEvent(new CustomEvent('scrubber-start', { bubbles: true, composed: true }));
     this._updatePositionFromClient(e.clientX);
     // Let the preview take effect for a moment, then restore
-    setTimeout(() => {
+    if (this._clickPreviewTimer) clearTimeout(this._clickPreviewTimer);
+    this._clickPreviewTimer = setTimeout(() => {
+      this._clickPreviewTimer = null;
       this.dispatchEvent(new CustomEvent('scrubber-end', { bubbles: true, composed: true }));
     }, 1500);
   }
@@ -315,6 +318,10 @@ export class CurveScrubber extends LitElement {
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
     this._observedBadgesRef = null;
+    if (this._clickPreviewTimer) {
+      clearTimeout(this._clickPreviewTimer);
+      this._clickPreviewTimer = null;
+    }
   }
 
   protected firstUpdated(): void {

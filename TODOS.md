@@ -89,68 +89,69 @@ Source: /challenge mode adversarial review
 
 ### P1 — Production Safety (Critical crash/data loss risks)
 
-- [ ] **Guard division by zero in range scaling**
+- [x] **Guard division by zero in range scaling**
   `js/src/utils/interpolation.ts:14` in `scaleRangedValue()` divides by `(b - a)` without
   checking if sourceRange endpoints are identical. If ever triggered, results in `Infinity`
   or `NaN` propagating through curve sampling, crashing brightness interpolation.
   Fix: Add early return if `sourceRange[0] === sourceRange[1]`.
   Priority: P1 (reliability blocker)
+  **Completed:** v2.13.1 (2026-04-13)
 
-- [ ] **Guard SVG coordinate transform inversion**
+- [x] **Guard SVG coordinate transform inversion**
   `js/src/components/curve-graph.ts:186-192` calls `ctm.inverse()` without null check.
   On edge-case SVG containers (zero-scaled, degenerate), inverse() could fail or return
   unexpected results, breaking all graph interactions.
-  Fix: Add `if (!inv) return null` after line 188.
+  Fix: Wrap in try/catch + NaN guard.
   Priority: P1 (interaction blocker)
+  **Completed:** v2.13.1 (2026-04-13)
 
-- [ ] **Race condition: entity change during save**
-  `js/src/lightener-curve-card.ts:948-963`. If user switches entity while save is in flight,
-  `_tryLoadCurves()` reloads for the OLD entity after save completes. Results in data
-  corruption: wrong entity's data loads into the new entity editor.
-  Fix: Capture `this._entityId` before the async call; validate it hasn't changed before
-  reloading. Pass captured entity ID to `_tryLoadCurves()` to detect mismatch.
+- [x] **Race condition: entity change during save**
+  `js/src/lightener-curve-card.ts`. If user switches entity while save is in flight,
+  post-save state update would corrupt the new entity's editor.
+  Fix: Capture entityId before async call; bail if it changed after await.
   Priority: P1 (data integrity)
+  **Completed:** v2.13.1 (2026-04-13)
 
-- [ ] **Guard localStorage access in entity persistence**
+- [x] **Guard localStorage access in entity persistence**
   `custom_components/lightener/frontend/lightener-panel.js:160-162`. Direct localStorage
   calls without try/catch. In private browsing or quota-exceeded scenarios, throws uncaught
   error and breaks entity selection persistence.
-  Fix: Wrap lines 160-162 in try/catch with silent fallback.
+  Fix: Wrap all localStorage reads/writes in try/catch with silent fallback.
   Priority: P1 (reliability)
+  **Completed:** v2.13.1 (2026-04-13)
 
 ### P2 — Reliability (Edge case crashes, memory/focus leaks)
 
-- [ ] **Timer leak on component destruction**
-  Multiple `setTimeout` calls without guaranteed cleanup: `_saveSuccessTimer` (line 205),
-  `_longPressTimer` (graph.ts line 41), scrubber click timeout (line 260). If panel unmounts
-  during animation, timers fire on destroyed components causing warnings/errors.
-  Fix: Add `_isDestroyed` flag; check it in all timer callbacks before executing state updates.
+- [x] **Timer leak on component destruction**
+  Scrubber click-preview `setTimeout` (1500ms) had no cleanup. `_saveSuccessTimer` and
+  `_longPressTimer` were already handled.
+  Fix: Added `_clickPreviewTimer` field to scrubber; clear in `disconnectedCallback`.
   Priority: P2 (reliability)
+  **Completed:** v2.13.1 (2026-04-13)
 
-- [ ] **Missing error context in save failures**
-  `custom_components/lightener/frontend/lightener-panel.js:177`. `await saveCurves()` with
-  no error logging. Save fails with generic "Save failed. Check connection." — real error
-  (permission denied, integration error) is lost to console, hard to debug.
-  Fix: Log `err` to console with full context before returning false.
+- [x] **Missing error context in save failures**
+  `custom_components/lightener/frontend/lightener-panel.js`. `await saveCurves()` with
+  no error logging. Save fails with generic message — real error lost to console.
+  Fix: Added try/catch with `console.error` around the save call in the panel.
   Priority: P2 (debuggability)
+  **Completed:** v2.13.1 (2026-04-13)
 
-- [ ] **Focus management missing in keyboard editing**
-  `js/src/components/curve-graph.ts:212-227`. New keyboard support (`_onPointFocus`,
-  `_onPointBlur`) tracks focused point in data but doesn't manage DOM focus. Screen reader
-  users see no focus indication; keyboard nav flow is unclear.
-  Fix: Call `.focus()` on the hit-circle SVG element when `_focusedPoint` changes.
+- [x] **Focus management missing in keyboard editing**
+  After keyboard point-add/remove, the DOM re-renders and focus is lost.
+  Fix: Call `_refocusHitCircle()` via `updateComplete.then()` after structural keyboard actions.
   Priority: P2 (accessibility)
+  **Completed:** v2.13.1 (2026-04-13)
 
-- [ ] **Hard-coded URL for integrations link**
-  `custom_components/lightener/frontend/lightener-panel.js:246`. Empty state link href is
-  `/config/integrations` with no dynamic URL construction. Breaks if HA is behind reverse
-  proxy with path prefix (e.g., `/ha/config/integrations`).
-  Fix: Build from `this._hass.config?.frontend_url || '/'` + path.
+- [x] **Hard-coded URL for integrations link**
+  `custom_components/lightener/frontend/lightener-panel.js`. Empty state link href was
+  `/config/integrations` — breaks with HA reverse-proxy path prefixes.
+  Fix: Build URL from `this._hass?.config?.frontend_url` + path.
   Priority: P2 (reverse-proxy compatibility)
+  **Completed:** v2.13.1 (2026-04-13)
 
-- [ ] **Entity dropdown double-click race condition**
-  `custom_components/lightener/frontend/lightener-panel.js:315-319`. If user clicks entity
-  dropdown twice while dirty, `_pendingEntity` overwrites on second click. Second entity is
-  lost; UI shows first pending entity. Confusing UX, silent data loss of selection.
-  Fix: Ignore entity change events while a switch is already pending (`_pendingEntity` is set).
+- [x] **Entity dropdown double-click race condition**
+  `custom_components/lightener/frontend/lightener-panel.js`. Second click while switch pending
+  overwrote `_pendingEntity`, silently losing the selection.
+  Fix: Ignore entity-change events when `_pendingEntity` is already set.
   Priority: P2 (UX/reliability)
+  **Completed:** v2.13.1 (2026-04-13)

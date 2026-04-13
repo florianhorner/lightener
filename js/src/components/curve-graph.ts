@@ -185,7 +185,13 @@ export class CurveGraph extends LitElement {
     if (!svgEl) return null;
     const ctm = svgEl.getScreenCTM();
     if (!ctm) return null;
-    const inv = ctm.inverse();
+    let inv: DOMMatrix;
+    try {
+      inv = ctm.inverse();
+    } catch {
+      return null;
+    }
+    if (!inv || isNaN(inv.a)) return null;
     const pt = svgEl.createSVGPoint();
     pt.x = e.clientX;
     pt.y = e.clientY;
@@ -341,6 +347,8 @@ export class CurveGraph extends LitElement {
           composed: true,
         })
       );
+      // After re-render the new point is at a sorted position; refocus the original point
+      this.updateComplete.then(() => this._refocusHitCircle(curveIdx, pointIdx)).catch(() => {});
       return;
     }
     if (
@@ -357,6 +365,31 @@ export class CurveGraph extends LitElement {
           composed: true,
         })
       );
+      // After removal, focus the preceding point so keyboard nav can continue
+      this.updateComplete
+        .then(() => this._refocusHitCircle(curveIdx, Math.max(1, pointIdx - 1)))
+        .catch(() => {});
+    }
+  }
+
+  private _refocusHitCircle(curveIdx: number, pointIdx: number): void {
+    const hitCircles = this.renderRoot.querySelectorAll<SVGCircleElement>('.hit-circle');
+    // Hit circles are rendered per-curve in order; find the correct one by data position
+    const curves = this.curves;
+    let offset = 0;
+    for (let ci = 0; ci < curveIdx; ci++) {
+      const c = curves[ci];
+      if (
+        c &&
+        c.visible &&
+        (this.selectedCurveId === null || c.entityId === this.selectedCurveId)
+      ) {
+        offset += c.controlPoints.length;
+      }
+    }
+    const target = hitCircles[offset + pointIdx];
+    if (target) {
+      target.focus();
     }
   }
 
