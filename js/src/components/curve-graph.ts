@@ -386,8 +386,8 @@ export class CurveGraph extends LitElement {
       }
     }
     const target = hitCircles[offset + pointIdx];
-    if (target && (target as HTMLElement).focus) {
-      (target as unknown as HTMLElement).focus();
+    if (target) {
+      target.focus();
     }
   }
 
