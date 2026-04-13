@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.13.1] - 2026-04-14
+
+### Fixed
+
+- Division by zero in `scaleRangedValue` when source range is degenerate (same start and end value) — previously returned `NaN`, now returns the target range start
+- Floating promise anti-pattern in `curve-graph.ts`: `.updateComplete.then()` calls now have `.catch(() => {})` guards, preventing unhandled rejections if the component disconnects before the promise resolves
+- Undo stack for old entity leaked when user switched entity mid-save — stack is now cleared in the entity-switch bail path of `_onSave`, preventing stale history from a previous entity being replayable after switch-back
+- Config flow: `_area_filter` internal key was stripped from persisted config entry data but lacked a regression test — regression test added
+- Config flow tests: area step was missing from 4 existing test scenarios, causing false-pass coverage
+
 ## [2.13.0] - 2026-04-12
 
 ### Added

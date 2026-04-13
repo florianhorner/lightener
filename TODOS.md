@@ -95,7 +95,7 @@ Source: /challenge mode adversarial review
   or `NaN` propagating through curve sampling, crashing brightness interpolation.
   Fix: Add early return if `sourceRange[0] === sourceRange[1]`.
   Priority: P1 (reliability blocker)
-  **Completed:** v2.13.x (2026-04-13)
+  **Completed:** v2.13.1 (2026-04-13)
 
 - [x] **Guard SVG coordinate transform inversion**
   `js/src/components/curve-graph.ts:186-192` calls `ctm.inverse()` without null check.
@@ -103,14 +103,14 @@ Source: /challenge mode adversarial review
   unexpected results, breaking all graph interactions.
   Fix: Wrap in try/catch + NaN guard.
   Priority: P1 (interaction blocker)
-  **Completed:** v2.13.x (2026-04-13)
+  **Completed:** v2.13.1 (2026-04-13)
 
 - [x] **Race condition: entity change during save**
   `js/src/lightener-curve-card.ts`. If user switches entity while save is in flight,
   post-save state update would corrupt the new entity's editor.
   Fix: Capture entityId before async call; bail if it changed after await.
   Priority: P1 (data integrity)
-  **Completed:** v2.13.x (2026-04-13)
+  **Completed:** v2.13.1 (2026-04-13)
 
 - [x] **Guard localStorage access in entity persistence**
   `custom_components/lightener/frontend/lightener-panel.js:160-162`. Direct localStorage
@@ -118,7 +118,7 @@ Source: /challenge mode adversarial review
   error and breaks entity selection persistence.
   Fix: Wrap all localStorage reads/writes in try/catch with silent fallback.
   Priority: P1 (reliability)
-  **Completed:** v2.13.x (2026-04-13)
+  **Completed:** v2.13.1 (2026-04-13)
 
 ### P2 — Reliability (Edge case crashes, memory/focus leaks)
 
@@ -127,31 +127,31 @@ Source: /challenge mode adversarial review
   `_longPressTimer` were already handled.
   Fix: Added `_clickPreviewTimer` field to scrubber; clear in `disconnectedCallback`.
   Priority: P2 (reliability)
-  **Completed:** v2.13.x (2026-04-13)
+  **Completed:** v2.13.1 (2026-04-13)
 
 - [x] **Missing error context in save failures**
   `custom_components/lightener/frontend/lightener-panel.js`. `await saveCurves()` with
   no error logging. Save fails with generic message — real error lost to console.
   Fix: Added try/catch with `console.error` around the save call in the panel.
   Priority: P2 (debuggability)
-  **Completed:** v2.13.x (2026-04-13)
+  **Completed:** v2.13.1 (2026-04-13)
 
 - [x] **Focus management missing in keyboard editing**
   After keyboard point-add/remove, the DOM re-renders and focus is lost.
   Fix: Call `_refocusHitCircle()` via `updateComplete.then()` after structural keyboard actions.
   Priority: P2 (accessibility)
-  **Completed:** v2.13.x (2026-04-13)
+  **Completed:** v2.13.1 (2026-04-13)
 
 - [x] **Hard-coded URL for integrations link**
   `custom_components/lightener/frontend/lightener-panel.js`. Empty state link href was
   `/config/integrations` — breaks with HA reverse-proxy path prefixes.
   Fix: Build URL from `this._hass?.config?.frontend_url` + path.
   Priority: P2 (reverse-proxy compatibility)
-  **Completed:** v2.13.x (2026-04-13)
+  **Completed:** v2.13.1 (2026-04-13)
 
 - [x] **Entity dropdown double-click race condition**
   `custom_components/lightener/frontend/lightener-panel.js`. Second click while switch pending
   overwrote `_pendingEntity`, silently losing the selection.
   Fix: Ignore entity-change events when `_pendingEntity` is already set.
   Priority: P2 (UX/reliability)
-  **Completed:** v2.13.x (2026-04-13)
+  **Completed:** v2.13.1 (2026-04-13)
