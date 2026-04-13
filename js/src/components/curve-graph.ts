@@ -348,7 +348,7 @@ export class CurveGraph extends LitElement {
         })
       );
       // After re-render the new point is at a sorted position; refocus the original point
-      this.updateComplete.then(() => this._refocusHitCircle(curveIdx, pointIdx));
+      this.updateComplete.then(() => this._refocusHitCircle(curveIdx, pointIdx)).catch(() => {});
       return;
     }
     if (
@@ -366,7 +366,9 @@ export class CurveGraph extends LitElement {
         })
       );
       // After removal, focus the preceding point so keyboard nav can continue
-      this.updateComplete.then(() => this._refocusHitCircle(curveIdx, Math.max(1, pointIdx - 1)));
+      this.updateComplete
+        .then(() => this._refocusHitCircle(curveIdx, Math.max(1, pointIdx - 1)))
+        .catch(() => {});
     }
   }
 

@@ -22,6 +22,10 @@ describe('scaleRangedValue', () => {
   it('handles non-zero source start', () => {
     expect(scaleRangedValue([10, 20], [0, 100], 15)).toBe(50);
   });
+
+  it('returns target range start when source range is degenerate (a === b)', () => {
+    expect(scaleRangedValue([50, 50], [10, 20], 50)).toBe(10);
+  });
 });
 
 describe('prepareBrightnessConfig', () => {

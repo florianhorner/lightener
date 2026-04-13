@@ -60,6 +60,31 @@ async def test_config_flow_steps(hass: HomeAssistant) -> None:
     }
 
 
+async def test_config_flow_no_internal_keys_in_persisted_data(
+    hass: HomeAssistant,
+) -> None:
+    """Regression test: internal flow keys (prefixed with _) must not leak into the config entry."""
+
+    result = await hass.config_entries.flow.async_init(
+        const.DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"name": "Test"}
+    )
+    # area step — always writes _area_filter to self.data (None when skipped)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input={"controlled_entities": ["light.test1"]},
+    )
+
+    assert result["type"] == "create_entry"
+    for key in result["data"]:
+        assert not key.startswith("_"), f"Internal key '{key}' leaked into config entry"
+
+
 async def test_config_flow_multiple_lights(hass: HomeAssistant) -> None:
     """Test config flow with multiple lights — all get default curves."""
 
