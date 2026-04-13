@@ -185,7 +185,13 @@ export class CurveGraph extends LitElement {
     if (!svgEl) return null;
     const ctm = svgEl.getScreenCTM();
     if (!ctm) return null;
-    const inv = ctm.inverse();
+    let inv: DOMMatrix;
+    try {
+      inv = ctm.inverse();
+    } catch {
+      return null;
+    }
+    if (!inv || isNaN(inv.a)) return null;
     const pt = svgEl.createSVGPoint();
     pt.x = e.clientX;
     pt.y = e.clientY;
