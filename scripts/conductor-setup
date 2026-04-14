@@ -4,6 +4,12 @@
 
 set -euo pipefail
 
+# apt-get, keyring writes, and package installs require root.
+if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+  echo "[conductor-setup] ERROR: must run as root (e.g. sudo scripts/conductor-setup)"
+  exit 1
+fi
+
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
@@ -60,8 +66,9 @@ fi
 # Write a .envrc-style activation shim so `source .env.workspace` activates
 # the venv and sets PYTHONPATH for interactive use in the terminal.
 cat > "$REPO_ROOT/.env.workspace" <<'EOF'
-# Source this in the workspace terminal for a ready dev environment:
-#   source .env.workspace
+# Source this in the workspace terminal for a ready dev environment.
+# IMPORTANT: source from the repo root — uses relative paths.
+#   cd /path/to/lightener-curve-editor && source .env.workspace
 source .venv/bin/activate
 # Avoid leading colon when PYTHONPATH is unset (would add "" = cwd to search path).
 export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${PWD}/custom_components"
