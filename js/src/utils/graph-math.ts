@@ -112,7 +112,7 @@ export function sampleSmoothCurveAt(points: { x: number; y: number }[], targetX:
 export function sampleCurveAt(controlPoints: ControlPoint[], position: number): number {
   const prepared = prepareBrightnessConfig(controlPoints);
   const pathPoints = prepared.map((cp) => ({ x: cp.lightener, y: cp.target }));
-  return sampleSmoothCurveAt(pathPoints, position);
+  return Math.max(0, Math.min(100, sampleSmoothCurveAt(pathPoints, position)));
 }
 
 /** Colorblind-safe curve palette — shared between card and tests. */

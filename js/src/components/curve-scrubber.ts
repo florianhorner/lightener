@@ -10,6 +10,7 @@ export class CurveScrubber extends LitElement {
 
   @state() private _position = 50; // 0-100
   @state() private _overflowCount = 0;
+  @state() private _expanded = false;
 
   @query('.value-badges') private _badgesRef!: HTMLElement | null;
 
@@ -17,7 +18,6 @@ export class CurveScrubber extends LitElement {
   private _trackRef: HTMLElement | null = null;
   private _resizeObserver: ResizeObserver | null = null;
   private _observedBadgesRef: HTMLElement | null = null;
-  private _clickPreviewTimer: ReturnType<typeof setTimeout> | null = null;
 
   static styles = css`
     :host {
@@ -26,7 +26,6 @@ export class CurveScrubber extends LitElement {
     .scrubber-panel {
       border-radius: 12px;
       padding: 14px 12px 12px;
-      margin-bottom: 8px;
       background: color-mix(
         in srgb,
         var(--ha-card-background, var(--card-background-color, #fff)) 95%,
@@ -146,7 +145,7 @@ export class CurveScrubber extends LitElement {
       margin-left: 2px;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 80px;
+      max-width: 110px;
     }
     .overflow-indicator {
       position: absolute;
@@ -169,7 +168,9 @@ export class CurveScrubber extends LitElement {
           )
           28%
       );
-      pointer-events: none;
+      cursor: pointer;
+      border: none;
+      font: inherit;
     }
     @media (max-width: 500px) {
       .track-area {
@@ -254,15 +255,7 @@ export class CurveScrubber extends LitElement {
 
   private _onTrackClick(e: MouseEvent): void {
     if (this.readOnly) return;
-    // Single-click preview: snap to position, fire start+move+end so lights preview briefly
-    this.dispatchEvent(new CustomEvent('scrubber-start', { bubbles: true, composed: true }));
     this._updatePositionFromClient(e.clientX);
-    // Let the preview take effect for a moment, then restore
-    if (this._clickPreviewTimer) clearTimeout(this._clickPreviewTimer);
-    this._clickPreviewTimer = setTimeout(() => {
-      this._clickPreviewTimer = null;
-      this.dispatchEvent(new CustomEvent('scrubber-end', { bubbles: true, composed: true }));
-    }, 1500);
   }
 
   private _onKeyDown(e: KeyboardEvent): void {
@@ -318,10 +311,6 @@ export class CurveScrubber extends LitElement {
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
     this._observedBadgesRef = null;
-    if (this._clickPreviewTimer) {
-      clearTimeout(this._clickPreviewTimer);
-      this._clickPreviewTimer = null;
-    }
   }
 
   protected firstUpdated(): void {
@@ -356,6 +345,9 @@ export class CurveScrubber extends LitElement {
 
     if (hiddenCount !== this._overflowCount) {
       this._overflowCount = hiddenCount;
+    }
+    if (hiddenCount === 0) {
+      this._expanded = false;
     }
   }
 
@@ -392,7 +384,7 @@ export class CurveScrubber extends LitElement {
         </div>
 
         <div class="value-badges-wrap">
-          <div class="value-badges">
+          <div class="value-badges" style="${this._expanded ? 'max-height: none;' : ''}">
             ${bars.map(
               (bar) => html`
                 <div class="badge" data-value-badge="true">
@@ -403,8 +395,15 @@ export class CurveScrubber extends LitElement {
               `
             )}
           </div>
-          ${this._overflowCount > 0
-            ? html`<div class="overflow-indicator">+${this._overflowCount} more</div>`
+          ${this._overflowCount > 0 || this._expanded
+            ? html`<button
+                class="overflow-indicator"
+                @click=${() => {
+                  this._expanded = !this._expanded;
+                }}
+              >
+                ${this._expanded ? 'Show less' : `+${this._overflowCount} more`}
+              </button>`
             : null}
         </div>
       </div>

@@ -349,6 +349,8 @@ class LightenerEditorPanel extends HTMLElement {
             display: block;
             padding: 18px 20px 28px;
             box-sizing: border-box;
+            max-width: 100%;
+            overflow-x: hidden;
             --lightener-panel-surface: color-mix(
               in srgb,
               var(--card-background-color) 95%,
@@ -393,15 +395,43 @@ class LightenerEditorPanel extends HTMLElement {
                 color-mix(in srgb, var(--lightener-panel-surface) 98%, transparent)
               );
           }
-          select {
+          .select-wrapper {
+            position: relative;
+            display: inline-block;
             width: 100%;
             max-width: 640px;
+          }
+          select {
+            width: 100%;
             height: 44px;
-            padding: 0 12px;
+            padding: 0 40px 0 14px;
             border-radius: 12px;
             border: 1px solid var(--divider-color);
             background: var(--card-background-color);
             color: var(--primary-text-color);
+            appearance: none;
+            -webkit-appearance: none;
+            font-family: var(--mdc-typography-body1-font-family, var(--paper-font-body1_-_font-family, 'Roboto', sans-serif));
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+          }
+          select:hover {
+            border-color: var(--primary-color, #2563eb);
+          }
+          select:focus {
+            border-color: var(--primary-color, #2563eb);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+          }
+          .select-arrow {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: var(--secondary-text-color);
+            opacity: 0.6;
           }
           .hint {
             font-size: 0.9rem;
@@ -520,7 +550,12 @@ class LightenerEditorPanel extends HTMLElement {
           <p>Pick a Lightener light entity and edit its curves directly here.</p>
           <div class="control-row">
             <label for="entity-select">Light entity</label>
-            <select id="entity-select"></select>
+            <div class="select-wrapper">
+              <select id="entity-select"></select>
+              <svg class="select-arrow" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true">
+                <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </svg>
+            </div>
             <div id="status-msg"></div>
             <div id="switch-guard" class="switch-guard" hidden>
               <div id="switch-guard-text" class="switch-copy"></div>

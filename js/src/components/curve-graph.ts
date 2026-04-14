@@ -285,6 +285,9 @@ export class CurveGraph extends LitElement {
       this._focusCurve(curve.entityId);
     }
 
+    // First control point: Y-axis only — skip horizontal moves
+    if (pointIdx === 0 && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) return;
+
     const step = e.shiftKey ? 10 : 1;
     const prevX = pointIdx > 0 ? curve.controlPoints[pointIdx - 1].lightener + 1 : point.lightener;
     const nextX =
@@ -398,9 +401,6 @@ export class CurveGraph extends LitElement {
     if (e.button !== 0) return;
     if (!this._isCurveInteractive(curveIdx)) return;
 
-    // The origin anchor (index 0) is not draggable or removable
-    if (pointIdx === 0) return;
-
     e.preventDefault();
     this._longPressFired = false;
 
@@ -447,7 +447,10 @@ export class CurveGraph extends LitElement {
     const prevX = this._dragPointIdx > 0 ? pts[this._dragPointIdx - 1].lightener + 1 : 1;
     const nextX =
       this._dragPointIdx < pts.length - 1 ? pts[this._dragPointIdx + 1].lightener - 1 : 100;
-    const x = Math.round(clamp(coords.x, prevX, nextX));
+    const x =
+      this._dragPointIdx === 0
+        ? (this.curves[this._dragCurveIdx]?.controlPoints[0]?.lightener ?? 0)
+        : Math.round(clamp(coords.x, prevX, nextX));
     const y = Math.round(clamp(coords.y, 0, 100));
 
     this.dispatchEvent(
@@ -731,7 +734,7 @@ export class CurveGraph extends LitElement {
       ${
         showPoints
           ? curve.controlPoints.map((cp, pi) => {
-              const isFixed = cp.lightener === 0;
+              const isFixed = false;
               const isActive = isDraggingThisCurve && this._dragPointIdx === pi;
               const isHovered =
                 this._hoveredPoint?.curve === curveIdx && this._hoveredPoint?.point === pi;
@@ -745,7 +748,7 @@ export class CurveGraph extends LitElement {
                 pointer-events="all"
                 tabindex="${isFixed ? -1 : 0}"
                 role="${isFixed ? 'presentation' : 'button'}"
-                aria-label="${curve.friendlyName} point ${cp.lightener}% group brightness to ${cp.target}% light brightness. Arrow keys move, Enter adds a nearby point, Space removes."
+                aria-label="${curve.friendlyName} point ${cp.lightener}% group brightness to ${cp.target}% light brightness. ${pi === 0 ? 'Arrow Up/Down to adjust starting brightness. Cannot be moved horizontally.' : 'Arrow keys move, Enter adds a nearby point, Space removes.'}"
                 style="touch-action: none; -webkit-touch-callout: none"
                 @pointerdown=${(e: PointerEvent) => this._onPointerDown(e, curveIdx, pi)}
                 @contextmenu=${(e: MouseEvent) => this._onPointContextMenu(e, curveIdx, pi)}
@@ -895,7 +898,7 @@ export class CurveGraph extends LitElement {
                 >Editing: ${selected?.friendlyName ?? ''}</text>
               <text class="hint" text-anchor="end"
                 x="${PAD_LEFT + GRAPH_W - 4}" y="${PAD_TOP + GRAPH_H - 6}"
-                >Dbl-click to add · Right-click or long-press to remove</text>`;
+                >${this._isMobile ? 'Tap to add a point · Long-press to remove' : 'Double-click to add · Right-click or long-press to remove'}</text>`;
         })()}
       </svg>
     `;
