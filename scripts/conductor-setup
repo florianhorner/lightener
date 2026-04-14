@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# Conductor workspace setup — runs once per new workspace.
+# Extends scripts/setup (Python/HA) with Node.js, gh CLI, and JS frontend deps.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
+
+# ── 1. Python / HA deps (existing setup) ─────────────────────────────────────
+echo "[conductor-setup] Running Python/HA setup..."
+bash scripts/setup
+
+# ── 2. Node.js ───────────────────────────────────────────────────────────────
+echo "[conductor-setup] Ensuring Node.js is available..."
+if ! command -v node >/dev/null 2>&1; then
+  # Use NodeSource for a recent LTS on Debian/Ubuntu
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  apt-get install -y --no-install-recommends nodejs
+fi
+echo "[conductor-setup] Node $(node --version), npm $(npm --version)"
+
+# ── 3. JS frontend deps ───────────────────────────────────────────────────────
+echo "[conductor-setup] Installing JS frontend deps (js/)..."
+cd "$REPO_ROOT/js"
+npm ci --prefer-offline 2>/dev/null || npm install
+cd "$REPO_ROOT"
+
+# ── 4. GitHub CLI ────────────────────────────────────────────────────────────
+echo "[conductor-setup] Ensuring gh CLI is available..."
+if ! command -v gh >/dev/null 2>&1; then
+  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+    > /etc/apt/sources.list.d/github-cli.list
+  apt-get update -qq
+  apt-get install -y --no-install-recommends gh
+fi
+echo "[conductor-setup] gh $(gh --version | head -1)"
+
+# ── 5. jq ─────────────────────────────────────────────────────────────────────
+if ! command -v jq >/dev/null 2>&1; then
+  apt-get install -y --no-install-recommends jq
+fi
+
+# ── 6. Convenience aliases in workspace shell ─────────────────────────────────
+# Write a .envrc-style activation shim so `source .env.workspace` activates
+# the venv and sets PYTHONPATH for interactive use in the terminal.
+cat > "$REPO_ROOT/.env.workspace" <<'EOF'
+# Source this in the workspace terminal for a ready dev environment:
+#   source .env.workspace
+source .venv/bin/activate
+export PYTHONPATH="${PYTHONPATH:-}:${PWD}/custom_components"
+echo "Lightener dev env active — HA at: scripts/develop"
+EOF
+
+echo ""
+echo "╔══════════════════════════════════════════════════════════╗"
+echo "║  Conductor workspace ready                               ║"
+echo "║                                                          ║"
+echo "║  Python:  .venv/bin/python (HA 3.13.2)                  ║"
+echo "║  Node:    $(node --version | head -c 8)                                         ║"
+echo "║  gh CLI:  $(gh --version 2>/dev/null | awk '{print $3}' | head -1 | head -c 8)                                         ║"
+echo "║                                                          ║"
+echo "║  Run HA locally:  scripts/develop                        ║"
+echo "║  Build JS card:   cd js && npm run build                 ║"
+echo "║  Lint:            scripts/lint  (Python)                 ║"
+echo "║                   cd js && npm run lint  (TS)            ║"
+echo "║  Tests:           pytest  (Python)                       ║"
+echo "║                   cd js && npm test  (TS/vitest)         ║"
+echo "╚══════════════════════════════════════════════════════════╝"
+echo ""
+
+# ── WISHLIST (not yet automated — requires auth or external install) ──────────
+# The following would make the workspace fully self-sufficient but need
+# manual steps or secrets that can't be embedded in a script:
+#
+#  gh auth login
+#    → interactive browser auth; run once per workspace if GH_TOKEN is not set.
+#      Workaround: set GH_TOKEN as a Conductor environment variable/secret.
+#
+#  gstack (global skill runner)
+#    → install path depends on your gstack distribution; no public installer URL.
+#      Copy from ~/ or mount via Conductor volume if available.
+#
+#  mempalace (cross-session memory)
+#    → lives at ~/.local/bin/mempalace; same situation — mount or copy in.
+#      Once available, run: mempalace init --wing lightener
+#
+#  Tailscale (HA SSH access)
+#    → needed for `ssh root@100.98.177.107` deploys to production HA.
+#      Install separately; a tailscale auth key can be injected as a secret.
