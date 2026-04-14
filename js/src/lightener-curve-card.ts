@@ -773,6 +773,7 @@ export class LightenerCurveCard extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    if (this._previewActive) this._stopPreview();
     if (this._boundKeyHandler) {
       window.removeEventListener('keydown', this._boundKeyHandler);
     }
