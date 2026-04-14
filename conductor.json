@@ -1,0 +1,4 @@
+{
+  "setup": "scripts/conductor-setup",
+  "run": "scripts/develop"
+}

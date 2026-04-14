@@ -24,3 +24,4 @@ config/*
 js/node_modules/
 .gstack/
 .context/
+.env.workspace

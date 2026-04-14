@@ -43,6 +43,8 @@ unzip -l lightener.zip | grep -c "custom_components/"  # must be 0
 
 ## Development
 
+- `conductor.json` — Conductor Mac app config: `setup` runs `scripts/conductor-setup`, `run` button starts `scripts/develop`
+- `scripts/conductor-setup` — one-shot workspace bootstrap (Python venv, Node.js 22, gh CLI, jq, JS deps); requires root
 - `scripts/setup` — create venv and install deps
 - `scripts/develop` — run HA locally with the integration
 - `scripts/lint` — run linters
