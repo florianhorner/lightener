@@ -52,6 +52,6 @@ jobs:
           echo "✓ ZIP structure valid — manifest.json at root, no nested paths"
 
       - name: "Upload the ZIP file to the release"
-        uses: softprops/action-gh-release@v0.1.15
+        uses: softprops/action-gh-release@4c8d8e0ff9dddee0dddd4db3b5910452a3491d3a # v0.1.15
         with:
           files: ${{ github.workspace }}/custom_components/lightener/lightener.zip
