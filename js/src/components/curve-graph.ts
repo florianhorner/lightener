@@ -751,7 +751,7 @@ export class CurveGraph extends LitElement {
                 pointer-events="all"
                 tabindex="0"
                 role="button"
-                aria-label="${curve.friendlyName} point ${cp.lightener}% group brightness to ${cp.target}% light brightness. ${pi === 0 ? 'Arrow Up/Down to adjust starting brightness. Cannot be moved horizontally.' : 'Arrow keys move, Enter adds a nearby point, Space removes.'}"
+                aria-label="${curve.friendlyName} point ${cp.lightener}% group brightness to ${cp.target}% light brightness. ${pi === 0 ? 'Arrow Up/Down to adjust starting brightness. Cannot be moved horizontally.' : pi === curve.controlPoints.length - 1 ? 'Arrow keys move, Enter adds a nearby point.' : 'Arrow keys move, Enter adds a nearby point, Space removes.'}"
                 style="touch-action: none; -webkit-touch-callout: none"
                 @pointerdown=${(e: PointerEvent) => this._onPointerDown(e, curveIdx, pi)}
                 @contextmenu=${(e: MouseEvent) => this._onPointContextMenu(e, curveIdx, pi)}
