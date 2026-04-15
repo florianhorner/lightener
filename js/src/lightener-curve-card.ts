@@ -982,6 +982,10 @@ export class LightenerCurveCard extends LitElement {
   private _startPreview = (): void => {
     if (!this._hass || this._previewActive) return;
     this._previewActive = true;
+    // Ensure the graph shows a scrubber indicator even if the user never touched the slider
+    if (this._scrubberPosition === null) {
+      this._scrubberPosition = 50;
+    }
     // Snapshot current brightness for each controlled light so we can restore later
     this._previewRestoreBrightness.clear();
     for (const curve of this._curves) {
@@ -993,7 +997,7 @@ export class LightenerCurveCard extends LitElement {
         );
       }
     }
-    this._previewLights(this._scrubberPosition ?? 50);
+    this._previewLights(this._scrubberPosition);
   };
 
   private _stopPreview = (): void => {
@@ -1201,6 +1205,8 @@ export class LightenerCurveCard extends LitElement {
     const curve = this._curves[curveIndex];
     if (!curve) return;
     if (curve.controlPoints.length <= 2) return;
+    // Defense-in-depth: never remove origin or endpoint
+    if (pointIndex === 0 || pointIndex >= curve.controlPoints.length - 1) return;
 
     this._pushUndo();
     const curves = [...this._curves];
@@ -1356,7 +1362,7 @@ export class LightenerCurveCard extends LitElement {
               @scrubber-end=${this._onScrubberEnd}
             ></curve-scrubber>
 
-            ${this._isAdmin
+            ${this._isAdmin && !this._cancelAnimating
               ? html`
                   <div class="preview-toggle-row">
                     ${this._previewActive
