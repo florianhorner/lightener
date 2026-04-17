@@ -4,15 +4,34 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [2.13.1] - 2026-04-14
+## [2.14.0] - 2026-04-17
+
+### Added
+
+- **Preview toggle** — new "Preview" button in the card header lets you push the live brightness to all lights in the group while you shape the curve, without holding the scrubber. Lights restore automatically when preview is stopped, the card is navigated away from, or the entity changes
+- **Origin point Y-drag** — the leftmost control point (brightness at 0% input) can now be dragged vertically to set a dim floor, with a dashed stroke and `ns-resize` cursor to indicate constrained movement
+- **Badge overflow** — when the light-selector bar is too narrow to show all badges, excess ones collapse behind a "+N more" button with `aria-expanded` toggle
+
+### Changed
+
+- Save-lifecycle state machine extracted into a pure TypeScript reducer (`save-lifecycle.ts`) — three ad-hoc `@state` booleans collapsed into one `SaveState` + selectors, making save logic testable in isolation
+- Brightness helpers extracted from `light.py` into a dedicated `brightness.py` module — identical behaviour, cleaner module boundaries
+- Coverage gates hardened: Python floor raised to 90% (baseline 94.74%), JS thresholds set at 75/65/75/75 (baseline 82.52/73.76/83.47/80.52)
 
 ### Fixed
 
-- Division by zero in `scaleRangedValue` when source range is degenerate (same start and end value) — previously returned `NaN`, now returns the target range start
-- Floating promise anti-pattern in `curve-graph.ts`: `.updateComplete.then()` calls now have `.catch(() => {})` guards, preventing unhandled rejections if the component disconnects before the promise resolves
-- Undo stack for old entity leaked when user switched entity mid-save — stack is now cleared in the entity-switch bail path of `_onSave`, preventing stale history from a previous entity being replayable after switch-back
-- Config flow: `_area_filter` internal key was stripped from persisted config entry data but lacked a regression test — regression test added
-- Config flow tests: area step was missing from 4 existing test scenarios, causing false-pass coverage
+- Preview stops on `disconnectedCallback` — lights no longer stuck at preview brightness after navigating away
+- Preview scrubber indicator now defaults to 50% when preview starts before the scrubber has been touched, so the graph stays in sync with what lights receive
+- Preview throttle now fires a trailing-edge send so the final scrubber position always reaches lights, even after rapid movement
+- Rapid preview toggle after an entity switch no longer sends stale brightness restore targets
+- Origin control point is now protected from accidental long-press deletion on mobile
+- Badge overflow measurement skipped while expanded, fixing an infinite expand/collapse flicker loop
+- ARIA labels on keyboard-editable control points now correctly distinguish origin (Y-only), interior (free), and endpoint (no remove) — previously all said "Space removes"
+- Focus-visible styles added to Preview, Presets, and preset-option buttons for keyboard accessibility
+- Division by zero in `scaleRangedValue` when source range is degenerate — now returns target range start instead of `NaN`
+- Floating promise anti-pattern in `curve-graph.ts`: `.updateComplete.then()` calls now guarded with `.catch(() => {})` to prevent unhandled rejections on disconnect
+- Undo stack for old entity cleared on entity-switch bail path, preventing stale undo history from a previous entity being replayable after switch-back
+- Config flow: `_area_filter` internal key regression test added
 
 ## [2.13.0] - 2026-04-12
 

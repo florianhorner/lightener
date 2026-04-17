@@ -26,10 +26,11 @@ A visual editor for per-light brightness curves, directly in your HA dashboard â
 - **Keyboard navigation**: arrow keys on the scrubber, Enter/Space on legend items, Ctrl+S to save, Ctrl/Cmd+Z to undo, Esc to cancel
 - **Layered panel design**: graph, scrubber, and legend each sit in their own tinted sub-panel
 - **Theme-aware**: adapts to both HA light and dark modes
-- **Scales from 2 to 20+ lights**: badges cap at 2 rows and long names truncate cleanly
+- **Scales from 2 to 20+ lights**: badges cap at 2 rows; excess badges collapse behind a "+N more" button, and long names truncate cleanly
+- **Dim floor via origin drag**: drag the leftmost control point vertically to set a non-zero dim floor â€” a dashed stroke and `ns-resize` cursor indicate the constrained Y-only movement
 - **Mobile-friendly**: touch-optimised controls with 44px touch targets
 - **Mobile long-press delete**: remove a control point by long-pressing it on touch devices
-- **Live light preview**: drag the scrubber to push real brightness to your physical lights in real-time, then release to restore
+- **Live light preview**: a **Preview** button in the card header pushes real brightness to all lights while you shape curves; the scrubber also pushes live brightness on drag. Lights restore automatically when preview stops, you navigate away, or the entity changes
 - **Custom card title**: set a title in the card config or keep the default "Brightness Curves"
 - **Visual card editor**: Home Assistant card config UI with native entity picker and optional title field
 - **Admin-only editing**: non-admin users see curves in read-only mode

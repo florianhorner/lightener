@@ -60,17 +60,23 @@ Typography rules:
 - Show grid, diagonal reference, and axis labels at all times.
 - Selected curve stays visually dominant; non-selected curves dim.
 - Editing affordances:
-  - Pointer drag moves points
-  - Double-click adds points
-  - Right-click or long-press removes points
-  - Keyboard focus on points enables arrow-key movement, `Enter` add, and `Space` remove
+  - Pointer drag moves points without requiring a selection; the **origin point** (leftmost) is Y-only constrained — a dashed stroke and `ns-resize` cursor signal restricted movement
+  - Double-click (`Enter` on keyboard) adds a point — requires a selected light/curve target
+  - Right-click, long-press, or `Space` removes a point — requires a selected light/curve target; origin point is protected from accidental long-press deletion
+  - Keyboard focus on points enables arrow-key movement, `Enter` add, and `Space` remove (ARIA labels distinguish origin/interior/endpoint points)
 - SVGs must include a descriptive `<desc>` summary for screen readers.
 
 ### Scrubber
 
 - Track aligns with graph padding so preview position matches the plotted data.
-- Value badges are a trust feature; if not all fit, show `+N more` rather than silently clipping.
+- Value badges are a trust feature; if not all fit, show `+N more` rather than silently clipping. Badge overflow measurement is skipped while the list is expanded to prevent flicker loops.
 - Preview state should always be reversible and clearly announced.
+
+### Preview Toggle
+
+- A **Preview** button in the card header enters preview mode independently of scrubber position, defaulting to 50% if the scrubber has not been touched.
+- Lights restore to their pre-preview state on: toggle off, `disconnectedCallback`, or entity change.
+- The button must show clear active/inactive state; do not rely on color alone.
 
 ### Legend
 
