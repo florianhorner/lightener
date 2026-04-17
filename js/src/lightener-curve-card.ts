@@ -4,6 +4,11 @@ import { LightCurve, Hass } from './utils/types.js';
 import { curvesToWsPayload, wsPayloadToCurves, cloneCurves, curvesEqual } from './utils/data.js';
 import { easeOutCubic, sampleCurveAt, CURVE_COLORS } from './utils/graph-math.js';
 import { CURVE_PRESETS, presetPolylinePoints, type PresetDef } from './utils/presets.js';
+import {
+  INITIAL_SAVE_STATE,
+  type SaveState,
+  reduce as reduceSave,
+} from './utils/save-lifecycle.js';
 import './components/curve-graph.js';
 import './components/curve-scrubber.js';
 import './components/curve-legend.js';
@@ -187,11 +192,23 @@ export class LightenerCurveCard extends LitElement {
   @state() private _originalCurves: LightCurve[] = [];
   @state() private _config: Record<string, unknown> = {};
   @state() private _selectedCurveId: string | null = null;
-  @state() private _saving = false;
+  @state() private _saveState: SaveState = INITIAL_SAVE_STATE;
   @state() private _loadError: string | null = null;
-  @state() private _saveError: string | null = null;
-  @state() private _saveSuccess = false;
   @state() private _loading = false;
+
+  private get _saving(): boolean {
+    return this._saveState.phase === 'saving';
+  }
+  private get _saveSuccess(): boolean {
+    return this._saveState.phase === 'saved';
+  }
+  private get _saveError(): string | null {
+    return this._saveState.phase === 'error' ? this._saveState.message : null;
+  }
+
+  private _dispatchSave(action: Parameters<typeof reduceSave>[1]): void {
+    this._saveState = reduceSave(this._saveState, action);
+  }
   @state() private _scrubberPosition: number | null = null;
   @state() private _cancelAnimating = false;
 
@@ -755,6 +772,9 @@ export class LightenerCurveCard extends LitElement {
             composed: true,
           })
         );
+        if (dirty) {
+          this._dispatchSave({ type: 'dirty' });
+        }
       }
     }
   }
@@ -1214,8 +1234,7 @@ export class LightenerCurveCard extends LitElement {
     if (this._previewActive) this._stopPreview();
 
     const savedEntityId = this._entityId;
-    this._saving = true;
-    this._saveError = null;
+    this._dispatchSave({ type: 'save-start' });
     try {
       const payload = curvesToWsPayload(this._curves);
       await this._hass.callWS({
@@ -1228,6 +1247,7 @@ export class LightenerCurveCard extends LitElement {
       if (this._entityId !== savedEntityId) {
         if (this._previewActive) this._stopPreview();
         this._undoStack = [];
+        this._dispatchSave({ type: 'reset' });
         return false;
       }
       this._originalCurves = cloneCurves(this._curves);
@@ -1235,18 +1255,16 @@ export class LightenerCurveCard extends LitElement {
       // Re-fetch from backend in case reload normalised data
       this._loaded = false;
       this._tryLoadCurves();
-      this._saveSuccess = true;
+      this._dispatchSave({ type: 'save-success' });
       this._saveSuccessTimer = setTimeout(() => {
-        this._saveSuccess = false;
+        this._dispatchSave({ type: 'save-clear' });
         this._saveSuccessTimer = null;
       }, SAVE_SUCCESS_DISPLAY_MS);
       return true;
     } catch (err) {
       console.error('[Lightener] Failed to save curves:', err);
-      this._saveError = 'Save failed. Check connection.';
+      this._dispatchSave({ type: 'save-error', message: 'Save failed. Check connection.' });
       return false;
-    } finally {
-      this._saving = false;
     }
   }
 
@@ -1264,6 +1282,7 @@ export class LightenerCurveCard extends LitElement {
     this._undoStack = [];
     this._animateCurvesTo(cloneCurves(this._originalCurves), () => {
       this._selectedCurveId = null;
+      this._dispatchSave({ type: 'reset' });
     });
   }
 
