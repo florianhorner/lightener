@@ -10,7 +10,8 @@
     "format": "prettier --write src/",
     "format:check": "prettier --check src/",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "lit": "^3.2.0"
@@ -19,6 +20,7 @@
     "@rollup/plugin-node-resolve": "^15.3.0",
     "@rollup/plugin-terser": "^1.0.0",
     "@rollup/plugin-typescript": "^12.1.0",
+    "@vitest/coverage-v8": "^4.1.4",
     "eslint": "^9.0.0",
     "jsdom": "^29.0.2",
     "lint-staged": "^15.0.0",

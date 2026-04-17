@@ -6,6 +6,7 @@ ruff>=0.4.0
 # For tests
 pytest==9.0.0
 pytest-asyncio==1.3.0
+pytest-cov==7.0.0
 pytest_homeassistant_custom_component==0.13.316
 # The newer HA test stack requires aiodns 4.x, which in turn requires pycares 5.x.
 pycares<6

@@ -34,3 +34,17 @@ disable_error_code = [
 [tool.pytest.ini_options]
 testpaths = ["tests/components/lightener"]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["custom_components/lightener"]
+branch = true
+
+[tool.coverage.report]
+# Floor only; raise as PR-B shrinks light.py and brightness helpers get tested.
+fail_under = 60
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

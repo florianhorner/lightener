@@ -64,8 +64,22 @@ jobs:
       - name: "Install requirements"
         run: python3 -m pip install -r requirements.txt
 
-      - name: "Run tests"
-        run: python3 -m pytest
+      - name: "Run tests with coverage"
+        run: >-
+          python3 -m pytest
+          --cov=custom_components/lightener
+          --cov-report=xml
+          --cov-report=term
+          --cov-fail-under=60
+
+      - name: "Upload Python coverage"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-coverage
+          path: coverage.xml
+          if-no-files-found: warn
+          retention-days: 14
 
   frontend:
     name: "Frontend"
@@ -96,5 +110,14 @@ jobs:
       - name: "TypeScript check"
         run: npx tsc --noEmit
 
-      - name: "Tests"
-        run: npx vitest run
+      - name: "Tests with coverage"
+        run: npm run test:coverage
+
+      - name: "Upload frontend coverage"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: js/coverage
+          if-no-files-found: warn
+          retention-days: 14

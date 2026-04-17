@@ -55,7 +55,7 @@ For a manual setup:
 
 ```sh
 # Backend
-pip install -r requirements.txt   # or: pip install pytest pytest-asyncio pytest_homeassistant_custom_component
+pip install -r requirements.txt   # or: pip install pytest pytest-asyncio pytest-cov pytest_homeassistant_custom_component
 scripts/setup                          # if available
 
 # Frontend
@@ -72,6 +72,7 @@ npm install
 | Ruff   | Linting + formatting | `ruff check . --fix` / `ruff format .` |
 | Mypy   | Type checking        | `mypy custom_components/lightener/` |
 | Pytest | Unit tests           | `pytest tests/`      |
+| Coverage | Coverage check     | `pytest --cov=custom_components/lightener --cov-fail-under=60` |
 
 Configuration lives in `pyproject.toml`.
 
@@ -83,6 +84,7 @@ Configuration lives in `pyproject.toml`.
 | Prettier | Formatting  | `npm run format`       |
 | tsc      | Type check  | `npx tsc --noEmit`     |
 | Vitest   | Unit tests  | `npm test`             |
+| Coverage | Coverage check | `npm run test:coverage` |
 | Rollup   | Build       | `npm run build`        |
 
 After changing any TypeScript file, run `npm run build` inside `js/` to
