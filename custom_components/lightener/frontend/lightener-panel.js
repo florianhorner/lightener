@@ -384,8 +384,8 @@ class LightenerEditorPanel extends HTMLElement {
             color: var(--secondary-text-color);
           }
           .control-row {
-            margin-bottom: 18px;
-            padding: 16px 18px 18px;
+            margin-bottom: 16px;
+            padding: 16px 18px;
             border-radius: 18px;
             border: 1px solid var(--lightener-panel-border);
             background:

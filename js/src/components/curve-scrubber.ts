@@ -25,7 +25,7 @@ export class CurveScrubber extends LitElement {
     }
     .scrubber-panel {
       border-radius: 12px;
-      padding: 14px 12px 12px;
+      padding: 12px;
       background: color-mix(
         in srgb,
         var(--ha-card-background, var(--card-background-color, #fff)) 95%,
@@ -33,12 +33,11 @@ export class CurveScrubber extends LitElement {
       );
     }
     .scrubber-label {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.04em;
       color: var(--secondary-text-color, #616161);
-      opacity: 0.7;
       margin-bottom: 10px;
     }
     .track-area {

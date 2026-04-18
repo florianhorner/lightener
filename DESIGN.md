@@ -63,7 +63,7 @@ Typography rules:
   - Pointer drag moves points without requiring a selection; the **origin point** (leftmost) is Y-only constrained — a dashed stroke and `ns-resize` cursor signal restricted movement
   - Double-click (`Enter` on keyboard) adds a point — requires a selected light/curve target
   - Right-click, long-press, or `Space` removes a point — requires a selected light/curve target; origin point is protected from accidental long-press deletion
-  - Keyboard focus on points enables arrow-key movement, `Enter` add, and `Space` remove (ARIA labels distinguish origin/interior/endpoint points)
+  - Keyboard focus on points enables arrow-key movement, `Enter` add, and `Space` remove (ARIA labels distinguish origin [Y-only, no remove] from all other points [free move + remove])
 - SVGs must include a descriptive `<desc>` summary for screen readers.
 
 ### Scrubber

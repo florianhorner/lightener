@@ -261,13 +261,13 @@ describe('origin point ARIA label', () => {
     expect(originLabel).toContain('Cannot be moved horizontally');
   });
 
-  it('endpoint gets no "Space removes"', async () => {
+  it('endpoint gets "Space removes" when endpoint removal is enabled', async () => {
     const graph = makeGraph();
     await graph.updateComplete;
 
     const hitCircles = graph.shadowRoot!.querySelectorAll<SVGCircleElement>('.hit-circle');
     const endpointLabel = hitCircles[hitCircles.length - 1].getAttribute('aria-label')!;
-    expect(endpointLabel).not.toContain('Space removes');
+    expect(endpointLabel).toContain('Space removes');
   });
 
   it('interior point gets "Space removes"', async () => {
@@ -310,7 +310,7 @@ describe('defense-in-depth _onPointRemove', () => {
     expect(removeEvents.length).toBe(0);
   });
 
-  it('removing the last index is rejected even with 3+ points', async () => {
+  it('removing the last index is allowed with 3+ points', async () => {
     const graph = makeGraph();
     await graph.updateComplete;
 
@@ -322,13 +322,13 @@ describe('defense-in-depth _onPointRemove', () => {
     const hitCircles = graph.shadowRoot!.querySelectorAll<SVGCircleElement>('.hit-circle');
     const lastCircle = hitCircles[hitCircles.length - 1];
 
-    // Space on endpoint should NOT emit point-remove
+    // Space on endpoint SHOULD emit point-remove (endpoint is now freely removable)
     lastCircle.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
-    expect(removeEvents.length).toBe(0);
+    expect(removeEvents.length).toBe(1);
 
-    // Delete on endpoint should NOT emit point-remove
+    // Delete on endpoint should also emit point-remove
     lastCircle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
-    expect(removeEvents.length).toBe(0);
+    expect(removeEvents.length).toBe(2);
   });
 
   it('removing an interior point works', async () => {
@@ -452,7 +452,262 @@ describe('preview stops on disconnect', () => {
   });
 });
 
-// ── 9. Preview button hidden during cancel animation ─────────────────
+// ── 9. Preview restore and save timer regressions ────────────────────
+
+describe('preview restore state', () => {
+  beforeEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it('restores an on/off-only light to on without forcing brightness', async () => {
+    const callService = vi.fn(() => Promise.resolve());
+    const card = document.createElement('lightener-curve-card') as LightenerCurveCard;
+    const mockHass = {
+      user: { is_admin: true },
+      states: {
+        'light.switch_like': {
+          state: 'on',
+          attributes: { friendly_name: 'Switch Like Light' },
+        },
+      },
+      callWS: () => Promise.resolve({}),
+      callService,
+    };
+
+    (card as unknown as Record<string, unknown>)['_hass'] = mockHass;
+    (card as unknown as Record<string, LightCurve[]>)['_curves'] = [
+      {
+        entityId: 'light.switch_like',
+        friendlyName: 'Switch Like Light',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 100, target: 100 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+
+    const rafSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((cb: FrameRequestCallback) => {
+        cb(0);
+        return 1;
+      });
+
+    document.body.appendChild(card);
+    await card.updateComplete;
+
+    (card as unknown as Record<string, () => void>)['_startPreview']();
+    callService.mockClear();
+
+    (card as unknown as Record<string, () => void>)['_stopPreview']();
+
+    expect(callService).toHaveBeenCalledTimes(1);
+    expect(callService).toHaveBeenCalledWith('light', 'turn_on', {
+      entity_id: 'light.switch_like',
+    });
+
+    rafSpy.mockRestore();
+  });
+
+  function makePreviewCard(
+    states: Record<string, { state: string; attributes: { brightness?: number } }>
+  ): {
+    card: LightenerCurveCard;
+    callService: ReturnType<typeof vi.fn>;
+    rafSpy: ReturnType<typeof vi.spyOn>;
+  } {
+    const callService = vi.fn(() => Promise.resolve());
+    const card = document.createElement('lightener-curve-card') as LightenerCurveCard;
+    (card as unknown as Record<string, LightCurve[]>)['_curves'] = Object.keys(states).map(
+      (entityId, idx) => ({
+        entityId,
+        friendlyName: entityId,
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 100, target: 100 },
+        ],
+        visible: true,
+        color: idx % 2 === 0 ? '#2563eb' : '#ef5350',
+      })
+    );
+    (card as unknown as Record<string, unknown>)['_hass'] = {
+      user: { is_admin: true },
+      states,
+      callWS: () => Promise.resolve({}),
+      callService,
+    };
+    const rafSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((cb: FrameRequestCallback) => {
+        cb(0);
+        return 1;
+      });
+    return { card, callService, rafSpy };
+  }
+
+  it('restores an off light with turn_off (null branch)', async () => {
+    const { card, callService, rafSpy } = makePreviewCard({
+      'light.was_off': { state: 'off', attributes: {} },
+    });
+    document.body.appendChild(card);
+    await card.updateComplete;
+
+    (card as unknown as Record<string, () => void>)['_startPreview']();
+    callService.mockClear();
+    (card as unknown as Record<string, () => void>)['_stopPreview']();
+
+    expect(callService).toHaveBeenCalledTimes(1);
+    expect(callService).toHaveBeenCalledWith('light', 'turn_off', {
+      entity_id: 'light.was_off',
+    });
+
+    rafSpy.mockRestore();
+  });
+
+  it('restores a mixed group using both branches', async () => {
+    const { card, callService, rafSpy } = makePreviewCard({
+      'light.was_off': { state: 'off', attributes: {} },
+      'light.was_on': { state: 'on', attributes: { brightness: 200 } },
+    });
+    document.body.appendChild(card);
+    await card.updateComplete;
+
+    (card as unknown as Record<string, () => void>)['_startPreview']();
+    callService.mockClear();
+    (card as unknown as Record<string, () => void>)['_stopPreview']();
+
+    expect(callService).toHaveBeenCalledTimes(2);
+    expect(callService).toHaveBeenCalledWith('light', 'turn_off', {
+      entity_id: 'light.was_off',
+    });
+    expect(callService).toHaveBeenCalledWith('light', 'turn_on', {
+      entity_id: 'light.was_on',
+      brightness: 200,
+    });
+
+    rafSpy.mockRestore();
+  });
+
+  it('preserves brightness 0 instead of treating it as on/off-only', async () => {
+    const { card, callService, rafSpy } = makePreviewCard({
+      'light.min_dim': { state: 'on', attributes: { brightness: 0 } },
+    });
+    document.body.appendChild(card);
+    await card.updateComplete;
+
+    (card as unknown as Record<string, () => void>)['_startPreview']();
+    callService.mockClear();
+    (card as unknown as Record<string, () => void>)['_stopPreview']();
+
+    expect(callService).toHaveBeenCalledTimes(1);
+    expect(callService).toHaveBeenCalledWith('light', 'turn_on', {
+      entity_id: 'light.min_dim',
+      brightness: 0,
+    });
+
+    rafSpy.mockRestore();
+  });
+});
+
+describe('save success timer', () => {
+  beforeEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it('keeps saved state until the newest timer expires on rapid re-save', async () => {
+    vi.useFakeTimers();
+
+    const card = document.createElement('lightener-curve-card') as LightenerCurveCard;
+    const callWS = vi.fn(async (msg: { type: string }) => {
+      if (msg.type === 'lightener/get_curves') {
+        return {
+          entities: {
+            'light.test': {
+              brightness: { '100': '100' },
+            },
+          },
+        };
+      }
+      return {};
+    });
+
+    const mockHass = {
+      user: { is_admin: true },
+      states: {
+        'light.test': {
+          state: 'on',
+          attributes: { friendly_name: 'Test Light', brightness: 200 },
+        },
+      },
+      callWS,
+      callService: vi.fn(() => Promise.resolve()),
+    };
+
+    card.setConfig({ entity: 'light.test' });
+    (card as unknown as Record<string, unknown>)['_hass'] = mockHass;
+    (card as unknown as Record<string, LightCurve[]>)['_curves'] = [
+      {
+        entityId: 'light.test',
+        friendlyName: 'Test Light',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 100, target: 100 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+    (card as unknown as Record<string, LightCurve[]>)['_originalCurves'] = [
+      {
+        entityId: 'light.test',
+        friendlyName: 'Test Light',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 100, target: 90 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+
+    document.body.appendChild(card);
+    await card.updateComplete;
+
+    const phase = () => (card as unknown as Record<string, { phase: string }>)['_saveState'].phase;
+
+    // First save at t=0. First timer pending, original deadline t=2000.
+    await card.saveCurves();
+    expect(phase()).toBe('saved');
+
+    // Second save at t=1500, inside the 2000ms display window.
+    // The fix at lightener-curve-card.ts clears the first timer here;
+    // without the fix, that timer would still fire at t=2000 and flip
+    // state to 'idle' while the user is looking at the second save's
+    // success indicator.
+    vi.advanceTimersByTime(1500);
+    await card.saveCurves();
+    expect(phase()).toBe('saved');
+
+    // t=1999 — one tick before the ORIGINAL first timer would have fired.
+    vi.advanceTimersByTime(499);
+    expect(phase()).toBe('saved');
+
+    // t=2001 — one tick past the original first-timer deadline.
+    // Without clearTimeout, phase would have gone to 'idle' here.
+    vi.advanceTimersByTime(2);
+    expect(phase()).toBe('saved');
+
+    // t=3500 — second timer's own deadline (1500 + 2000). It fires.
+    vi.advanceTimersByTime(1499);
+    expect(phase()).toBe('idle');
+
+    vi.useRealTimers();
+  });
+});
+
+// ── 10. Preview button hidden during cancel animation ────────────────
 
 describe('preview button hidden during cancel animation', () => {
   beforeEach(() => {

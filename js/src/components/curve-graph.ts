@@ -359,7 +359,6 @@ export class CurveGraph extends LitElement {
     if (
       (e.key === ' ' || e.key === 'Delete' || e.key === 'Backspace') &&
       pointIdx > 0 &&
-      pointIdx < curve.controlPoints.length - 1 &&
       curve.controlPoints.length > 2
     ) {
       e.preventDefault();
@@ -623,8 +622,7 @@ export class CurveGraph extends LitElement {
       <rect
         x="${x}" y="${toSvgY(100)}"
         width="${toSvgX(100) - x}" height="${GRAPH_H}"
-        fill="var(--ha-card-background, var(--card-background-color, #1c1c1c))"
-        opacity="0.25"
+        fill="color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 80%, transparent)"
         pointer-events="none"
       />
     `;
@@ -745,7 +743,7 @@ export class CurveGraph extends LitElement {
                 pointer-events="all"
                 tabindex="0"
                 role="button"
-                aria-label="${curve.friendlyName} point ${cp.lightener}% group brightness to ${cp.target}% light brightness. ${pi === 0 ? 'Arrow Up/Down to adjust starting brightness. Cannot be moved horizontally.' : pi === curve.controlPoints.length - 1 ? 'Arrow keys move, Enter adds a nearby point.' : 'Arrow keys move, Enter adds a nearby point, Space removes.'}"
+                aria-label="${curve.friendlyName} point ${cp.lightener}% group brightness to ${cp.target}% light brightness. ${pi === 0 ? 'Arrow Up/Down to adjust starting brightness. Cannot be moved horizontally.' : 'Arrow keys move, Enter adds a nearby point, Space removes.'}"
                 style="touch-action: none; -webkit-touch-callout: none"
                 @pointerdown=${(e: PointerEvent) => this._onPointerDown(e, curveIdx, pi)}
                 @contextmenu=${(e: MouseEvent) => this._onPointContextMenu(e, curveIdx, pi)}

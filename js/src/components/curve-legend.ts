@@ -22,12 +22,11 @@ export class CurveLegend extends LitElement {
       );
     }
     .legend-label {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.04em;
       color: var(--secondary-text-color, #616161);
-      opacity: 0.7;
       padding: 6px 10px 4px;
     }
     .legend {

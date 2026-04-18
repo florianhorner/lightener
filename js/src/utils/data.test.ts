@@ -42,6 +42,45 @@ describe('curvesToWsPayload', () => {
     const payload = curvesToWsPayload(curves);
     expect(payload['light.test'].brightness).toEqual({});
   });
+
+  it('injects explicit 100 key with last_target when curve has no 100', () => {
+    const curves = [
+      makeCurve({
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: 40 },
+        ],
+      }),
+    ];
+    const payload = curvesToWsPayload(curves);
+    expect(payload['light.test'].brightness).toEqual({
+      '50': '40',
+      '100': '40',
+    });
+  });
+
+  it('preserves explicit 100 value and does not overwrite it', () => {
+    const curves = [
+      makeCurve({
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: 40 },
+          { lightener: 100, target: 60 },
+        ],
+      }),
+    ];
+    const payload = curvesToWsPayload(curves);
+    expect(payload['light.test'].brightness).toEqual({
+      '50': '40',
+      '100': '60',
+    });
+  });
+
+  it('does not inject 100 key for origin-only curve', () => {
+    const curves = [makeCurve({ controlPoints: [{ lightener: 0, target: 0 }] })];
+    const payload = curvesToWsPayload(curves);
+    expect(payload['light.test'].brightness).toEqual({});
+  });
 });
 
 describe('wsPayloadToCurves', () => {

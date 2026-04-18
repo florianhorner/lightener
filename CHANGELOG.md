@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- Curve endpoint control point is now removable: `Space`, `Delete`, and right-click work on the last point the same as on interior points. The minimum 2-point guard still applies.
+- When a curve has no explicit 100 control point, the UI saves an explicit `(100, last_target)` entry so the curve flattens at the last configured level on reload (e.g. a curve ending at `[50%, 40%]` outputs 40% for all inputs ≥ 50%). Backend defaults for legacy YAML configs that omit the 100 key are unchanged.
+- ARIA labels on graph points now use two categories — origin (Y-only, no remove) and all other points (free move + remove) — replacing the prior three-way distinction.
+
+### Fixed
+
+- Preview restore correctly handles on/off-only lights (no brightness attribute): they are restored with `turn_on` without a brightness argument, rather than having a brightness level forced onto them.
+- Save-success timer is cleared before re-arming on rapid successive saves, preventing a status flap when saves complete inside the 2-second display window.
+
 ## [2.14.0] - 2026-04-17
 
 ### Added
@@ -26,7 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Rapid preview toggle after an entity switch no longer sends stale brightness restore targets
 - Origin control point is now protected from accidental long-press deletion on mobile
 - Badge overflow measurement skipped while expanded, fixing an infinite expand/collapse flicker loop
-- ARIA labels on keyboard-editable control points now correctly distinguish origin (Y-only), interior (free), and endpoint (no remove) — previously all said "Space removes"
+- ARIA labels on keyboard-editable control points now correctly distinguish origin (Y-only) and all other points (free move + remove) — previously all said "Space removes"
 - Focus-visible styles added to Preview, Presets, and preset-option buttons for keyboard accessibility
 - Division by zero in `scaleRangedValue` when source range is degenerate — now returns target range start instead of `NaN`
 - Floating promise anti-pattern in `curve-graph.ts`: `.updateComplete.then()` calls now guarded with `.catch(() => {})` to prevent unhandled rejections on disconnect
