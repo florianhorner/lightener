@@ -18,7 +18,9 @@ export function scaleRangedValue(
 /**
  * Prepare control points for interpolation:
  * - Always include the implicit 0 -> 0 endpoint
- * - Default 100 -> 100 if the maximum is missing
+ * - If 100 is missing, flatten at the last configured target so live
+ *   preview matches the saved behavior (curvesToWsPayload writes an
+ *   explicit (100, last_target) key on save)
  * - Sort by lightener value ascending
  */
 export function prepareBrightnessConfig(controlPoints: ControlPoint[]): ControlPoint[] {
@@ -31,9 +33,16 @@ export function prepareBrightnessConfig(controlPoints: ControlPoint[]): ControlP
     map.set(cp.lightener, cp.target);
   }
 
-  // Default maximum if not specified
   if (!map.has(100)) {
-    map.set(100, 100);
+    let lastLightener = -1;
+    let lastTarget = 100;
+    for (const [lightener, target] of map) {
+      if (lightener !== 0 && lightener > lastLightener) {
+        lastLightener = lightener;
+        lastTarget = target;
+      }
+    }
+    map.set(100, lastTarget);
   }
 
   const result: ControlPoint[] = [];

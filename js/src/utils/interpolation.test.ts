@@ -35,11 +35,11 @@ describe('prepareBrightnessConfig', () => {
     expect(prepared[0]).toEqual({ lightener: 0, target: 0 });
   });
 
-  it('adds default 100->100 endpoint', () => {
+  it('flattens missing 100 endpoint to the last configured target', () => {
     const points: ControlPoint[] = [{ lightener: 50, target: 75 }];
     const prepared = prepareBrightnessConfig(points);
     const last = prepared[prepared.length - 1];
-    expect(last).toEqual({ lightener: 100, target: 100 });
+    expect(last).toEqual({ lightener: 100, target: 75 });
   });
 
   it('preserves explicit 100 endpoint', () => {
@@ -67,6 +67,15 @@ describe('prepareBrightnessConfig', () => {
     expect(prepared).toEqual([
       { lightener: 0, target: 0 },
       { lightener: 100, target: 100 },
+    ]);
+  });
+
+  it('flattens past the last configured point when 100 is missing', () => {
+    const prepared = prepareBrightnessConfig([{ lightener: 50, target: 40 }]);
+    expect(prepared).toEqual([
+      { lightener: 0, target: 0 },
+      { lightener: 50, target: 40 },
+      { lightener: 100, target: 40 },
     ]);
   });
 });
@@ -128,5 +137,14 @@ describe('interpolateCurve', () => {
     }
     // 90 should be roughly 50
     expect(result[90]).toBeCloseTo(50, 0);
+  });
+
+  it('keeps values flat after the last configured point when 100 is missing', () => {
+    const result = interpolateCurve([
+      { lightener: 0, target: 0 },
+      { lightener: 50, target: 40 },
+    ]);
+    expect(result[75]).toBeCloseTo(40, 5);
+    expect(result[100]).toBeCloseTo(40, 5);
   });
 });

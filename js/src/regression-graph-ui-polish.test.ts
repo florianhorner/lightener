@@ -510,6 +510,105 @@ describe('preview restore state', () => {
 
     rafSpy.mockRestore();
   });
+
+  function makePreviewCard(
+    states: Record<string, { state: string; attributes: { brightness?: number } }>
+  ): {
+    card: LightenerCurveCard;
+    callService: ReturnType<typeof vi.fn>;
+    rafSpy: ReturnType<typeof vi.spyOn>;
+  } {
+    const callService = vi.fn(() => Promise.resolve());
+    const card = document.createElement('lightener-curve-card') as LightenerCurveCard;
+    (card as unknown as Record<string, LightCurve[]>)['_curves'] = Object.keys(states).map(
+      (entityId, idx) => ({
+        entityId,
+        friendlyName: entityId,
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 100, target: 100 },
+        ],
+        visible: true,
+        color: idx % 2 === 0 ? '#2563eb' : '#ef5350',
+      })
+    );
+    (card as unknown as Record<string, unknown>)['_hass'] = {
+      user: { is_admin: true },
+      states,
+      callWS: () => Promise.resolve({}),
+      callService,
+    };
+    const rafSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((cb: FrameRequestCallback) => {
+        cb(0);
+        return 1;
+      });
+    return { card, callService, rafSpy };
+  }
+
+  it('restores an off light with turn_off (null branch)', async () => {
+    const { card, callService, rafSpy } = makePreviewCard({
+      'light.was_off': { state: 'off', attributes: {} },
+    });
+    document.body.appendChild(card);
+    await card.updateComplete;
+
+    (card as unknown as Record<string, () => void>)['_startPreview']();
+    callService.mockClear();
+    (card as unknown as Record<string, () => void>)['_stopPreview']();
+
+    expect(callService).toHaveBeenCalledTimes(1);
+    expect(callService).toHaveBeenCalledWith('light', 'turn_off', {
+      entity_id: 'light.was_off',
+    });
+
+    rafSpy.mockRestore();
+  });
+
+  it('restores a mixed group using both branches', async () => {
+    const { card, callService, rafSpy } = makePreviewCard({
+      'light.was_off': { state: 'off', attributes: {} },
+      'light.was_on': { state: 'on', attributes: { brightness: 200 } },
+    });
+    document.body.appendChild(card);
+    await card.updateComplete;
+
+    (card as unknown as Record<string, () => void>)['_startPreview']();
+    callService.mockClear();
+    (card as unknown as Record<string, () => void>)['_stopPreview']();
+
+    expect(callService).toHaveBeenCalledTimes(2);
+    expect(callService).toHaveBeenCalledWith('light', 'turn_off', {
+      entity_id: 'light.was_off',
+    });
+    expect(callService).toHaveBeenCalledWith('light', 'turn_on', {
+      entity_id: 'light.was_on',
+      brightness: 200,
+    });
+
+    rafSpy.mockRestore();
+  });
+
+  it('preserves brightness 0 instead of treating it as on/off-only', async () => {
+    const { card, callService, rafSpy } = makePreviewCard({
+      'light.min_dim': { state: 'on', attributes: { brightness: 0 } },
+    });
+    document.body.appendChild(card);
+    await card.updateComplete;
+
+    (card as unknown as Record<string, () => void>)['_startPreview']();
+    callService.mockClear();
+    (card as unknown as Record<string, () => void>)['_stopPreview']();
+
+    expect(callService).toHaveBeenCalledTimes(1);
+    expect(callService).toHaveBeenCalledWith('light', 'turn_on', {
+      entity_id: 'light.min_dim',
+      brightness: 0,
+    });
+
+    rafSpy.mockRestore();
+  });
 });
 
 describe('save success timer', () => {
@@ -517,7 +616,7 @@ describe('save success timer', () => {
     document.body.replaceChildren();
   });
 
-  it('clears the previous success timer when saving again', async () => {
+  it('keeps saved state until the newest timer expires on rapid re-save', async () => {
     vi.useFakeTimers();
 
     const card = document.createElement('lightener-curve-card') as LightenerCurveCard;
@@ -576,29 +675,33 @@ describe('save success timer', () => {
     document.body.appendChild(card);
     await card.updateComplete;
 
+    const phase = () => (card as unknown as Record<string, { phase: string }>)['_saveState'].phase;
+
+    // First save at t=0. First timer pending, original deadline t=2000.
     await card.saveCurves();
-    expect((card as unknown as Record<string, { phase: string }>)['_saveState'].phase).toBe(
-      'saved'
-    );
+    expect(phase()).toBe('saved');
 
-    vi.advanceTimersByTime(1000);
+    // Second save at t=1500, inside the 2000ms display window.
+    // The fix at lightener-curve-card.ts clears the first timer here;
+    // without the fix, that timer would still fire at t=2000 and flip
+    // state to 'idle' while the user is looking at the second save's
+    // success indicator.
+    vi.advanceTimersByTime(1500);
     await card.saveCurves();
-    expect((card as unknown as Record<string, { phase: string }>)['_saveState'].phase).toBe(
-      'saved'
-    );
+    expect(phase()).toBe('saved');
 
-    vi.advanceTimersByTime(999);
-    expect((card as unknown as Record<string, { phase: string }>)['_saveState'].phase).toBe(
-      'saved'
-    );
+    // t=1999 — one tick before the ORIGINAL first timer would have fired.
+    vi.advanceTimersByTime(499);
+    expect(phase()).toBe('saved');
 
-    vi.advanceTimersByTime(1);
-    expect((card as unknown as Record<string, { phase: string }>)['_saveState'].phase).toBe(
-      'saved'
-    );
+    // t=2001 — one tick past the original first-timer deadline.
+    // Without clearTimeout, phase would have gone to 'idle' here.
+    vi.advanceTimersByTime(2);
+    expect(phase()).toBe('saved');
 
-    vi.advanceTimersByTime(1000);
-    expect((card as unknown as Record<string, { phase: string }>)['_saveState'].phase).toBe('idle');
+    // t=3500 — second timer's own deadline (1500 + 2000). It fires.
+    vi.advanceTimersByTime(1499);
+    expect(phase()).toBe('idle');
 
     vi.useRealTimers();
   });

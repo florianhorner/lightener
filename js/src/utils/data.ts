@@ -10,10 +10,24 @@ export function curvesToWsPayload(
   const result: Record<string, { brightness: Record<string, string> }> = {};
   for (const curve of curves) {
     const brightness: Record<string, string> = {};
+    let lastLightener = -1;
+    let lastTarget = 0;
     for (const cp of curve.controlPoints) {
       // The implicit 0->0 point is not stored in config
       if (cp.lightener === 0) continue;
       brightness[String(cp.lightener)] = String(cp.target);
+      if (cp.lightener > lastLightener) {
+        lastLightener = cp.lightener;
+        lastTarget = cp.target;
+      }
+    }
+    // Ensure UI-saved configs always carry an explicit 100 key so the
+    // backend's implicit (255, 255) fallback never triggers for them.
+    // Preserves flatten-at-last-target intent when the user removed the
+    // endpoint, without changing backend behavior for legacy YAML that
+    // omits the 100 key.
+    if (!('100' in brightness) && lastLightener >= 0) {
+      brightness['100'] = String(lastTarget);
     }
     result[curve.entityId] = { brightness };
   }
