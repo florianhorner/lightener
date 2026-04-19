@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [2.15.0-dev.1] - 2026-04-19
 
+### Security
+
+- Release workflow now validates the tag name against a strict semver regex before use and passes it via `strenv()` instead of shell interpolation, closing a CI script injection vector in the `yq` version-patching step.
+- `ws_list_entities` access control decision documented: the endpoint intentionally omits `require_admin` so non-admin users can view curves in read-only mode via the sidebar panel. `config_entry_id` is intentionally included because the panel uses it for per-entry filtering.
+
 ### Changed
 
 - Curve endpoint control point is now removable: `Space`, `Delete`, and right-click work on the last point the same as on interior points. The minimum 2-point guard still applies.

@@ -118,7 +118,15 @@ def ws_list_entities(
     connection: websocket_api.ActiveConnection,
     msg: dict,
 ) -> None:
-    """Return all Lightener light entities."""
+    """Return all Lightener light entities.
+
+    Access control: intentionally not admin-restricted. The sidebar panel uses this
+    endpoint with require_admin=False so non-admin users can view curves in read-only
+    mode. The config_entry_id field is included because the panel filters by it when
+    opened from a specific config entry context. This data (entity IDs, friendly names,
+    config entry IDs) is already accessible to any authenticated user via HA's own
+    config/config_entries/get websocket endpoint.
+    """
     op_started = monotonic()
     span = start_span(_LOGGER, "lightener.ws.list_entities", message_id=msg["id"])
     entity_registry = async_get_entity_registry(hass)
