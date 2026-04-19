@@ -84,11 +84,11 @@ function makeScrubber(opts?: { curves?: LightCurve[]; readOnly?: boolean }): Cur
 }
 
 describe('curve-scrubber — render + ARIA', () => {
-  it('renders the "Preview at brightness" label', async () => {
+  it('renders the "At brightness" label', async () => {
     const el = makeScrubber();
     await el.updateComplete;
     const label = el.renderRoot.querySelector('.scrubber-label');
-    expect(label?.textContent?.trim()).toBe('Preview at brightness');
+    expect(label?.textContent?.trim()).toBe('At brightness');
   });
 
   it('exposes ARIA slider role with valid min/max/now/text', async () => {
@@ -146,8 +146,8 @@ describe('curve-scrubber — badges', () => {
     await el.updateComplete;
     const badges = el.renderRoot.querySelectorAll('.badge');
     expect(badges.length).toBe(1);
-    const nameEl = badges[0]!.querySelector('.badge-name');
-    expect(nameEl?.textContent?.trim()).toBe('Beta');
+    // Badge shows value only, no name (name is shown in the legend instead)
+    expect(badges[0]!.querySelector('.badge-name')).toBeNull();
   });
 
   it('darkens low-contrast #ffca28 to #9e7c00 for badge text', async () => {
@@ -438,7 +438,7 @@ describe('curve-scrubber — overflow indicator', () => {
     expect(btn!.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('toggles to "Show less" when clicked', async () => {
+  it('toggles to "Collapse" when clicked', async () => {
     const el = makeScrubber();
     await el.updateComplete;
     const container = el.renderRoot.querySelector<HTMLElement>('.value-badges')!;
@@ -454,7 +454,7 @@ describe('curve-scrubber — overflow indicator', () => {
     const btn = el.renderRoot.querySelector<HTMLButtonElement>('.overflow-indicator')!;
     btn.click();
     await el.updateComplete;
-    expect(btn.textContent?.trim()).toBe('Show less');
+    expect(btn.textContent?.trim()).toBe('Collapse');
     expect(btn.getAttribute('aria-expanded')).toBe('true');
   });
 });

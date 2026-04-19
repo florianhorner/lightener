@@ -36,6 +36,7 @@ export class CurveGraph extends LitElement {
   @state() private _focusedPoint: { curve: number; point: number } | null = null;
   @state() private _isMobile = false;
 
+  private readonly _uid = Math.random().toString(36).slice(2, 7);
   private _mql: MediaQueryList | null = null;
   private _wasDragging = false;
   private _longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -532,6 +533,11 @@ export class CurveGraph extends LitElement {
   private _renderGrid() {
     const ticks = [0, 25, 50, 75, 100];
     return svg`
+      <defs>
+        <clipPath id="graph-area-${this._uid}">
+          <rect x="${PAD_LEFT}" y="${PAD_TOP}" width="${GRAPH_W}" height="${GRAPH_H}" />
+        </clipPath>
+      </defs>
       <!-- Diagonal reference line (1:1) -->
       <line class="diagonal-ref"
         x1="${toSvgX(0)}" y1="${toSvgY(0)}"
@@ -617,12 +623,15 @@ export class CurveGraph extends LitElement {
     const pos = this.scrubberPosition;
     const x = toSvgX(pos);
 
-    // Dim overlay to the right of the scrubber position
+    // Dim overlay to the right of the scrubber position.
+    // Use fill + fill-opacity separately — color-mix() in SVG fill attributes
+    // is not reliably supported across all browsers.
     const dimOverlay = svg`
       <rect
         x="${x}" y="${toSvgY(100)}"
         width="${toSvgX(100) - x}" height="${GRAPH_H}"
-        fill="color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 80%, transparent)"
+        fill="var(--ha-card-background, var(--card-background-color, #fff))"
+        fill-opacity="0.93"
         pointer-events="none"
       />
     `;
@@ -857,7 +866,7 @@ export class CurveGraph extends LitElement {
                   { curve: this.curves[selectedIdx], idx: selectedIdx },
                 ]
               : this.curves.map((c, i) => ({ curve: c, idx: i }));
-          return order.map(({ curve, idx }) => this._renderCurve(curve, idx));
+          return svg`<g clip-path="url(#graph-area-${this._uid})">${order.map(({ curve, idx }) => this._renderCurve(curve, idx))}</g>`;
         })()}
         <!-- Scrubber glow filters (only re-render when curves change, not on every position update) -->
         <defs>
@@ -883,17 +892,17 @@ export class CurveGraph extends LitElement {
           if (this.selectedCurveId === null && this._dragCurveIdx < 0) {
             return svg`<text class="hint hint-select" text-anchor="middle"
                 x="${PAD_LEFT + GRAPH_W / 2}" y="${PAD_TOP + GRAPH_H / 2}"
-                >Select a light below — each gets its own curve</text>`;
+                >Select a light to edit its curve</text>`;
           }
           const selected = this.curves.find((c) => c.entityId === this.selectedCurveId);
           return svg`
               <text class="editing-label"
                 x="${PAD_LEFT + 6}" y="${PAD_TOP + 14}"
                 fill="${selected?.color ?? 'currentColor'}"
-                >Editing: ${selected?.friendlyName ?? ''}</text>
+                >Editing ${selected?.friendlyName ?? ''}</text>
               <text class="hint" text-anchor="end"
                 x="${PAD_LEFT + GRAPH_W - 4}" y="${PAD_TOP + GRAPH_H - 6}"
-                >${this._isMobile ? 'Tap to add a point · Long-press to remove' : 'Double-click to add · Right-click or long-press to remove'}</text>`;
+                >${this._isMobile ? 'Double-tap to add · Long-press to remove' : 'Double-click to add · Right-click to remove'}</text>`;
         })()}
       </svg>
     `;
