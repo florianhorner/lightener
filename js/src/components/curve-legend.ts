@@ -1,12 +1,13 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { LightCurve } from '../utils/types.js';
-import { LEGEND_SHAPES } from '../utils/graph-math.js';
+import { LEGEND_SHAPES, sampleCurveAt } from '../utils/graph-math.js';
 
 @customElement('curve-legend')
 export class CurveLegend extends LitElement {
   @property({ type: Array }) curves: LightCurve[] = [];
   @property({ type: String }) selectedCurveId: string | null = null;
+  @property({ type: Number }) scrubberPosition: number | null = null;
 
   static styles = css`
     :host {
@@ -20,6 +21,8 @@ export class CurveLegend extends LitElement {
         var(--ha-card-background, var(--card-background-color, #fff)) 95%,
         var(--secondary-text-color, #616161) 5%
       );
+      border: 1px solid
+        color-mix(in srgb, var(--divider-color, rgba(127, 127, 127, 0.2)) 80%, transparent);
     }
     .legend-label {
       font-size: 11px;
@@ -53,20 +56,23 @@ export class CurveLegend extends LitElement {
       position: relative;
     }
     .legend-item:hover {
-      background: rgba(128, 128, 128, 0.08);
+      background: color-mix(in srgb, var(--primary-color, #2563eb) 8%, transparent);
+    }
+    .legend-item:focus {
+      outline: none;
+    }
+    .legend-item:focus-visible {
+      background: color-mix(in srgb, var(--primary-color, #2563eb) 10%, transparent);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color, #2563eb) 50%, transparent);
     }
     .legend-item.hidden {
       opacity: 0.4;
     }
-    .legend-item.selected::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 10px;
-      right: 10px;
-      height: 2px;
-      border-radius: 1px;
-      background: var(--accent-color, currentColor);
+    .legend-item.selected {
+      background: color-mix(in srgb, var(--primary-color, #2563eb) 12%, transparent);
+    }
+    .legend-item.selected:hover {
+      background: color-mix(in srgb, var(--primary-color, #2563eb) 16%, transparent);
     }
     .color-dot {
       width: 10px;
@@ -105,7 +111,6 @@ export class CurveLegend extends LitElement {
       flex-shrink: 0;
       opacity: 0.35;
       transition: opacity 0.15s ease;
-      margin-left: auto;
       padding: 4px;
       box-sizing: content-box;
     }
@@ -113,10 +118,30 @@ export class CurveLegend extends LitElement {
     .legend-item.hidden .eye-icon {
       opacity: 0.7;
     }
+    .eye-icon:focus {
+      outline: none;
+    }
+    .eye-icon:focus-visible {
+      outline: 2px solid var(--primary-color, #2563eb);
+      outline-offset: 2px;
+      border-radius: 4px;
+      opacity: 0.9;
+    }
     .name {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      flex: 1;
+      min-width: 0;
+    }
+    .brightness-value {
+      font-size: 11px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--secondary-text-color, #616161);
+      flex-shrink: 0;
+      min-width: 2.8ch;
+      text-align: right;
     }
     @media (max-width: 500px) {
       .legend-item {
@@ -197,7 +222,6 @@ export class CurveLegend extends LitElement {
                 aria-selected=${this.selectedCurveId === curve.entityId}
                 @click=${() => this._select(curve.entityId)}
                 @keydown=${(e: KeyboardEvent) => this._onItemKeyDown(e, curve.entityId)}
-                title="${curve.friendlyName}"
                 style="--accent-color: ${curve.color}"
               >
                 <span
@@ -205,6 +229,13 @@ export class CurveLegend extends LitElement {
                   style="background: ${curve.color}; --dot-color: ${curve.color}"
                 ></span>
                 <span class="name">${curve.friendlyName}</span>
+                ${this.scrubberPosition !== null
+                  ? html`<span class="brightness-value"
+                      >${Math.round(
+                        sampleCurveAt(curve.controlPoints, Math.round(this.scrubberPosition))
+                      )}%</span
+                    >`
+                  : nothing}
                 <svg
                   class="eye-icon"
                   viewBox="0 0 24 24"

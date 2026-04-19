@@ -171,9 +171,7 @@ export class LightenerCurveCardEditor extends LitElement {
             allow-custom-entity
             @value-changed=${this._onEntityChange}
           ></ha-entity-picker>
-          <span class="hint"
-            >Choose the lightener group whose brightness curves you want to edit.</span
-          >
+          <span class="hint">Select a Lightener group to edit its brightness curves.</span>
         </div>
         <div class="field">
           <label>Title (optional)</label>
@@ -274,10 +272,7 @@ export class LightenerCurveCard extends LitElement {
       --curve-legend-max-height: 440px;
       --curve-scrubber-badges-max-height: 72px;
 
-      background: transparent;
       box-shadow: none;
-      border-radius: 0;
-      padding: 0;
     }
     .header {
       display: flex;
@@ -322,8 +317,6 @@ export class LightenerCurveCard extends LitElement {
     }
     .card.embedded .graph-panel {
       padding: 14px;
-      border: 1px solid color-mix(in srgb, var(--divider) 80%, transparent);
-      box-shadow: none;
     }
     .card.embedded .header-icon {
       opacity: 0.42;
@@ -485,6 +478,10 @@ export class LightenerCurveCard extends LitElement {
       }
     }
     @media (min-width: 1100px) {
+      .card.embedded {
+        --curve-graph-max-height: 360px;
+        --curve-graph-min-height: 240px;
+      }
       .card.embedded .workspace {
         grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.95fr);
         align-items: start;
@@ -706,6 +703,15 @@ export class LightenerCurveCard extends LitElement {
     return 4;
   }
 
+  getGridOptions() {
+    return {
+      columns: 12,
+      rows: 9,
+      min_columns: 6,
+      min_rows: 6,
+    };
+  }
+
   // --- Data loading ---
 
   private get _isAdmin(): boolean {
@@ -809,8 +815,8 @@ export class LightenerCurveCard extends LitElement {
   private _renderPresetsPanel() {
     const targetLabel =
       this._selectedCurveId !== null
-        ? `Applying to: ${this._curves.find((c) => c.entityId === this._selectedCurveId)?.friendlyName ?? 'selected light'}`
-        : `Applying to: all lights`;
+        ? `Applying to ${this._curves.find((c) => c.entityId === this._selectedCurveId)?.friendlyName ?? 'selected light'}`
+        : `Applying to all lights`;
 
     return html`
       <div class="presets-panel">
@@ -951,6 +957,20 @@ export class LightenerCurveCard extends LitElement {
 
   private _onScrubberEnd(): void {
     // No-op: preview is now controlled by the explicit preview toggle button
+  }
+
+  private _onBadgeClick(e: CustomEvent): void {
+    if (!this._hass || !this._isAdmin) return;
+    const { entityId, value } = e.detail as { entityId: string; value: number };
+    if (!this._curves.find((c) => c.entityId === entityId)?.visible) return;
+    const brightness = Math.round((value / 100) * 255);
+    if (brightness === 0) {
+      this._hass.callService('light', 'turn_off', { entity_id: entityId }).catch(() => {});
+    } else {
+      this._hass
+        .callService('light', 'turn_on', { entity_id: entityId, brightness })
+        .catch(() => {});
+    }
   }
 
   private _startPreview = (): void => {
@@ -1365,6 +1385,7 @@ export class LightenerCurveCard extends LitElement {
               @scrubber-move=${this._onScrubberMove}
               @scrubber-start=${this._onScrubberStart}
               @scrubber-end=${this._onScrubberEnd}
+              @badge-click=${this._onBadgeClick}
             ></curve-scrubber>
 
             ${this._isAdmin && !this._cancelAnimating
@@ -1388,6 +1409,7 @@ export class LightenerCurveCard extends LitElement {
             <curve-legend
               .curves=${this._curves}
               .selectedCurveId=${this._selectedCurveId}
+              .scrubberPosition=${this._scrubberPosition}
               @select-curve=${this._onSelectCurve}
               @toggle-curve=${this._onToggleCurve}
             ></curve-legend>
@@ -1409,7 +1431,7 @@ export class LightenerCurveCard extends LitElement {
         <div class="status-stack">
           ${this._previewActive
             ? html`<div class="preview-notice" role="status" aria-live="polite">
-                Previewing live — click Restore to return to original brightness
+                Live preview active — click Restore to reset
               </div>`
             : nothing}
           ${this._saveSuccess

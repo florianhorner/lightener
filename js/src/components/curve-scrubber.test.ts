@@ -84,11 +84,11 @@ function makeScrubber(opts?: { curves?: LightCurve[]; readOnly?: boolean }): Cur
 }
 
 describe('curve-scrubber — render + ARIA', () => {
-  it('renders the "Preview at brightness" label', async () => {
+  it('renders the "At brightness" label', async () => {
     const el = makeScrubber();
     await el.updateComplete;
     const label = el.renderRoot.querySelector('.scrubber-label');
-    expect(label?.textContent?.trim()).toBe('Preview at brightness');
+    expect(label?.textContent?.trim()).toBe('At brightness');
   });
 
   it('exposes ARIA slider role with valid min/max/now/text', async () => {
@@ -146,8 +146,8 @@ describe('curve-scrubber — badges', () => {
     await el.updateComplete;
     const badges = el.renderRoot.querySelectorAll('.badge');
     expect(badges.length).toBe(1);
-    const nameEl = badges[0]!.querySelector('.badge-name');
-    expect(nameEl?.textContent?.trim()).toBe('Beta');
+    // Badge shows value only, no name (name is shown in the legend instead)
+    expect(badges[0]!.querySelector('.badge-name')).toBeNull();
   });
 
   it('darkens low-contrast #ffca28 to #9e7c00 for badge text', async () => {
@@ -288,6 +288,41 @@ describe('curve-scrubber — readOnly guard', () => {
     );
     expect(startSpy).not.toHaveBeenCalled();
   });
+
+  it('scrubber slider is non-focusable and aria-disabled when readOnly', async () => {
+    const el = makeScrubber({ readOnly: true });
+    await el.updateComplete;
+    const track = el.renderRoot.querySelector('.track-area')!;
+    expect(track.getAttribute('tabindex')).toBe('-1');
+    expect(track.getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('strips interactive attributes from badges when readOnly=true', async () => {
+    const el = makeScrubber({ readOnly: true });
+    await el.updateComplete;
+    const badges = [...el.renderRoot.querySelectorAll('[data-value-badge="true"]')];
+    expect(badges.length).toBeGreaterThan(0);
+    badges.forEach((b) => {
+      expect(b.tagName).toBe('DIV');
+      expect(b.getAttribute('tabindex')).toBeNull();
+      expect(b.getAttribute('role')).toBeNull();
+      expect(b.getAttribute('aria-label')).toBeNull();
+      expect(b.classList.contains('interactive')).toBe(false);
+    });
+  });
+
+  it('renders badges as interactive <button>s when not readOnly', async () => {
+    const el = makeScrubber({ readOnly: false });
+    await el.updateComplete;
+    const badges = [...el.renderRoot.querySelectorAll('[data-value-badge="true"]')];
+    expect(badges.length).toBeGreaterThan(0);
+    badges.forEach((b) => {
+      expect(b.tagName).toBe('BUTTON');
+      expect(b.getAttribute('type')).toBe('button');
+      expect(b.classList.contains('interactive')).toBe(true);
+      expect(b.getAttribute('aria-label')).toMatch(/^Set .* to \d+%$/);
+    });
+  });
 });
 
 describe('curve-scrubber — pointer drag', () => {
@@ -383,6 +418,30 @@ describe('curve-scrubber — pointer drag', () => {
   });
 });
 
+describe('curve-scrubber — badge-click event', () => {
+  it('dispatches badge-click with entityId and value when interactive badge is clicked', async () => {
+    const el = makeScrubber({ readOnly: false });
+    await el.updateComplete;
+    const spy = vi.fn();
+    el.addEventListener('badge-click', spy);
+
+    const btn = el.renderRoot.querySelector<HTMLButtonElement>('button.badge.interactive')!;
+    btn.click();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    const detail = spy.mock.calls[0]![0].detail as { entityId: string; value: number };
+    expect(detail.entityId).toMatch(/^light\./);
+    expect(typeof detail.value).toBe('number');
+  });
+
+  it('does not render interactive badges when readOnly=true', async () => {
+    const el = makeScrubber({ readOnly: true });
+    await el.updateComplete;
+    const btns = el.renderRoot.querySelectorAll('button.badge.interactive');
+    expect(btns.length).toBe(0);
+  });
+});
+
 describe('curve-scrubber — track click', () => {
   it('updates position based on click clientX relative to track rect', async () => {
     const el = makeScrubber();
@@ -438,7 +497,7 @@ describe('curve-scrubber — overflow indicator', () => {
     expect(btn!.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('toggles to "Show less" when clicked', async () => {
+  it('toggles to "Collapse" when clicked', async () => {
     const el = makeScrubber();
     await el.updateComplete;
     const container = el.renderRoot.querySelector<HTMLElement>('.value-badges')!;
@@ -454,8 +513,44 @@ describe('curve-scrubber — overflow indicator', () => {
     const btn = el.renderRoot.querySelector<HTMLButtonElement>('.overflow-indicator')!;
     btn.click();
     await el.updateComplete;
-    expect(btn.textContent?.trim()).toBe('Show less');
+    expect(btn.textContent?.trim()).toBe('Collapse');
     expect(btn.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('counts a straddling badge as hidden after the snap (not undercount)', async () => {
+    // Three badges laid out at tops 0 / 22 / 44, each 20 tall, clipHeight 46.
+    // Third badge's top (44) is within 46 but bottom (64) exceeds. Under the old
+    // logic it was excluded from hiddenCount and then hidden by the snap — so
+    // "+N more" undercounted. New logic: snap to the last fully-visible badge
+    // (second, bottom 42), then count any badge whose bottom exceeds snap.
+    const curve = (name: string, color: string): LightCurve => ({
+      entityId: `light.${name}`,
+      friendlyName: name,
+      controlPoints: [
+        { lightener: 0, target: 0 },
+        { lightener: 100, target: 100 },
+      ],
+      visible: true,
+      color,
+    });
+    const el = makeScrubber({
+      curves: [curve('A', '#2563eb'), curve('B', '#ef5350'), curve('C', '#ffca28')],
+    });
+    await el.updateComplete;
+    const container = el.renderRoot.querySelector<HTMLElement>('.value-badges')!;
+    const badges = container.querySelectorAll<HTMLElement>('.badge');
+    Object.defineProperty(container, 'clientHeight', { configurable: true, value: 46 });
+    badges.forEach((b, i) => {
+      Object.defineProperty(b, 'offsetTop', { configurable: true, value: i * 22 });
+      Object.defineProperty(b, 'offsetHeight', { configurable: true, value: 20 });
+    });
+
+    roInstances[0]!.trigger();
+    await el.updateComplete;
+
+    const btn = el.renderRoot.querySelector<HTMLButtonElement>('.overflow-indicator')!;
+    expect(btn).not.toBeNull();
+    expect(btn!.textContent?.trim()).toBe('+1 more');
   });
 });
 

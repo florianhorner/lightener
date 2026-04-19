@@ -19,7 +19,7 @@ export const CURVE_PRESETS: PresetDef[] = [
   {
     id: 'dim_accent',
     name: 'Dim accent',
-    description: 'Caps at ~45% max — great for mood or accent lighting.',
+    description: 'Caps at ~45% — great for mood or accent lighting.',
     controlPoints: [
       { lightener: 0, target: 0 },
       { lightener: 1, target: 1 },
@@ -43,7 +43,7 @@ export const CURVE_PRESETS: PresetDef[] = [
   {
     id: 'night_mode',
     name: 'Night mode',
-    description: 'Caps at ~25% — barely bright even at full Lightener level.',
+    description: 'Caps at ~25% — barely bright even at full brightness.',
     controlPoints: [
       { lightener: 0, target: 0 },
       { lightener: 1, target: 1 },

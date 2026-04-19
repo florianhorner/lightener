@@ -3,7 +3,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { CurveLegend } from './curve-legend.js';
 import type { LightCurve } from '../utils/types.js';
-import { LEGEND_SHAPES } from '../utils/graph-math.js';
+import { LEGEND_SHAPES, sampleCurveAt } from '../utils/graph-math.js';
 
 beforeAll(async () => {
   await import('./curve-legend.js');
@@ -12,6 +12,7 @@ beforeAll(async () => {
 function makeLegend(opts?: {
   curves?: LightCurve[];
   selectedCurveId?: string | null;
+  scrubberPosition?: number | null;
 }): CurveLegend {
   const el = document.createElement('curve-legend') as CurveLegend;
   el.curves = opts?.curves ?? [
@@ -37,6 +38,7 @@ function makeLegend(opts?: {
     },
   ];
   el.selectedCurveId = opts?.selectedCurveId ?? null;
+  el.scrubberPosition = opts?.scrubberPosition ?? null;
   document.body.appendChild(el);
   return el;
 }
@@ -222,5 +224,33 @@ describe('curve-legend', () => {
     eye.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
     expect(outerSpy).toHaveBeenCalledTimes(1);
     document.body.removeEventListener('toggle-curve', outerSpy);
+  });
+
+  it('omits aria-label on legend items — accessible name comes from descendant text', async () => {
+    const el = makeLegend({ scrubberPosition: null });
+    await el.updateComplete;
+    const item = el.renderRoot.querySelector('.legend-item')!;
+    expect(item.getAttribute('aria-label')).toBeNull();
+    expect(item.textContent).toContain('Alpha');
+  });
+
+  it('includes sampled brightness in accessible name when scrubber is active', async () => {
+    const curve: LightCurve = {
+      entityId: 'light.a',
+      friendlyName: 'Alpha',
+      controlPoints: [
+        { lightener: 0, target: 0 },
+        { lightener: 100, target: 100 },
+      ],
+      visible: true,
+      color: '#2563eb',
+    };
+    const el = makeLegend({ curves: [curve], scrubberPosition: 50 });
+    await el.updateComplete;
+    const item = el.renderRoot.querySelector('.legend-item')!;
+    expect(item.getAttribute('aria-label')).toBeNull();
+    const expectedPct = Math.round(sampleCurveAt(curve.controlPoints, 50));
+    expect(item.textContent).toContain(`${expectedPct}%`);
+    expect(item.textContent).toContain('Alpha');
   });
 });

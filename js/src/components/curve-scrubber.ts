@@ -11,6 +11,7 @@ export class CurveScrubber extends LitElement {
   @state() private _position = 50; // 0-100
   @state() private _overflowCount = 0;
   @state() private _expanded = false;
+  @state() private _snappedMaxHeight: number | null = null;
 
   @query('.value-badges') private _badgesRef!: HTMLElement | null;
 
@@ -132,19 +133,32 @@ export class CurveScrubber extends LitElement {
       white-space: nowrap;
       min-width: 0;
     }
+    button.badge.interactive {
+      cursor: pointer;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-color, #2563eb) 30%, transparent);
+      transition:
+        background 0.12s ease,
+        box-shadow 0.12s ease;
+      border: none;
+      font: inherit;
+      color: inherit;
+    }
+    button.badge.interactive:hover {
+      background: rgba(128, 128, 128, 0.14);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-color, #2563eb) 60%, transparent);
+    }
+    button.badge.interactive:focus {
+      outline: none;
+    }
+    button.badge.interactive:focus-visible {
+      outline: 2px solid var(--primary-color, #2563eb);
+      outline-offset: 2px;
+    }
     .badge-dot {
       width: 6px;
       height: 6px;
       border-radius: 50%;
       flex-shrink: 0;
-    }
-    .badge-name {
-      font-weight: 400;
-      opacity: 0.5;
-      margin-left: 2px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 110px;
     }
     .overflow-indicator {
       position: absolute;
@@ -288,6 +302,23 @@ export class CurveScrubber extends LitElement {
     this._emitPosition();
   }
 
+  private _renderBadgeContent(bar: { color: string; value: number }) {
+    return html`
+      <span class="badge-dot" style="background: ${bar.color}"></span>
+      <span style="color: ${this._badgeTextColor(bar.color)}">${bar.value}%</span>
+    `;
+  }
+
+  private _onBadgeClick(entityId: string, value: number): void {
+    this.dispatchEvent(
+      new CustomEvent('badge-click', {
+        detail: { entityId, value },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
   private _emitPosition(): void {
     this.dispatchEvent(
       new CustomEvent('scrubber-move', {
@@ -336,20 +367,31 @@ export class CurveScrubber extends LitElement {
     const container = this._badgesRef;
     if (!container) return;
 
-    // Skip measurement while expanded — the inline max-height:none makes all
-    // badges visible, so hiddenCount would always be 0 and immediately collapse
-    // the panel, causing an expand/collapse flicker loop.
+    // Skip measurement while expanded — all badges are visible so hiddenCount
+    // would be 0, immediately collapsing the panel and causing a flicker loop.
     if (this._expanded) return;
 
-    const maxVisibleBottom = container.clientHeight + 1;
+    const clipHeight = container.clientHeight;
     const badges = [...container.querySelectorAll<HTMLElement>('.badge[data-value-badge="true"]')];
+
+    // Snap the max-height to the bottom of the last fully-visible badge so no
+    // badge is shown half-cut. "Fully visible" = bottom edge within clipHeight.
+    const lastFullyVisible = [...badges]
+      .reverse()
+      .find((badge) => badge.offsetTop + badge.offsetHeight <= clipHeight);
+    const snapped = lastFullyVisible
+      ? lastFullyVisible.offsetTop + lastFullyVisible.offsetHeight
+      : clipHeight;
+
+    // Count badges whose bottom exceeds the snapped boundary — those are the
+    // ones actually hidden by the snap. Counting against raw clipHeight would
+    // undercount when the last row is partially clipped.
     const hiddenCount = badges.filter(
-      (badge) => badge.offsetTop + badge.offsetHeight > maxVisibleBottom
+      (badge) => badge.offsetTop + badge.offsetHeight > snapped
     ).length;
 
-    if (hiddenCount !== this._overflowCount) {
-      this._overflowCount = hiddenCount;
-    }
+    if (hiddenCount !== this._overflowCount) this._overflowCount = hiddenCount;
+    if (snapped !== this._snappedMaxHeight) this._snappedMaxHeight = snapped;
   }
 
   render() {
@@ -358,11 +400,12 @@ export class CurveScrubber extends LitElement {
 
     return html`
       <div class="scrubber-panel">
-        <div class="scrubber-label">Preview at brightness</div>
+        <div class="scrubber-label">At brightness</div>
         <div
           class="track-area"
           role="slider"
-          tabindex="0"
+          tabindex="${this.readOnly ? -1 : 0}"
+          aria-disabled="${this.readOnly}"
           aria-label="Brightness scrubber"
           aria-valuemin="0"
           aria-valuemax="100"
@@ -385,15 +428,28 @@ export class CurveScrubber extends LitElement {
         </div>
 
         <div class="value-badges-wrap">
-          <div class="value-badges" style="${this._expanded ? 'max-height: none;' : ''}">
-            ${bars.map(
-              (bar) => html`
-                <div class="badge" data-value-badge="true">
-                  <span class="badge-dot" style="background: ${bar.color}"></span>
-                  <span style="color: ${this._badgeTextColor(bar.color)}">${bar.value}%</span>
-                  <span class="badge-name">${bar.name}</span>
-                </div>
-              `
+          <div
+            class="value-badges"
+            style="${this._expanded
+              ? 'max-height: none;'
+              : this._snappedMaxHeight !== null
+                ? `max-height: ${this._snappedMaxHeight}px;`
+                : ''}"
+          >
+            ${bars.map((bar) =>
+              this.readOnly
+                ? html`<div class="badge" data-value-badge="true">
+                    ${this._renderBadgeContent(bar)}
+                  </div>`
+                : html`<button
+                    type="button"
+                    class="badge interactive"
+                    data-value-badge="true"
+                    aria-label="Set ${bar.name} to ${bar.value}%"
+                    @click=${() => this._onBadgeClick(bar.entityId, bar.value)}
+                  >
+                    ${this._renderBadgeContent(bar)}
+                  </button>`
             )}
           </div>
           ${this._overflowCount > 0 || this._expanded
@@ -401,13 +457,13 @@ export class CurveScrubber extends LitElement {
                 class="overflow-indicator"
                 aria-expanded=${this._expanded}
                 aria-label="${this._expanded
-                  ? 'Show fewer light badges'
-                  : `Show ${this._overflowCount} more light badges`}"
+                  ? 'Collapse light list'
+                  : `Show ${this._overflowCount} more lights`}"
                 @click=${() => {
                   this._expanded = !this._expanded;
                 }}
               >
-                ${this._expanded ? 'Show less' : `+${this._overflowCount} more`}
+                ${this._expanded ? 'Collapse' : `+${this._overflowCount} more`}
               </button>`
             : null}
         </div>

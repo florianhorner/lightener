@@ -96,3 +96,43 @@ describe('curve-graph keyboard editing', () => {
     });
   });
 });
+
+describe('curve-graph SVG def ID scoping', () => {
+  beforeEach(() => {
+    document.body.replaceChildren();
+  });
+
+  function makeGraph() {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.alpha',
+        friendlyName: 'Alpha',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 100, target: 100 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+    document.body.appendChild(graph);
+    return graph;
+  }
+
+  it('generates unique SVG def IDs per instance so multi-card dashboards do not cross-wire', async () => {
+    const a = makeGraph();
+    const b = makeGraph();
+    await Promise.all([a.updateComplete, b.updateComplete]);
+
+    const aGrads = [...a.shadowRoot!.querySelectorAll('linearGradient')].map((el) => el.id);
+    const bGrads = [...b.shadowRoot!.querySelectorAll('linearGradient')].map((el) => el.id);
+    expect(aGrads.length).toBeGreaterThan(0);
+    expect(bGrads.length).toBeGreaterThan(0);
+    expect(aGrads).not.toEqual(bGrads);
+
+    const aClip = a.shadowRoot!.querySelector('clipPath')!.id;
+    const bClip = b.shadowRoot!.querySelector('clipPath')!.id;
+    expect(aClip).not.toBe(bClip);
+  });
+});
