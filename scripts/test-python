@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+if [[ ! -x ".venv/bin/python" ]]; then
+    echo "Run scripts/setup-python first." >&2
+    exit 1
+fi
+
+VENV_PY_VERSION=$(.venv/bin/python -c 'import platform; print(platform.python_version())')
+if [[ "${VENV_PY_VERSION}" != 3.13.* ]]; then
+    echo "Expected .venv to use Python 3.13.x, found ${VENV_PY_VERSION}. Run scripts/setup-python first." >&2
+    exit 1
+fi
+
+if [[ $# -eq 0 ]]; then
+    set -- tests/components/lightener
+fi
+
+exec .venv/bin/python -m pytest "$@"

@@ -2,11 +2,18 @@
 
 set -euo pipefail
 
-# Change to repo root
 cd "$(dirname "$0")/.."
 
-# This should match the version used by HA core
-PY_VERSION=${PY_VERSION:-3.13.2}
+if ! command -v apt-get >/dev/null 2>&1; then
+	echo "[setup] ERROR: requires Debian/Ubuntu (apt-get not found)" >&2
+	echo "  On macOS, run: scripts/setup-python" >&2
+	exit 1
+fi
+
+if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+	echo "[setup] ERROR: must run as root (e.g. sudo scripts/setup)" >&2
+	exit 1
+fi
 
 DEBIAN_FRONTEND=noninteractive
 
@@ -46,41 +53,8 @@ apt-get install -y --no-install-recommends \
 mkdir -p /root/.ssh
 chmod 700 /root/.ssh
 
-echo "[setup] Installing uv (Python toolchain manager)..."
-if ! command -v uv >/dev/null 2>&1; then
-	# Install uv to ~/.local/bin/uv
-	curl -fsSL https://astral.sh/uv/install.sh | sh
-fi
-
-# Ensure uv is on PATH
-export PATH="$HOME/.local/bin:$PATH"
-if [[ -d "$HOME/.cargo/bin" ]]; then
-	export PATH="$HOME/.cargo/bin:$PATH"
-fi
-
-echo "[setup] Ensuring Python ${PY_VERSION} is available..."
-uv python install "${PY_VERSION}"
-
-RECREATE_VENV=0
-if [[ ! -x ".venv/bin/python" ]]; then
-	RECREATE_VENV=1
-else
-	# Get current Python version in the existing venv
-	CURRENT_PY_VERSION=$(.venv/bin/python -c 'import platform; print(platform.python_version())' || echo "")
-	if [[ "${CURRENT_PY_VERSION}" != "${PY_VERSION}" ]]; then
-		RECREATE_VENV=1
-	fi
-fi
-
-if [[ ${RECREATE_VENV} -eq 1 ]]; then
-	echo "[setup] Creating virtual environment at .venv with Python ${PY_VERSION}..."
-	uv venv --clear --python "${PY_VERSION}" .venv
-else
-	echo "[setup] Reusing existing virtual environment (.venv) with Python ${CURRENT_PY_VERSION}."
-fi
-
-echo "[setup] Installing dependencies..."
-uv pip install --python .venv/bin/python -r requirements.txt
+echo "[setup] Running Python environment bootstrap..."
+bash scripts/setup-python
 
 echo "[setup] Cleaning apt cache..."
 apt-get clean

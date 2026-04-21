@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 if [[ ! -d .venv ]]; then
-    echo "Virtualenv not found. Run scripts/setup first." >&2
+    echo "Virtualenv not found. Run scripts/setup-python first." >&2
     exit 1
 fi
 

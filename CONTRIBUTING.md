@@ -43,7 +43,7 @@ tests/                         # pytest — backend unit tests
 
 ## Prerequisites
 
-- Python 3.12+
+- Python 3.13 for local backend testing
 - Node.js 20+
 - A running Home Assistant dev instance (or the included Dev Container)
 
@@ -58,13 +58,18 @@ For a manual setup:
 
 ```sh
 # Backend
-pip install -r requirements.txt   # or: pip install pytest pytest-asyncio pytest-cov pytest_homeassistant_custom_component
-scripts/setup                          # if available
+scripts/setup-python
+source .env.workspace
 
 # Frontend
 cd js
 npm install
 ```
+
+Do not use bare `pytest` for local backend work. This repository standardizes on
+`scripts/test-python`, which always runs the Home Assistant pytest stack inside
+the repo-managed Python 3.13 `.venv`. A global `pytest` can resolve to a stale
+install and fail before test collection starts.
 
 ## Tooling
 
@@ -74,10 +79,12 @@ npm install
 | ------ | ------------------- | -------------------- |
 | Ruff   | Linting + formatting | `ruff check . --fix` / `ruff format .` |
 | Mypy   | Type checking        | `mypy custom_components/lightener/` |
-| Pytest | Unit tests           | `pytest tests/`      |
-| Coverage | Coverage check     | `pytest --cov=custom_components/lightener --cov-fail-under=90` |
+| Pytest | Unit tests           | `scripts/test-python` |
+| Coverage | Coverage check     | `scripts/test-python --cov=custom_components/lightener --cov-fail-under=90` |
 
-Configuration lives in `pyproject.toml`.
+Configuration lives in `pyproject.toml`. Ruff and Mypy still target `py312` /
+Python 3.12 there as tooling compatibility settings. Local backend pytest
+runtime is standardized on Python 3.13.
 
 ### TypeScript (frontend)
 

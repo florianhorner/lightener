@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+PY_VERSION=${PY_VERSION:-3.13.2}
+
+export PATH="$HOME/.local/bin:$PATH"
+if [[ -d "$HOME/.cargo/bin" ]]; then
+    export PATH="$HOME/.cargo/bin:$PATH"
+fi
+
+echo "[setup-python] Ensuring uv is available..."
+if ! command -v uv >/dev/null 2>&1; then
+    curl -fsSL https://astral.sh/uv/install.sh | sh
+fi
+
+echo "[setup-python] Ensuring Python ${PY_VERSION} is available..."
+uv python install "${PY_VERSION}"
+
+RECREATE_VENV=0
+if [[ ! -x ".venv/bin/python" ]]; then
+    RECREATE_VENV=1
+else
+    CURRENT_PY_VERSION=$(.venv/bin/python -c 'import platform; print(platform.python_version())' || echo "")
+    if [[ "${CURRENT_PY_VERSION}" != "${PY_VERSION}" ]]; then
+        RECREATE_VENV=1
+    fi
+fi
+
+if [[ ${RECREATE_VENV} -eq 1 ]]; then
+    echo "[setup-python] Creating virtual environment at .venv with Python ${PY_VERSION}..."
+    uv venv --clear --python "${PY_VERSION}" .venv
+else
+    echo "[setup-python] Reusing existing virtual environment (.venv) with Python ${CURRENT_PY_VERSION}."
+fi
+
+echo "[setup-python] Installing dependencies..."
+uv pip install --python .venv/bin/python -r requirements.txt
+
+cat > .env.workspace <<'EOF'
+# Source this in the workspace terminal for a ready dev environment.
+# IMPORTANT: source from the repo root — uses relative paths.
+#   cd /path/to/lightener-curve-editor && source .env.workspace
+source .venv/bin/activate
+# Avoid leading colon when PYTHONPATH is unset (would add "" = cwd to search path).
+export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${PWD}/custom_components"
+echo "Lightener dev env active — tests: scripts/test-python, HA: scripts/develop"
+EOF
+
+echo ""
+echo "[setup-python] Backend environment ready"
+echo "  Activate shell:   source .env.workspace"
+echo "  Test backend:     scripts/test-python"
+echo "  Run HA locally:   scripts/develop"
