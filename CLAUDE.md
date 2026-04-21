@@ -74,3 +74,19 @@ regressions without flagging small refactors.
 - Integration source lives in `custom_components/lightener/`
 - Frontend card JS lives in `custom_components/lightener/frontend/`
 - Card source (if editing) lives in `js/`
+
+### Fast Testing Loop (default)
+
+- Future agents should default to the fast loop in this repo instead of asking for a release cut or HACS update for routine testing.
+- First local validation step: `scripts/test-fast`
+- Fastest live HA UI loop: `scripts/ha-sync --frontend-only`
+- Full live HA sync when needed: `scripts/ha-sync`
+- Store SSH target configuration in the gitignored `.context/ha-sync.env` file.
+- `scripts/ha-sync` never restarts Home Assistant. If Python code changed, tell the user a manual HA restart or equivalent reload is still required.
+- Only use the release/HACS flow when validating packaging, distribution, or an actual release candidate.
+
+### Backend test entrypoint
+
+- Never rely on bare `pytest` from the ambient shell PATH in this repo.
+- Default to `scripts/test-python` for backend tests.
+- If you need direct pytest flags, use `.venv/bin/python -m pytest ...` or `source .env.workspace` first. The generated `.env.workspace` defines a shell `pytest()` wrapper that routes to the repo-managed Python 3.13 venv.

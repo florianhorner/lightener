@@ -69,7 +69,8 @@ npm install
 Do not use bare `pytest` for local backend work. This repository standardizes on
 `scripts/test-python`, which always runs the Home Assistant pytest stack inside
 the repo-managed Python 3.13 `.venv`. A global `pytest` can resolve to a stale
-install and fail before test collection starts.
+install and fail before test collection starts. If you `source .env.workspace`
+first, the shell also gets a `pytest()` wrapper that routes to the same venv.
 
 ## Fast loop
 

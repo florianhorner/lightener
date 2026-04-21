@@ -43,10 +43,16 @@ cat > .env.workspace <<'EOF'
 # Source this in the workspace terminal for a ready dev environment.
 # IMPORTANT: source from the repo root — uses relative paths.
 #   cd /path/to/lightener-curve-editor && source .env.workspace
+export LIGHTENER_REPO_ROOT="${PWD}"
 source .venv/bin/activate
 # Avoid leading colon when PYTHONPATH is unset (would add "" = cwd to search path).
-export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${PWD}/custom_components"
-echo "Lightener dev env active — tests: scripts/test-python, HA: scripts/develop"
+export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${LIGHTENER_REPO_ROOT}/custom_components"
+# Route accidental bare `pytest` calls through the repo-managed Home Assistant
+# test environment instead of whatever global pytest happens to be on PATH.
+pytest() {
+    "${LIGHTENER_REPO_ROOT}/.venv/bin/python" -m pytest "$@"
+}
+echo "Lightener dev env active — tests: scripts/test-python or bare pytest, HA: scripts/develop"
 EOF
 
 echo ""
