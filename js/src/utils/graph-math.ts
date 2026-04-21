@@ -4,7 +4,7 @@
  */
 
 import { ControlPoint } from './types.js';
-import { prepareBrightnessConfig } from './interpolation.js';
+import { sampleInterpolatedCurve } from './interpolation.js';
 
 // Graph coordinate system: SVG viewBox with padding for axis labels.
 export const PAD_LEFT = 44;
@@ -46,20 +46,54 @@ export function computeMonotoneTangents(points: { x: number; y: number }[]): {
   tangents: number[];
 } {
   const n = points.length;
+  if (n === 0) return { dx: [], tangents: [] };
+  if (n === 1) return { dx: [], tangents: [0] };
+
   const dx: number[] = [];
   const dy: number[] = [];
   const m: number[] = [];
   for (let i = 0; i < n - 1; i++) {
     dx.push(points[i + 1].x - points[i].x);
     dy.push(points[i + 1].y - points[i].y);
-    m.push(dy[i] / (dx[i] || 1));
+    m.push(dx[i] === 0 ? 0 : dy[i] / dx[i]);
   }
-  const tangents: number[] = new Array(n);
+
+  const tangents: number[] = new Array(n).fill(0);
+  if (n === 2) {
+    tangents[0] = m[0];
+    tangents[1] = m[0];
+    return { dx, tangents };
+  }
+
   tangents[0] = m[0];
   tangents[n - 1] = m[n - 2];
   for (let i = 1; i < n - 1; i++) {
+    if (m[i - 1] === 0 || m[i] === 0 || m[i - 1] * m[i] <= 0) {
+      tangents[i] = 0;
+      continue;
+    }
     tangents[i] = (m[i - 1] + m[i]) / 2;
   }
+
+  // Fritsch-Carlson limiter: cap tangent magnitudes per segment so the cubic
+  // stays monotone when the underlying secants are monotone.
+  for (let i = 0; i < n - 1; i++) {
+    if (m[i] === 0) {
+      tangents[i] = 0;
+      tangents[i + 1] = 0;
+      continue;
+    }
+
+    const alpha = tangents[i] / m[i];
+    const beta = tangents[i + 1] / m[i];
+    const norm = alpha * alpha + beta * beta;
+    if (norm > 9) {
+      const tau = 3 / Math.sqrt(norm);
+      tangents[i] = tau * alpha * m[i];
+      tangents[i + 1] = tau * beta * m[i];
+    }
+  }
+
   return { dx, tangents };
 }
 
@@ -106,13 +140,11 @@ export function sampleSmoothCurveAt(points: { x: number; y: number }[], targetX:
 }
 
 /**
- * Convenience: prepare control points and sample the smooth curve at a position.
- * Used by both the graph scrubber dots and the scrubber badge values.
+ * Sample the curve using the same piecewise-linear interpolation as the backend.
+ * Used by the graph scrubber dots, legend values, scrubber badges, and preview.
  */
 export function sampleCurveAt(controlPoints: ControlPoint[], position: number): number {
-  const prepared = prepareBrightnessConfig(controlPoints);
-  const pathPoints = prepared.map((cp) => ({ x: cp.lightener, y: cp.target }));
-  return Math.max(0, Math.min(100, sampleSmoothCurveAt(pathPoints, position)));
+  return Math.max(0, Math.min(100, sampleInterpolatedCurve(controlPoints, position)));
 }
 
 /** Colorblind-safe curve palette — shared between card and tests. */
@@ -149,6 +181,16 @@ export function buildSmoothPath(points: { x: number; y: number }[]): string {
     const cp2x = points[i + 1].x - seg;
     const cp2y = points[i + 1].y - tangents[i + 1] * seg;
     d += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${points[i + 1].x},${points[i + 1].y}`;
+  }
+  return d;
+}
+
+export function buildLinearPath(points: { x: number; y: number }[]): string {
+  if (points.length < 2) return '';
+
+  let d = `M${points[0].x},${points[0].y}`;
+  for (let i = 1; i < points.length; i++) {
+    d += ` L${points[i].x},${points[i].y}`;
   }
   return d;
 }

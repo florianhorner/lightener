@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - Badge click in scrubber correctly skips hidden (visibility-off) lights.
+- Curve graph rendering and preview sampling now use the same piecewise-linear interpolation as the backend brightness map, so scrubber values, previewed brightness, and saved behavior no longer diverge.
 - Preview restore correctly handles on/off-only lights (no brightness attribute): they are restored with `turn_on` without a brightness argument.
 - Save-success timer is cleared before re-arming on rapid successive saves, preventing a status flap when saves complete inside the 2-second display window.
 

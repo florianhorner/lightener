@@ -16,6 +16,7 @@ import {
   computeMonotoneTangents,
   sampleSmoothCurveAt,
   buildSmoothPath,
+  buildLinearPath,
   DASH_PATTERNS,
   LEGEND_SHAPES,
   easeOutCubic,
@@ -140,15 +141,14 @@ describe('computeMonotoneTangents', () => {
     expect(tangents[2]).toBeCloseTo(0, 10);
   });
 
-  it('interior tangent is average of adjacent slopes', () => {
+  it('zeros the interior tangent when a steep ramp hits a flat segment', () => {
     const points = [
       { x: 0, y: 0 },
       { x: 50, y: 100 },
       { x: 100, y: 100 },
     ];
     const { tangents } = computeMonotoneTangents(points);
-    // Middle tangent = avg(2, 0) = 1
-    expect(tangents[1]).toBeCloseTo(1, 10);
+    expect(tangents[1]).toBeCloseTo(0, 10);
   });
 
   it('handles two points', () => {
@@ -245,7 +245,7 @@ describe('sampleSmoothCurveAt', () => {
     }
   });
 
-  it('monotonically increasing input stays non-decreasing (no overshoot)', () => {
+  it('monotonically increasing input stays non-decreasing', () => {
     const pts = [
       { x: 0, y: 0 },
       { x: 30, y: 60 },
@@ -255,24 +255,32 @@ describe('sampleSmoothCurveAt', () => {
     let prev = -Infinity;
     for (let i = 0; i <= 100; i++) {
       const v = sampleSmoothCurveAt(pts, i);
-      // Allow tiny floating-point dips (< 0.5)
-      expect(v).toBeGreaterThanOrEqual(prev - 0.5);
+      expect(v).toBeGreaterThanOrEqual(prev - 1e-9);
       prev = v;
     }
   });
 
-  it('steep ramp followed by flat: converges to flat value', () => {
+  it('steep ramp followed by flat never overshoots above the flat segment', () => {
     const pts = [
       { x: 0, y: 0 },
       { x: 10, y: 100 },
       { x: 100, y: 100 },
     ];
-    // Cubic Hermite can overshoot near the junction, but must converge.
-    // The far end of the flat region should be very close to 100.
-    expect(sampleSmoothCurveAt(pts, 100)).toBeCloseTo(100, 5);
-    // Mid-region should be within a reasonable range of 100
-    expect(sampleSmoothCurveAt(pts, 70)).toBeGreaterThan(80);
-    expect(sampleSmoothCurveAt(pts, 70)).toBeLessThan(150);
+    for (let i = 10; i <= 100; i++) {
+      expect(sampleSmoothCurveAt(pts, i)).toBeLessThanOrEqual(100 + 1e-9);
+    }
+  });
+
+  it('keeps a flat interior region flat', () => {
+    const pts = [
+      { x: 0, y: 0 },
+      { x: 40, y: 50 },
+      { x: 60, y: 50 },
+      { x: 100, y: 100 },
+    ];
+    for (let i = 40; i <= 60; i++) {
+      expect(sampleSmoothCurveAt(pts, i)).toBeCloseTo(50, 5);
+    }
   });
 });
 
@@ -322,6 +330,31 @@ describe('buildSmoothPath', () => {
       { x: 344, y: 12 },
     ]);
     expect(path).toMatch(/^M44,212/);
+  });
+});
+
+describe('buildLinearPath', () => {
+  it('returns empty string for 0 or 1 points', () => {
+    expect(buildLinearPath([])).toBe('');
+    expect(buildLinearPath([{ x: 10, y: 20 }])).toBe('');
+  });
+
+  it('returns M…L… for exactly 2 points', () => {
+    const path = buildLinearPath([
+      { x: 0, y: 100 },
+      { x: 300, y: 0 },
+    ]);
+    expect(path).toBe('M0,100 L300,0');
+  });
+
+  it('returns only line commands for 3+ points', () => {
+    const path = buildLinearPath([
+      { x: 0, y: 200 },
+      { x: 150, y: 100 },
+      { x: 300, y: 200 },
+    ]);
+    expect(path).toContain(' L');
+    expect(path).not.toContain(' C');
   });
 });
 

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { scaleRangedValue, prepareBrightnessConfig, interpolateCurve } from './interpolation.js';
+import {
+  scaleRangedValue,
+  prepareBrightnessConfig,
+  sampleInterpolatedCurve,
+  interpolateCurve,
+} from './interpolation.js';
 import { ControlPoint } from './types.js';
 
 describe('scaleRangedValue', () => {
@@ -146,5 +151,60 @@ describe('interpolateCurve', () => {
     ]);
     expect(result[75]).toBeCloseTo(40, 5);
     expect(result[100]).toBeCloseTo(40, 5);
+  });
+});
+
+describe('sampleInterpolatedCurve', () => {
+  const peakCurve: ControlPoint[] = [
+    { lightener: 0, target: 0 },
+    { lightener: 50, target: 100 },
+    { lightener: 100, target: 0 },
+  ];
+
+  it('matches linear segment math for a peak curve', () => {
+    expect(sampleInterpolatedCurve(peakCurve, 25)).toBeCloseTo(50, 5);
+    expect(sampleInterpolatedCurve(peakCurve, 50)).toBeCloseTo(100, 5);
+    expect(sampleInterpolatedCurve(peakCurve, 75)).toBeCloseTo(50, 5);
+  });
+
+  it('preserves flatten-after-last-point semantics', () => {
+    expect(
+      sampleInterpolatedCurve(
+        [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: 40 },
+        ],
+        75
+      )
+    ).toBeCloseTo(40, 5);
+    expect(
+      sampleInterpolatedCurve(
+        [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: 40 },
+        ],
+        100
+      )
+    ).toBeCloseTo(40, 5);
+  });
+
+  it('clamps out-of-range input', () => {
+    expect(sampleInterpolatedCurve(peakCurve, -10)).toBeCloseTo(0, 5);
+    expect(sampleInterpolatedCurve(peakCurve, 110)).toBeCloseTo(0, 5);
+  });
+});
+
+describe('interpolateCurve / sampleInterpolatedCurve consistency', () => {
+  it('matches the shared sampler at representative integer positions', () => {
+    const points: ControlPoint[] = [
+      { lightener: 0, target: 0 },
+      { lightener: 50, target: 100 },
+      { lightener: 100, target: 0 },
+    ];
+    const interpolated = interpolateCurve(points);
+
+    for (const position of [0, 25, 50, 75, 100]) {
+      expect(interpolated[position]).toBeCloseTo(sampleInterpolatedCurve(points, position), 5);
+    }
   });
 });

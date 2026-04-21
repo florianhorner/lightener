@@ -54,6 +54,38 @@ export function prepareBrightnessConfig(controlPoints: ControlPoint[]): ControlP
   return result;
 }
 
+function samplePreparedCurve(controlPoints: ControlPoint[], position: number): number {
+  if (controlPoints.length === 0) return 0;
+
+  const clamped = Math.max(0, Math.min(100, position));
+  if (clamped <= controlPoints[0].lightener) {
+    return controlPoints[0].target;
+  }
+
+  for (let seg = 1; seg < controlPoints.length; seg++) {
+    const start = controlPoints[seg - 1];
+    const end = controlPoints[seg];
+
+    if (clamped === end.lightener) {
+      return end.target;
+    }
+
+    if (clamped < end.lightener) {
+      return scaleRangedValue(
+        [start.lightener, end.lightener],
+        [start.target, end.target],
+        clamped
+      );
+    }
+  }
+
+  return controlPoints[controlPoints.length - 1].target;
+}
+
+export function sampleInterpolatedCurve(controlPoints: ControlPoint[], position: number): number {
+  return samplePreparedCurve(prepareBrightnessConfig(controlPoints), position);
+}
+
 /**
  * Returns an array of 101 values (index 0-100) where each index
  * represents a lightener percentage and the value is the interpolated
@@ -61,15 +93,10 @@ export function prepareBrightnessConfig(controlPoints: ControlPoint[]): ControlP
  */
 export function interpolateCurve(controlPoints: ControlPoint[]): number[] {
   const prepared = prepareBrightnessConfig(controlPoints);
-  const result = new Array<number>(101).fill(0);
+  const result = new Array<number>(101);
 
-  for (let seg = 1; seg < prepared.length; seg++) {
-    const start = prepared[seg - 1];
-    const end = prepared[seg];
-
-    for (let i = start.lightener + 1; i <= end.lightener; i++) {
-      result[i] = scaleRangedValue([start.lightener, end.lightener], [start.target, end.target], i);
-    }
+  for (let i = 0; i <= 100; i++) {
+    result[i] = samplePreparedCurve(prepared, i);
   }
 
   return result;

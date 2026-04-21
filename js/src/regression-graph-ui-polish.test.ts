@@ -512,7 +512,8 @@ describe('preview restore state', () => {
   });
 
   function makePreviewCard(
-    states: Record<string, { state: string; attributes: { brightness?: number } }>
+    states: Record<string, { state: string; attributes: { brightness?: number } }>,
+    controlPointsByEntity?: Record<string, LightCurve['controlPoints']>
   ): {
     card: LightenerCurveCard;
     callService: ReturnType<typeof vi.fn>;
@@ -524,7 +525,7 @@ describe('preview restore state', () => {
       (entityId, idx) => ({
         entityId,
         friendlyName: entityId,
-        controlPoints: [
+        controlPoints: controlPointsByEntity?.[entityId] ?? [
           { lightener: 0, target: 0 },
           { lightener: 100, target: 100 },
         ],
@@ -605,6 +606,37 @@ describe('preview restore state', () => {
     expect(callService).toHaveBeenCalledWith('light', 'turn_on', {
       entity_id: 'light.min_dim',
       brightness: 0,
+    });
+
+    rafSpy.mockRestore();
+  });
+
+  it('previews the backend-linear brightness for a peak curve', async () => {
+    const entityId = 'light.preview_peak';
+    const { card, callService, rafSpy } = makePreviewCard(
+      {
+        [entityId]: { state: 'on', attributes: { brightness: 200 } },
+      },
+      {
+        [entityId]: [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: 100 },
+          { lightener: 100, target: 0 },
+        ],
+      }
+    );
+    document.body.appendChild(card);
+    await card.updateComplete;
+
+    (card as unknown as Record<string, () => void>)['_startPreview']();
+    callService.mockClear();
+    (card as unknown as Record<string, number>)['_lastPreviewTime'] = 0;
+    (card as unknown as Record<string, (position: number) => void>)['_previewLights'](25);
+
+    expect(callService).toHaveBeenCalledTimes(1);
+    expect(callService).toHaveBeenCalledWith('light', 'turn_on', {
+      entity_id: entityId,
+      brightness: 128,
     });
 
     rafSpy.mockRestore();
