@@ -1,111 +1,114 @@
 #!/usr/bin/env bash
 # Conductor workspace setup — runs once per new workspace.
-# Extends scripts/setup (Python/HA) with Node.js, gh CLI, and JS frontend deps.
+# On Debian/root, extends scripts/setup with Node.js, gh CLI, jq, and JS deps.
+# On macOS/local, checks for required tools and runs scripts/setup-python.
 
 set -euo pipefail
-
-# This script assumes a Debian/Ubuntu environment (apt-get, dpkg).
-if ! command -v apt-get >/dev/null 2>&1; then
-  echo "[conductor-setup] ERROR: requires Debian/Ubuntu (apt-get not found)"
-  echo "  On macOS, install tools manually: node, gh, jq, then run: scripts/setup"
-  exit 1
-fi
-
-# apt-get, keyring writes, and package installs require root.
-if [ "${EUID:-$(id -u)}" -ne 0 ]; then
-  echo "[conductor-setup] ERROR: must run as root (e.g. sudo scripts/conductor-setup)"
-  exit 1
-fi
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
-# ── 1. Python / HA deps (existing setup) ─────────────────────────────────────
-echo "[conductor-setup] Running Python/HA setup..."
-bash scripts/setup
+install_js_deps() {
+  echo "[conductor-setup] Installing JS frontend deps (js/)..."
+  cd "$REPO_ROOT/js"
+  if [ -f package-lock.json ]; then
+    npm ci --prefer-offline --ignore-scripts
+  else
+    npm install --ignore-scripts
+  fi
+  if [ -n "${SUDO_UID:-}" ] && [ -n "${SUDO_GID:-}" ]; then
+    chown -R "$SUDO_UID:$SUDO_GID" node_modules/ 2>/dev/null || true
+  fi
+  cd "$REPO_ROOT"
+}
 
-# ── 2. Node.js ───────────────────────────────────────────────────────────────
-echo "[conductor-setup] Ensuring Node.js is available..."
-if ! command -v node >/dev/null 2>&1; then
-  # Download NodeSource setup script to a temp file before executing,
-  # so curl failures are caught by set -e (curl|bash masks curl exit codes).
-  _NS_TMP=$(mktemp /tmp/nodesource-setup-XXXXXXXX.sh)
-  curl -fsSL https://deb.nodesource.com/setup_22.x -o "$_NS_TMP"
-  bash "$_NS_TMP"
-  rm -f "$_NS_TMP"
-  apt-get install -y --no-install-recommends nodejs
-fi
-echo "[conductor-setup] Node $(node --version), npm $(npm --version)"
+print_summary() {
+  if [ -x .venv/bin/python ]; then
+    _PY_VER="$(.venv/bin/python --version 2>&1)"
+  else
+    _PY_VER="unknown"
+  fi
+  _NODE_VER="$(node --version 2>/dev/null || echo 'unknown')"
+  if command -v gh >/dev/null 2>&1; then
+    _GH_VER="$(gh --version | head -1)"
+  else
+    _GH_VER="unknown"
+  fi
+  echo ""
+  echo "  Conductor workspace ready"
+  echo "  ========================"
+  echo ""
+  echo "  Python:  .venv/bin/python (${_PY_VER})"
+  echo "  Node:    ${_NODE_VER}"
+  echo "  gh CLI:  ${_GH_VER}"
+  echo ""
+  echo "  Activate env:    source .env.workspace"
+  echo "  Run HA locally:  scripts/develop"
+  echo "  Build JS card:   cd js && npm run build"
+  echo "  Lint:            scripts/lint  (Python)"
+  echo "                   cd js && npm run lint  (TS)"
+  echo "  Tests:           scripts/test-python"
+  echo "                   cd js && npm test  (TS/vitest)"
+  echo ""
+}
 
-# ── 3. JS frontend deps ───────────────────────────────────────────────────────
-echo "[conductor-setup] Installing JS frontend deps (js/)..."
-cd "$REPO_ROOT/js"
-# Use npm ci (respects lockfile). Fall back to npm install only if lockfile
-# is absent; never suppress stderr — errors here indicate real problems.
-# --ignore-scripts prevents npm lifecycle scripts (postinstall etc.) from
-# running as root, mitigating supply-chain attacks via malicious packages.
-if [ -f package-lock.json ]; then
-  npm ci --prefer-offline --ignore-scripts
+if command -v apt-get >/dev/null 2>&1; then
+  if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+    echo "[conductor-setup] ERROR: must run as root (e.g. sudo scripts/conductor-setup)" >&2
+    exit 1
+  fi
+
+  echo "[conductor-setup] Running Debian Python/HA bootstrap..."
+  bash scripts/setup
+
+  echo "[conductor-setup] Ensuring Node.js is available..."
+  if ! command -v node >/dev/null 2>&1; then
+    _NS_TMP=$(mktemp /tmp/nodesource-setup-XXXXXXXX.sh)
+    curl -fsSL https://deb.nodesource.com/setup_22.x -o "$_NS_TMP"
+    bash "$_NS_TMP"
+    rm -f "$_NS_TMP"
+    apt-get install -y --no-install-recommends nodejs
+  fi
+  echo "[conductor-setup] Node $(node --version), npm $(npm --version)"
+
+  install_js_deps
+
+  echo "[conductor-setup] Ensuring gh CLI is available..."
+  if ! command -v gh >/dev/null 2>&1; then
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      | tee /usr/share/keyrings/githubcli-archive-keyring.gpg > /dev/null
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list
+    apt-get update -qq
+    apt-get install -y --no-install-recommends gh
+  fi
+  echo "[conductor-setup] gh $(gh --version | head -1)"
+
+  if ! command -v jq >/dev/null 2>&1; then
+    apt-get update -qq
+    apt-get install -y --no-install-recommends jq
+  fi
 else
-  npm install --ignore-scripts
-fi
-# Fix ownership if running via sudo (SUDO_UID/SUDO_GID set by sudo).
-if [ -n "${SUDO_UID:-}" ] && [ -n "${SUDO_GID:-}" ]; then
-  chown -R "$SUDO_UID:$SUDO_GID" node_modules/ 2>/dev/null || true
-fi
-cd "$REPO_ROOT"
+  MISSING_TOOLS=()
+  for tool in node npm gh jq; do
+    if ! command -v "${tool}" >/dev/null 2>&1; then
+      MISSING_TOOLS+=("${tool}")
+    fi
+  done
 
-# ── 4. GitHub CLI ────────────────────────────────────────────────────────────
-echo "[conductor-setup] Ensuring gh CLI is available..."
-if ! command -v gh >/dev/null 2>&1; then
-  # Use tee (respects set -e) instead of dd (silently ignores write errors).
-  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-    | tee /usr/share/keyrings/githubcli-archive-keyring.gpg > /dev/null
-  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-    > /etc/apt/sources.list.d/github-cli.list
-  apt-get update -qq
-  apt-get install -y --no-install-recommends gh
-fi
-echo "[conductor-setup] gh $(gh --version | head -1)"
+  if [ "${#MISSING_TOOLS[@]}" -gt 0 ]; then
+    echo "[conductor-setup] ERROR: missing required tools for local setup: ${MISSING_TOOLS[*]}" >&2
+    echo "  Install them, then rerun scripts/conductor-setup." >&2
+    exit 1
+  fi
 
-# ── 5. jq ─────────────────────────────────────────────────────────────────────
-if ! command -v jq >/dev/null 2>&1; then
-  # Ensure package index is fresh before installing.
-  apt-get update -qq
-  apt-get install -y --no-install-recommends jq
+  echo "[conductor-setup] Running local Python bootstrap..."
+  bash scripts/setup-python
+  echo "[conductor-setup] Node $(node --version), npm $(npm --version)"
+  install_js_deps
 fi
 
-# ── 6. Convenience aliases in workspace shell ─────────────────────────────────
-# Write a .envrc-style activation shim so `source .env.workspace` activates
-# the venv and sets PYTHONPATH for interactive use in the terminal.
-cat > "$REPO_ROOT/.env.workspace" <<'EOF'
-# Source this in the workspace terminal for a ready dev environment.
-# IMPORTANT: source from the repo root — uses relative paths.
-#   cd /path/to/lightener-curve-editor && source .env.workspace
-source .venv/bin/activate
-# Avoid leading colon when PYTHONPATH is unset (would add "" = cwd to search path).
-export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${PWD}/custom_components"
-echo "Lightener dev env active — HA at: scripts/develop"
-EOF
-
-_PY_VER="$(.venv/bin/python --version 2>&1 || echo 'unknown')"
-_NODE_VER="$(node --version)"
-_GH_VER="$(gh --version 2>/dev/null | awk '{print $3}' | head -1)"
-echo ""
-echo "  Conductor workspace ready"
-echo "  ========================"
-echo ""
-echo "  Python:  .venv/bin/python (${_PY_VER})"
-echo "  Node:    ${_NODE_VER}"
-echo "  gh CLI:  ${_GH_VER}"
-echo ""
-echo "  Run HA locally:  scripts/develop"
-echo "  Build JS card:   cd js && npm run build"
-echo "  Lint:            scripts/lint  (Python)"
-echo "                   cd js && npm run lint  (TS)"
-echo "  Tests:           pytest  (Python)"
-echo "                   cd js && npm test  (TS/vitest)"
-echo ""
+print_summary
 
 # ── WISHLIST (not yet automated — requires auth or external install) ──────────
 # The following would make the workspace fully self-sufficient but need

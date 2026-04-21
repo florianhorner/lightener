@@ -47,10 +47,10 @@ regressions without flagging small refactors.
   `src/lightener-curve-card.ts` is excluded until the god-file is under
   400 lines and can be covered directly.
 - **Raising a gate:** run the suite locally (`npm run test:coverage` or
-  `pytest --cov=custom_components/lightener`), confirm the new floor has
-  at least ~3pp cushion above the measured number, then bump the config.
-  Don't chase the measured baseline exactly — that creates false failures
-  on every PR.
+  `scripts/test-python --cov=custom_components/lightener`), confirm the new
+  floor has at least ~3pp cushion above the measured number, then bump the
+  config. Don't chase the measured baseline exactly — that creates false
+  failures on every PR.
 
 ### Shipping procedure
 
@@ -63,8 +63,10 @@ regressions without flagging small refactors.
 ## Development
 
 - `conductor.json` — Conductor Mac app config: `setup` runs `scripts/conductor-setup`, `run` button starts `scripts/develop`
-- `scripts/conductor-setup` — one-shot workspace bootstrap (Python venv, Node.js 22, gh CLI, jq, JS deps); requires root
-- `scripts/setup` — create venv and install deps
+- `scripts/conductor-setup` — one-shot workspace bootstrap (macOS-safe local bootstrap or Debian/root system bootstrap, plus JS deps)
+- `scripts/setup-python` — create the local Python 3.13 `.venv`, install backend deps, and write `.env.workspace`
+- `scripts/setup` — Debian/system bootstrap that installs system packages, then delegates to `scripts/setup-python`
+- `scripts/test-python` — canonical backend test command; runs `.venv/bin/python -m pytest`
 - `scripts/develop` — run HA locally with the integration
 - `scripts/lint` — run linters
 - Integration source lives in `custom_components/lightener/`

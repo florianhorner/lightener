@@ -80,6 +80,19 @@ Use it to pick a Lightener entity and edit curves without manually adding a dash
 - [CLAUDE.md](CLAUDE.md) — repository notes for AI-assisted contributors
 - [TODOS.md](TODOS.md) — tracked follow-up work
 
+## Local Development
+
+For backend work, use the repo-owned Python bootstrap and test runner instead
+of bare `pytest`:
+
+```sh
+scripts/setup-python
+scripts/test-python
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full backend and frontend
+workflow.
+
 ## Example Use Case
 
 Suppose you have the following lights in your living room, all available as independent entities in Home Assistant:
