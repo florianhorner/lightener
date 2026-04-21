@@ -196,6 +196,8 @@ export class LightenerCurveCard extends LitElement {
   @state() private _saveState: SaveState = INITIAL_SAVE_STATE;
   @state() private _loadError: string | null = null;
   @state() private _loading = false;
+  @state() private _manageError: string | null = null;
+  @state() private _managingLights = false;
 
   private get _saving(): boolean {
     return isSaving(this._saveState);
@@ -724,6 +726,20 @@ export class LightenerCurveCard extends LitElement {
 
   private get _isDirty(): boolean {
     return !curvesEqual(this._curves, this._originalCurves);
+  }
+
+  private get _canManageLights(): boolean {
+    return (
+      this._isAdmin &&
+      !!this._hass &&
+      !!this._entityId &&
+      !this._isDirty &&
+      !this._saving &&
+      !this._cancelAnimating &&
+      !this._loading &&
+      !this._managingLights &&
+      !this._loadError
+    );
   }
 
   public get dirty(): boolean {
@@ -1256,6 +1272,63 @@ export class LightenerCurveCard extends LitElement {
     }
   }
 
+  private async _onAddLight(e: CustomEvent): Promise<void> {
+    if (!this._hass || !this._entityId || this._managingLights) return;
+    const { entityId } = e.detail as { entityId: string };
+    if (!entityId) return;
+    if (this._previewActive) this._stopPreview();
+    this._manageError = null;
+    this._managingLights = true;
+    try {
+      await this._hass.callWS({
+        type: 'lightener/add_light',
+        entity_id: this._entityId,
+        controlled_entity_id: entityId,
+      });
+      this._undoStack = [];
+      this._loaded = false;
+      await this._tryLoadCurves();
+    } catch (err) {
+      console.error('[Lightener] Failed to add light:', err);
+      this._manageError = this._formatManageError(err, 'Could not add light.');
+    } finally {
+      this._managingLights = false;
+    }
+  }
+
+  private async _onRemoveLight(e: CustomEvent): Promise<void> {
+    if (!this._hass || !this._entityId || this._managingLights) return;
+    const { entityId } = e.detail as { entityId: string };
+    if (!entityId) return;
+    if (this._previewActive) this._stopPreview();
+    this._manageError = null;
+    this._managingLights = true;
+    try {
+      await this._hass.callWS({
+        type: 'lightener/remove_light',
+        entity_id: this._entityId,
+        controlled_entity_id: entityId,
+      });
+      if (this._selectedCurveId === entityId) {
+        this._selectedCurveId = null;
+      }
+      this._undoStack = [];
+      this._loaded = false;
+      await this._tryLoadCurves();
+    } catch (err) {
+      console.error('[Lightener] Failed to remove light:', err);
+      this._manageError = this._formatManageError(err, 'Could not remove light.');
+    } finally {
+      this._managingLights = false;
+    }
+  }
+
+  private _formatManageError(err: unknown, fallback: string): string {
+    const anyErr = err as { message?: string; code?: string } | null | undefined;
+    if (anyErr?.message) return anyErr.message;
+    return fallback;
+  }
+
   public async saveCurves(): Promise<boolean> {
     return this._onSave();
   }
@@ -1410,9 +1483,16 @@ export class LightenerCurveCard extends LitElement {
               .curves=${this._curves}
               .selectedCurveId=${this._selectedCurveId}
               .scrubberPosition=${this._scrubberPosition}
+              .canManage=${this._canManageLights}
+              .hass=${this._hass}
               @select-curve=${this._onSelectCurve}
               @toggle-curve=${this._onToggleCurve}
+              @add-light=${this._onAddLight}
+              @remove-light=${this._onRemoveLight}
             ></curve-legend>
+            ${this._manageError
+              ? html`<div class="error" role="alert">${WARNING_ICON} ${this._manageError}</div>`
+              : nothing}
           </div>
 
           <div class="footer-slot">

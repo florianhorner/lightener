@@ -253,4 +253,166 @@ describe('curve-legend', () => {
     expect(item.textContent).toContain(`${expectedPct}%`);
     expect(item.textContent).toContain('Alpha');
   });
+
+  describe('light management', () => {
+    it('does not render add/remove controls when canManage is false', async () => {
+      const el = makeLegend();
+      await el.updateComplete;
+      expect(el.renderRoot.querySelector('.add-light-btn')).toBeNull();
+      expect(el.renderRoot.querySelector('.remove-icon')).toBeNull();
+    });
+
+    it('renders add-light button when canManage is true', async () => {
+      const el = makeLegend();
+      el.canManage = true;
+      await el.updateComplete;
+      expect(el.renderRoot.querySelector('.add-light-btn')).not.toBeNull();
+    });
+
+    it('renders a remove button per row when canManage is true and more than one light', async () => {
+      const el = makeLegend();
+      el.canManage = true;
+      await el.updateComplete;
+      const removes = el.renderRoot.querySelectorAll('.remove-icon');
+      expect(removes.length).toBe(2);
+    });
+
+    it('hides remove button when only one light remains', async () => {
+      const el = makeLegend({
+        curves: [
+          {
+            entityId: 'light.only',
+            friendlyName: 'Only',
+            controlPoints: [
+              { lightener: 0, target: 0 },
+              { lightener: 100, target: 100 },
+            ],
+            visible: true,
+            color: '#2563eb',
+          },
+        ],
+      });
+      el.canManage = true;
+      await el.updateComplete;
+      expect(el.renderRoot.querySelector('.remove-icon')).toBeNull();
+    });
+
+    it('fires remove-light event when remove button clicked and user confirms', async () => {
+      const el = makeLegend();
+      el.canManage = true;
+      await el.updateComplete;
+      const origConfirm = window.confirm;
+      window.confirm = () => true;
+      try {
+        const spy = vi.fn();
+        el.addEventListener('remove-light', spy);
+        const remove = el.renderRoot.querySelector<HTMLButtonElement>('.remove-icon')!;
+        remove.click();
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy.mock.calls[0]![0].detail).toEqual({ entityId: 'light.a' });
+      } finally {
+        window.confirm = origConfirm;
+      }
+    });
+
+    it('does not fire remove-light when user cancels confirm dialog', async () => {
+      const el = makeLegend();
+      el.canManage = true;
+      await el.updateComplete;
+      const origConfirm = window.confirm;
+      window.confirm = () => false;
+      try {
+        const spy = vi.fn();
+        el.addEventListener('remove-light', spy);
+        const remove = el.renderRoot.querySelector<HTMLButtonElement>('.remove-icon')!;
+        remove.click();
+        expect(spy).not.toHaveBeenCalled();
+      } finally {
+        window.confirm = origConfirm;
+      }
+    });
+
+    it('remove click does not also fire select-curve', async () => {
+      const el = makeLegend();
+      el.canManage = true;
+      await el.updateComplete;
+      const origConfirm = window.confirm;
+      window.confirm = () => true;
+      try {
+        const selectSpy = vi.fn();
+        el.addEventListener('select-curve', selectSpy);
+        const remove = el.renderRoot.querySelector<HTMLButtonElement>('.remove-icon')!;
+        remove.click();
+        expect(selectSpy).not.toHaveBeenCalled();
+      } finally {
+        window.confirm = origConfirm;
+      }
+    });
+
+    it('clicking add-light reveals the entity picker form', async () => {
+      const el = makeLegend();
+      el.canManage = true;
+      await el.updateComplete;
+      const addBtn = el.renderRoot.querySelector<HTMLButtonElement>('.add-light-btn')!;
+      addBtn.click();
+      await el.updateComplete;
+      expect(el.renderRoot.querySelector('ha-entity-picker')).not.toBeNull();
+      expect(el.renderRoot.querySelector('.add-form')).not.toBeNull();
+    });
+
+    it('confirm button is disabled until an entity is selected', async () => {
+      const el = makeLegend();
+      el.canManage = true;
+      await el.updateComplete;
+      el.renderRoot.querySelector<HTMLButtonElement>('.add-light-btn')!.click();
+      await el.updateComplete;
+      const confirmBtn = el.renderRoot.querySelector<HTMLButtonElement>(
+        '.add-form-actions button.primary'
+      )!;
+      expect(confirmBtn.disabled).toBe(true);
+    });
+
+    it('fires add-light event after picker selection + Add click', async () => {
+      const el = makeLegend();
+      el.canManage = true;
+      await el.updateComplete;
+      el.renderRoot.querySelector<HTMLButtonElement>('.add-light-btn')!.click();
+      await el.updateComplete;
+      const picker = el.renderRoot.querySelector('ha-entity-picker')!;
+      picker.dispatchEvent(
+        new CustomEvent('value-changed', {
+          detail: { value: 'light.new' },
+          bubbles: true,
+          composed: true,
+        })
+      );
+      await el.updateComplete;
+      const spy = vi.fn();
+      el.addEventListener('add-light', spy);
+      const confirmBtn = el.renderRoot.querySelector<HTMLButtonElement>(
+        '.add-form-actions button.primary'
+      )!;
+      confirmBtn.click();
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.calls[0]![0].detail).toEqual({ entityId: 'light.new' });
+    });
+
+    it('Cancel in add form hides the picker without firing add-light', async () => {
+      const el = makeLegend();
+      el.canManage = true;
+      await el.updateComplete;
+      el.renderRoot.querySelector<HTMLButtonElement>('.add-light-btn')!.click();
+      await el.updateComplete;
+      const spy = vi.fn();
+      el.addEventListener('add-light', spy);
+      const cancelBtn = el.renderRoot.querySelector<HTMLButtonElement>(
+        '.add-form-actions button:not(.primary)'
+      )!;
+      cancelBtn.click();
+      await el.updateComplete;
+      expect(spy).not.toHaveBeenCalled();
+      expect(el.renderRoot.querySelector('.add-form')).toBeNull();
+      expect(el.renderRoot.querySelector('.add-light-btn')).not.toBeNull();
+    });
+  });
 });

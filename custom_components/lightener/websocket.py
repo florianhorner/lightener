@@ -8,7 +8,7 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 
-from .const import DOMAIN
+from .const import CURVE_PRESETS, DEFAULT_CURVE_PRESET, DOMAIN
 from .observability import end_span, entity_ref, log_event, metric, start_span
 
 _LOGGER = logging.getLogger(__name__)
@@ -19,6 +19,8 @@ def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_get_curves)
     websocket_api.async_register_command(hass, ws_save_curves)
     websocket_api.async_register_command(hass, ws_list_entities)
+    websocket_api.async_register_command(hass, ws_add_light)
+    websocket_api.async_register_command(hass, ws_remove_light)
 
 
 @websocket_api.websocket_command(
@@ -413,4 +415,244 @@ async def ws_save_curves(
         span,
         status="ok",
         updated_entities=len(curves),
+    )
+
+
+def _resolve_lightener_entry(hass: HomeAssistant, entity_id: str):
+    """Return (entry, config_entry) for a Lightener entity, or (None, None) if invalid."""
+    entity_registry = async_get_entity_registry(hass)
+    entry = entity_registry.async_get(entity_id)
+    if entry is None or entry.platform != DOMAIN:
+        return None, None
+    config_entry = hass.config_entries.async_get_entry(entry.config_entry_id)
+    if config_entry is None:
+        return entry, None
+    return entry, config_entry
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "lightener/add_light",
+        vol.Required("entity_id"): str,
+        vol.Required("controlled_entity_id"): str,
+        vol.Optional("preset"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_add_light(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict,
+) -> None:
+    """Add a controlled light to a Lightener entity with a default curve."""
+    entity_id = msg["entity_id"]
+    controlled_entity_id = msg["controlled_entity_id"]
+    preset_id = msg.get("preset", DEFAULT_CURVE_PRESET)
+    op_started = monotonic()
+    span = start_span(
+        _LOGGER,
+        "lightener.ws.add_light",
+        message_id=msg["id"],
+        lightener_entity_ref=entity_ref(entity_id),
+        controlled_entity_ref=entity_ref(controlled_entity_id),
+    )
+    metric(_LOGGER, "lightener.ws.add_light.requests_total", "counter", 1)
+
+    entry, config_entry = _resolve_lightener_entry(hass, entity_id)
+    if entry is None or entry.platform != DOMAIN:
+        metric(
+            _LOGGER,
+            "lightener.ws.add_light.validation_errors_total",
+            "counter",
+            1,
+            error_code="not_found",
+        )
+        end_span(_LOGGER, span, status="error", error_code="not_found")
+        connection.send_error(
+            msg["id"], "not_found", f"Entity {entity_id} is not a Lightener entity"
+        )
+        return
+    if config_entry is None:
+        end_span(_LOGGER, span, status="error", error_code="missing_config_entry")
+        connection.send_error(msg["id"], "not_found", "Config entry not found")
+        return
+
+    # Validate the light to add
+    if not controlled_entity_id.startswith("light."):
+        connection.send_error(
+            msg["id"],
+            "invalid_format",
+            f"{controlled_entity_id} is not a light entity",
+        )
+        end_span(_LOGGER, span, status="error", error_code="not_a_light")
+        return
+
+    if controlled_entity_id == entity_id:
+        connection.send_error(
+            msg["id"],
+            "invalid_format",
+            "Cannot add a Lightener to itself",
+        )
+        end_span(_LOGGER, span, status="error", error_code="self_reference")
+        return
+
+    entity_registry = async_get_entity_registry(hass)
+    controlled_entry = entity_registry.async_get(controlled_entity_id)
+    if controlled_entry is not None and controlled_entry.platform == DOMAIN:
+        connection.send_error(
+            msg["id"],
+            "invalid_format",
+            f"{controlled_entity_id} is a Lightener entity and cannot be controlled by another Lightener",
+        )
+        end_span(_LOGGER, span, status="error", error_code="nested_lightener")
+        return
+
+    if preset_id not in CURVE_PRESETS:
+        connection.send_error(
+            msg["id"],
+            "invalid_format",
+            f"Unknown preset: {preset_id}",
+        )
+        end_span(_LOGGER, span, status="error", error_code="unknown_preset")
+        return
+
+    new_data = dict(config_entry.data)
+    new_entities = dict(new_data.get("entities", {}))
+
+    if controlled_entity_id in new_entities:
+        connection.send_error(
+            msg["id"],
+            "already_exists",
+            f"{controlled_entity_id} is already controlled by this Lightener",
+        )
+        end_span(_LOGGER, span, status="error", error_code="already_exists")
+        return
+
+    new_entities[controlled_entity_id] = {"brightness": dict(CURVE_PRESETS[preset_id])}
+    new_data["entities"] = new_entities
+
+    hass.config_entries.async_update_entry(config_entry, data=new_data)
+    await hass.config_entries.async_reload(config_entry.entry_id)
+
+    connection.send_result(msg["id"], {"entities": new_entities})
+    duration_ms = (monotonic() - op_started) * 1000
+    metric(
+        _LOGGER,
+        "lightener.ws.add_light.duration_ms",
+        "histogram",
+        round(duration_ms, 2),
+    )
+    log_event(
+        _LOGGER,
+        logging.INFO,
+        "lightener.ws.add_light.success",
+        trace_id=span.trace_id,
+        span_id=span.span_id,
+        duration_ms=round(duration_ms, 2),
+        total_entities=len(new_entities),
+    )
+    end_span(
+        _LOGGER,
+        span,
+        status="ok",
+        total_entities=len(new_entities),
+    )
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "lightener/remove_light",
+        vol.Required("entity_id"): str,
+        vol.Required("controlled_entity_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_remove_light(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict,
+) -> None:
+    """Remove a controlled light from a Lightener entity."""
+    entity_id = msg["entity_id"]
+    controlled_entity_id = msg["controlled_entity_id"]
+    op_started = monotonic()
+    span = start_span(
+        _LOGGER,
+        "lightener.ws.remove_light",
+        message_id=msg["id"],
+        lightener_entity_ref=entity_ref(entity_id),
+        controlled_entity_ref=entity_ref(controlled_entity_id),
+    )
+    metric(_LOGGER, "lightener.ws.remove_light.requests_total", "counter", 1)
+
+    entry, config_entry = _resolve_lightener_entry(hass, entity_id)
+    if entry is None or entry.platform != DOMAIN:
+        metric(
+            _LOGGER,
+            "lightener.ws.remove_light.validation_errors_total",
+            "counter",
+            1,
+            error_code="not_found",
+        )
+        end_span(_LOGGER, span, status="error", error_code="not_found")
+        connection.send_error(
+            msg["id"], "not_found", f"Entity {entity_id} is not a Lightener entity"
+        )
+        return
+    if config_entry is None:
+        end_span(_LOGGER, span, status="error", error_code="missing_config_entry")
+        connection.send_error(msg["id"], "not_found", "Config entry not found")
+        return
+
+    new_data = dict(config_entry.data)
+    new_entities = dict(new_data.get("entities", {}))
+
+    if controlled_entity_id not in new_entities:
+        connection.send_error(
+            msg["id"],
+            "not_found",
+            f"{controlled_entity_id} is not controlled by this Lightener",
+        )
+        end_span(_LOGGER, span, status="error", error_code="not_controlled")
+        return
+
+    if len(new_entities) <= 1:
+        connection.send_error(
+            msg["id"],
+            "last_light",
+            "Cannot remove the last light. Delete the Lightener entity instead.",
+        )
+        end_span(_LOGGER, span, status="error", error_code="last_light")
+        return
+
+    del new_entities[controlled_entity_id]
+    new_data["entities"] = new_entities
+
+    hass.config_entries.async_update_entry(config_entry, data=new_data)
+    await hass.config_entries.async_reload(config_entry.entry_id)
+
+    connection.send_result(msg["id"], {"entities": new_entities})
+    duration_ms = (monotonic() - op_started) * 1000
+    metric(
+        _LOGGER,
+        "lightener.ws.remove_light.duration_ms",
+        "histogram",
+        round(duration_ms, 2),
+    )
+    log_event(
+        _LOGGER,
+        logging.INFO,
+        "lightener.ws.remove_light.success",
+        trace_id=span.trace_id,
+        span_id=span.span_id,
+        duration_ms=round(duration_ms, 2),
+        total_entities=len(new_entities),
+    )
+    end_span(
+        _LOGGER,
+        span,
+        status="ok",
+        total_entities=len(new_entities),
     )
