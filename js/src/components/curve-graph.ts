@@ -4,7 +4,6 @@ import { LightCurve, ControlPoint } from '../utils/types.js';
 import { prepareBrightnessConfig } from '../utils/interpolation.js';
 import {
   PAD_LEFT,
-  PAD_RIGHT,
   PAD_TOP,
   PAD_BOTTOM,
   GRAPH_W,
@@ -16,10 +15,8 @@ import {
   fromSvgX,
   fromSvgY,
   clamp,
-  computeMonotoneTangents,
-  sampleSmoothCurveAt,
   sampleCurveAt,
-  buildSmoothPath,
+  buildLinearPath,
   DASH_PATTERNS,
 } from '../utils/graph-math.js';
 
@@ -673,13 +670,13 @@ export class CurveGraph extends LitElement {
       const isInteractive = this._isCurveInteractive(curveIdx);
       const showPoints = isInteractive && !this.readOnly;
 
-      // Build smooth bezier path through the prepared control points
+      // Build a piecewise-linear path so the rendered graph matches backend interpolation.
       const prepared = prepareBrightnessConfig(curve.controlPoints);
       const pathPoints = prepared.map((cp) => ({
         x: toSvgX(cp.lightener),
         y: toSvgY(cp.target),
       }));
-      const curvePath = buildSmoothPath(pathPoints);
+      const curvePath = buildLinearPath(pathPoints);
 
       // Gradient fill path: close the curve to the x-axis
       const fillPath =

@@ -136,3 +136,32 @@ describe('curve-graph SVG def ID scoping', () => {
     expect(aClip).not.toBe(bClip);
   });
 });
+
+describe('curve-graph line rendering', () => {
+  beforeEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it('renders the curve as straight line segments instead of cubic smoothing', async () => {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.alpha',
+        friendlyName: 'Alpha',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: 100 },
+          { lightener: 100, target: 0 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+    document.body.appendChild(graph);
+    await graph.updateComplete;
+
+    const path = graph.shadowRoot!.querySelector<SVGPathElement>('.curve-line')!;
+    expect(path.getAttribute('d')).toContain(' L');
+    expect(path.getAttribute('d')).not.toContain(' C');
+  });
+});

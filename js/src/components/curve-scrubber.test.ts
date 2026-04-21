@@ -177,6 +177,31 @@ describe('curve-scrubber — badges', () => {
     const valueSpan = el.renderRoot.querySelector<HTMLElement>('.badge span[style*="color"]')!;
     expect(valueSpan.style.color).toContain('rgb(179, 107, 0)');
   });
+
+  it('renders the linear interpolated badge value for a peak curve', async () => {
+    const el = makeScrubber({
+      curves: [
+        {
+          entityId: 'light.peak',
+          friendlyName: 'Peak',
+          controlPoints: [
+            { lightener: 0, target: 0 },
+            { lightener: 50, target: 100 },
+            { lightener: 100, target: 0 },
+          ],
+          visible: true,
+          color: '#2563eb',
+        },
+      ],
+    });
+    await el.updateComplete;
+
+    (el as unknown as Record<string, number>)['_position'] = 25;
+    await el.updateComplete;
+
+    const badge = el.renderRoot.querySelector<HTMLElement>('.badge')!;
+    expect(badge.textContent).toContain('50%');
+  });
 });
 
 describe('curve-scrubber — keyboard nav', () => {
