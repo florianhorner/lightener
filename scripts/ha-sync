@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+if [[ -f ".context/ha-sync.env" ]]; then
+    # shellcheck disable=SC1091
+    source ".context/ha-sync.env"
+fi
+
+usage() {
+    cat <<'EOF'
+Usage: scripts/ha-sync [--frontend-only|--backend-only] [--no-build]
+
+Sync the integration directly to a Home Assistant config directory over SSH,
+bypassing release/HACS for day-to-day testing.
+
+Configuration is read from environment variables or .context/ha-sync.env:
+
+  HA_SSH_TARGET   required  e.g. root@your-ha-host
+  HA_CONFIG_DIR   optional  defaults to /config
+
+Examples:
+  cat > .context/ha-sync.env <<'EOF2'
+  HA_SSH_TARGET=root@your-ha-host
+  HA_CONFIG_DIR=/config
+  EOF2
+
+  scripts/ha-sync --frontend-only
+  scripts/ha-sync
+
+Notes:
+  - Frontend syncs do not require a release cut and usually only need a browser refresh.
+  - Python/backend changes still need a Home Assistant restart or equivalent manual reload
+    to load new module code. This script never restarts Home Assistant.
+EOF
+}
+
+MODE="all"
+BUILD_FRONTEND=1
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --frontend-only)
+            MODE="frontend"
+            shift
+            ;;
+        --backend-only)
+            MODE="backend"
+            shift
+            ;;
+        --no-build)
+            BUILD_FRONTEND=0
+            shift
+            ;;
+        -h|--help|help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "[ha-sync] Unknown option: $1" >&2
+            usage >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -z "${HA_SSH_TARGET:-}" ]]; then
+    echo "[ha-sync] HA_SSH_TARGET is required. Set it in the environment or .context/ha-sync.env." >&2
+    exit 1
+fi
+
+HA_CONFIG_DIR=${HA_CONFIG_DIR:-/config}
+REMOTE_COMPONENT_DIR="${HA_CONFIG_DIR}/custom_components/lightener"
+SSH_DESTINATION="${HA_SSH_TARGET}:${REMOTE_COMPONENT_DIR}/"
+COMMON_RSYNC_ARGS=(
+    -az
+    --delete
+    --exclude '__pycache__/'
+    --exclude '*.pyc'
+    --exclude '.DS_Store'
+)
+
+if [[ "${BUILD_FRONTEND}" -eq 1 && "${MODE}" != "backend" ]]; then
+    echo "[ha-sync] Building frontend bundle..."
+    (
+        cd js
+        npm run build
+    )
+fi
+
+echo "[ha-sync] Ensuring remote destination exists..."
+if [[ "${MODE}" == "frontend" ]]; then
+    ssh "${HA_SSH_TARGET}" "mkdir -p '${REMOTE_COMPONENT_DIR}/frontend'"
+else
+    ssh "${HA_SSH_TARGET}" "mkdir -p '${REMOTE_COMPONENT_DIR}'"
+fi
+
+case "${MODE}" in
+    frontend)
+        echo "[ha-sync] Syncing frontend assets to ${SSH_DESTINATION}frontend/ ..."
+        rsync "${COMMON_RSYNC_ARGS[@]}" \
+            custom_components/lightener/frontend/ \
+            "${HA_SSH_TARGET}:${REMOTE_COMPONENT_DIR}/frontend/"
+        ;;
+    backend)
+        echo "[ha-sync] Syncing backend integration files to ${SSH_DESTINATION} ..."
+        rsync "${COMMON_RSYNC_ARGS[@]}" \
+            --exclude 'frontend/' \
+            custom_components/lightener/ \
+            "${SSH_DESTINATION}"
+        ;;
+    all)
+        echo "[ha-sync] Syncing full integration to ${SSH_DESTINATION} ..."
+        rsync "${COMMON_RSYNC_ARGS[@]}" \
+            custom_components/lightener/ \
+            "${SSH_DESTINATION}"
+        ;;
+esac
+
+echo ""
+echo "[ha-sync] Sync complete"
+echo "  Target: ${HA_SSH_TARGET}"
+echo "  Config: ${HA_CONFIG_DIR}"
+
+if [[ "${MODE}" != "backend" ]]; then
+    echo "  Frontend next step: hard-refresh the HA page or revisit /lightener/lightener-curve-card.js"
+fi
+
+if [[ "${MODE}" != "frontend" ]]; then
+    echo "  Backend next step: restart or manually reload Home Assistant if you changed Python code"
+    echo "  Safety: this script never restarts HA for you"
+fi

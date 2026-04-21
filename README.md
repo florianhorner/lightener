@@ -87,11 +87,12 @@ of bare `pytest`:
 
 ```sh
 scripts/setup-python
-scripts/test-python
+scripts/test-fast
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full backend and frontend
-workflow.
+workflow, including direct `scripts/ha-sync` deployment to a test HA box
+without cutting a release.
 
 ## Example Use Case
 

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+usage() {
+    cat <<'EOF'
+Usage: scripts/test-fast [all|frontend|backend]
+
+Runs the fast local inner loop:
+  all      backend pytest + frontend vitest + frontend typecheck
+  frontend frontend vitest + frontend typecheck
+  backend  backend pytest
+EOF
+}
+
+run_backend() {
+    echo "[test-fast] Running backend tests..."
+    ./scripts/test-python -q
+}
+
+run_frontend() {
+    echo "[test-fast] Running frontend tests..."
+    (
+        cd js
+        npm test
+        npx tsc --noEmit
+    )
+}
+
+MODE=${1:-all}
+
+case "${MODE}" in
+    all)
+        run_backend
+        run_frontend
+        ;;
+    frontend)
+        run_frontend
+        ;;
+    backend)
+        run_backend
+        ;;
+    -h|--help|help)
+        usage
+        ;;
+    *)
+        usage >&2
+        exit 1
+        ;;
+esac

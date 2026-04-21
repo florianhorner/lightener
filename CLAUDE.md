@@ -67,6 +67,8 @@ regressions without flagging small refactors.
 - `scripts/setup-python` — create the local Python 3.13 `.venv`, install backend deps, and write `.env.workspace`
 - `scripts/setup` — Debian/system bootstrap that installs system packages, then delegates to `scripts/setup-python`
 - `scripts/test-python` — canonical backend test command; runs `.venv/bin/python -m pytest`
+- `scripts/test-fast` — fast local inner loop: backend pytest + frontend vitest + frontend typecheck
+- `scripts/ha-sync` — direct SSH sync to a test Home Assistant config dir; bypasses release/HACS and never restarts HA
 - `scripts/develop` — run HA locally with the integration
 - `scripts/lint` — run linters
 - Integration source lives in `custom_components/lightener/`

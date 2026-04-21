@@ -71,6 +71,38 @@ Do not use bare `pytest` for local backend work. This repository standardizes on
 the repo-managed Python 3.13 `.venv`. A global `pytest` can resolve to a stale
 install and fail before test collection starts.
 
+## Fast loop
+
+For the normal local inner loop, use:
+
+```sh
+scripts/test-fast
+```
+
+That runs the fast checks we expect before touching a real Home Assistant box:
+backend pytest, frontend vitest, and frontend typecheck.
+
+If you want to test on a live Home Assistant instance without cutting a release
+or waiting for HACS, sync the integration directly over SSH:
+
+```sh
+cat > .context/ha-sync.env <<'EOF'
+HA_SSH_TARGET=root@your-ha-host
+HA_CONFIG_DIR=/config
+EOF
+
+scripts/ha-sync --frontend-only
+```
+
+Notes:
+
+- `scripts/ha-sync --frontend-only` is the fastest UI loop. It builds the
+  frontend bundle and syncs only `custom_components/lightener/frontend/`.
+- `scripts/ha-sync` syncs the full integration directory.
+- The script never restarts Home Assistant. Frontend-only changes usually just
+  need a browser refresh. Python changes still require a manual HA restart or
+  equivalent reload on your test box.
+
 ## Tooling
 
 ### Python (backend)
@@ -96,6 +128,8 @@ runtime is standardized on Python 3.13.
 | Vitest   | Unit tests  | `npm test`             |
 | Coverage | Coverage check | `npm run test:coverage` |
 | Rollup   | Build       | `npm run build`        |
+
+Fast local loop: `scripts/test-fast frontend`
 
 After changing any TypeScript file, run `npm run build` inside `js/` to
 regenerate the bundled JS file in `custom_components/lightener/frontend/`.

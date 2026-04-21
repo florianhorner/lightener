@@ -52,5 +52,6 @@ EOF
 echo ""
 echo "[setup-python] Backend environment ready"
 echo "  Activate shell:   source .env.workspace"
+echo "  Fast local loop:  scripts/test-fast"
 echo "  Test backend:     scripts/test-python"
 echo "  Run HA locally:   scripts/develop"
