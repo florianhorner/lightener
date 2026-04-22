@@ -394,9 +394,7 @@ async def ws_save_curves(
             1,
         )
         end_span(_LOGGER, span, status="error", error_code="reload_failed")
-        connection.send_error(
-            msg["id"], "reload_failed", "Config entry reload failed"
-        )
+        connection.send_error(msg["id"], "reload_failed", "Config entry reload failed")
         return
 
     connection.send_result(msg["id"])
@@ -547,9 +545,7 @@ async def ws_add_light(
             1,
         )
         end_span(_LOGGER, span, status="error", error_code="reload_failed")
-        connection.send_error(
-            msg["id"], "reload_failed", "Config entry reload failed"
-        )
+        connection.send_error(msg["id"], "reload_failed", "Config entry reload failed")
         return
 
     connection.send_result(msg["id"], {"entities": new_entities})
@@ -657,9 +653,7 @@ async def ws_remove_light(
             1,
         )
         end_span(_LOGGER, span, status="error", error_code="reload_failed")
-        connection.send_error(
-            msg["id"], "reload_failed", "Config entry reload failed"
-        )
+        connection.send_error(msg["id"], "reload_failed", "Config entry reload failed")
         return
 
     connection.send_result(msg["id"], {"entities": new_entities})
