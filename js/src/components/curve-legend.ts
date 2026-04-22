@@ -3,16 +3,33 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { LightCurve, Hass } from '../utils/types.js';
 import { LEGEND_SHAPES, sampleCurveAt } from '../utils/graph-math.js';
 
+export interface LegendPresetOption {
+  value: string;
+  label: string;
+}
+
+const DEFAULT_PRESET_OPTIONS: LegendPresetOption[] = [
+  { value: 'linear', label: 'Linear' },
+  { value: 'dim_accent', label: 'Dim accent' },
+  { value: 'late_starter', label: 'Late starter' },
+  { value: 'night_mode', label: 'Night mode' },
+];
+
 @customElement('curve-legend')
 export class CurveLegend extends LitElement {
   @property({ type: Array }) curves: LightCurve[] = [];
   @property({ type: String }) selectedCurveId: string | null = null;
   @property({ type: Number }) scrubberPosition: number | null = null;
   @property({ type: Boolean }) canManage = false;
+  @property({ type: Boolean }) managing = false;
+  @property({ type: Array }) excludeEntityIds: string[] = [];
+  @property({ type: Array }) presetOptions: LegendPresetOption[] = DEFAULT_PRESET_OPTIONS;
   @property({ attribute: false }) hass: Hass | null = null;
 
   @state() private _addingLight = false;
   @state() private _pendingAddEntity = '';
+  @state() private _pendingPreset: string = DEFAULT_PRESET_OPTIONS[0].value;
+  @state() private _confirmingRemove: string | null = null;
 
   static styles = css`
     :host {
@@ -78,6 +95,13 @@ export class CurveLegend extends LitElement {
     }
     .legend-item.selected:hover {
       background: color-mix(in srgb, var(--primary-color, #2563eb) 16%, transparent);
+    }
+    .legend-item.confirming {
+      background: color-mix(in srgb, var(--error-color, #db4437) 10%, transparent);
+      cursor: default;
+    }
+    .legend-item.confirming:hover {
+      background: color-mix(in srgb, var(--error-color, #db4437) 12%, transparent);
     }
     .color-dot {
       width: 10px;
@@ -167,6 +191,10 @@ export class CurveLegend extends LitElement {
       border-radius: 4px;
       opacity: 1;
     }
+    .remove-icon:disabled {
+      cursor: not-allowed;
+      opacity: 0.3 !important;
+    }
     .remove-icon svg {
       width: 16px;
       height: 16px;
@@ -187,6 +215,47 @@ export class CurveLegend extends LitElement {
       flex-shrink: 0;
       min-width: 2.8ch;
       text-align: right;
+    }
+    .confirm-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+    .confirm-text {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      color: var(--error-color, #db4437);
+      font-weight: 500;
+    }
+    .confirm-btn {
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 6px;
+      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+      background: transparent;
+      color: var(--secondary-text-color, #616161);
+      cursor: pointer;
+      font-family: inherit;
+      flex-shrink: 0;
+    }
+    .confirm-btn.danger {
+      background: var(--error-color, #db4437);
+      border-color: var(--error-color, #db4437);
+      color: #fff;
+    }
+    .confirm-btn.danger:hover {
+      opacity: 0.9;
+    }
+    .confirm-btn:focus-visible {
+      outline: 2px solid var(--primary-color, #2563eb);
+      outline-offset: 2px;
     }
     .add-divider {
       height: 1px;
@@ -215,7 +284,7 @@ export class CurveLegend extends LitElement {
         color 0.15s ease,
         background 0.15s ease;
     }
-    .add-light-btn:hover {
+    .add-light-btn:hover:not(:disabled) {
       border-color: var(--primary-color, #2563eb);
       border-style: solid;
       color: var(--primary-color, #2563eb);
@@ -224,6 +293,10 @@ export class CurveLegend extends LitElement {
     .add-light-btn:focus-visible {
       outline: 2px solid var(--primary-color, #2563eb);
       outline-offset: 2px;
+    }
+    .add-light-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
     }
     .add-light-btn svg {
       width: 14px;
@@ -234,6 +307,31 @@ export class CurveLegend extends LitElement {
       display: flex;
       flex-direction: column;
       gap: 8px;
+    }
+    .add-form label {
+      font-size: 11px;
+      color: var(--secondary-text-color, #616161);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .preset-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .preset-field select {
+      padding: 6px 10px;
+      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+      border-radius: 8px;
+      background: var(--card-background-color, #fff);
+      color: var(--primary-text-color, #212121);
+      font-family: inherit;
+      font-size: 13px;
+    }
+    .preset-field select:focus {
+      outline: none;
+      border-color: var(--primary-color, #2563eb);
+      box-shadow: 0 0 0 1px var(--primary-color, #2563eb);
     }
     .add-form-actions {
       display: flex;
@@ -272,6 +370,29 @@ export class CurveLegend extends LitElement {
       opacity: 0.5;
       cursor: not-allowed;
     }
+    .managing-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 10px;
+      color: var(--secondary-text-color, #616161);
+      font-size: 12px;
+    }
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid color-mix(in srgb, var(--secondary-text-color, #616161) 30%, transparent);
+      border-top-color: var(--primary-color, #2563eb);
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
     @media (max-width: 500px) {
       .legend-item {
         padding: 10px 10px;
@@ -298,6 +419,7 @@ export class CurveLegend extends LitElement {
   `;
 
   private _select(entityId: string) {
+    if (this._confirmingRemove === entityId) return;
     this.dispatchEvent(
       new CustomEvent('select-curve', {
         detail: { entityId },
@@ -318,17 +440,23 @@ export class CurveLegend extends LitElement {
     );
   }
 
-  private _remove(e: Event, curve: LightCurve) {
+  private _startRemove(e: Event, entityId: string) {
     e.stopPropagation();
     if (this.curves.length <= 1) return;
-    const ok =
-      typeof window !== 'undefined' && typeof window.confirm === 'function'
-        ? window.confirm(`Remove "${curve.friendlyName}" from this Lightener?`)
-        : true;
-    if (!ok) return;
+    this._confirmingRemove = entityId;
+  }
+
+  private _cancelRemove(e: Event) {
+    e.stopPropagation();
+    this._confirmingRemove = null;
+  }
+
+  private _confirmRemove(e: Event, entityId: string) {
+    e.stopPropagation();
+    this._confirmingRemove = null;
     this.dispatchEvent(
       new CustomEvent('remove-light', {
-        detail: { entityId: curve.entityId },
+        detail: { entityId },
         bubbles: true,
         composed: true,
       })
@@ -336,6 +464,7 @@ export class CurveLegend extends LitElement {
   }
 
   private _onItemKeyDown(e: KeyboardEvent, entityId: string) {
+    if (this._confirmingRemove === entityId) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       this._select(entityId);
@@ -359,6 +488,7 @@ export class CurveLegend extends LitElement {
   private _startAdd() {
     this._addingLight = true;
     this._pendingAddEntity = '';
+    this._pendingPreset = this.presetOptions[0]?.value ?? 'linear';
   }
 
   private _cancelAdd() {
@@ -370,12 +500,16 @@ export class CurveLegend extends LitElement {
     this._pendingAddEntity = (e.detail?.value as string) ?? '';
   }
 
+  private _onPresetChange(e: Event) {
+    this._pendingPreset = (e.target as HTMLSelectElement).value;
+  }
+
   private _confirmAdd() {
     const entityId = this._pendingAddEntity.trim();
     if (!entityId) return;
     this.dispatchEvent(
       new CustomEvent('add-light', {
-        detail: { entityId },
+        detail: { entityId, preset: this._pendingPreset },
         bubbles: true,
         composed: true,
       })
@@ -387,17 +521,32 @@ export class CurveLegend extends LitElement {
   private static readonly _shapes = LEGEND_SHAPES;
 
   private _renderAddForm() {
-    const existing = this.curves.map((c) => c.entityId);
+    const excluded = [
+      ...this.curves.map((c) => c.entityId),
+      ...this.excludeEntityIds.filter(Boolean),
+    ];
     return html`
       <div class="add-form">
         <ha-entity-picker
           .hass=${this.hass}
           .value=${this._pendingAddEntity}
           .includeDomains=${['light']}
-          .excludeEntities=${existing}
+          .excludeEntities=${excluded}
           allow-custom-entity
           @value-changed=${this._onAddEntityChange}
         ></ha-entity-picker>
+        <div class="preset-field">
+          <label for="preset-select">Starting curve</label>
+          <select id="preset-select" .value=${this._pendingPreset} @change=${this._onPresetChange}>
+            ${this.presetOptions.map(
+              (opt) => html`
+                <option value=${opt.value} ?selected=${opt.value === this._pendingPreset}>
+                  ${opt.label}
+                </option>
+              `
+            )}
+          </select>
+        </div>
         <div class="add-form-actions">
           <button type="button" @click=${this._cancelAdd}>Cancel</button>
           <button
@@ -413,18 +562,37 @@ export class CurveLegend extends LitElement {
     `;
   }
 
+  private _renderConfirmRow(curve: LightCurve) {
+    return html`
+      <div class="confirm-row">
+        <span class="confirm-text">Remove "${curve.friendlyName}"?</span>
+        <button type="button" class="confirm-btn" @click=${(e: Event) => this._cancelRemove(e)}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="confirm-btn danger"
+          @click=${(e: Event) => this._confirmRemove(e, curve.entityId)}
+        >
+          Remove
+        </button>
+      </div>
+    `;
+  }
+
   render() {
     return html`
       <div class="legend-panel">
         <div class="legend-label">Lights</div>
         <div class="legend" role="listbox" aria-label="Light curves">
-          ${this.curves.map(
-            (curve, idx) => html`
+          ${this.curves.map((curve, idx) => {
+            const confirming = this._confirmingRemove === curve.entityId;
+            return html`
               <div
                 class="legend-item ${curve.visible ? '' : 'hidden'} ${this.selectedCurveId ===
                 curve.entityId
                   ? 'selected'
-                  : ''}"
+                  : ''} ${confirming ? 'confirming' : ''}"
                 role="option"
                 tabindex="0"
                 aria-selected=${this.selectedCurveId === curve.entityId}
@@ -436,91 +604,106 @@ export class CurveLegend extends LitElement {
                   class="color-dot shape-${CurveLegend._shapes[idx % CurveLegend._shapes.length]}"
                   style="background: ${curve.color}; --dot-color: ${curve.color}"
                 ></span>
-                <span class="name">${curve.friendlyName}</span>
-                ${this.scrubberPosition !== null
-                  ? html`<span class="brightness-value"
-                      >${Math.round(
-                        sampleCurveAt(curve.controlPoints, Math.round(this.scrubberPosition))
-                      )}%</span
-                    >`
-                  : nothing}
-                <svg
-                  class="eye-icon"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  role="button"
-                  tabindex="0"
-                  aria-label="${curve.visible ? 'Hide' : 'Show'} ${curve.friendlyName}"
-                  aria-pressed=${!curve.visible}
-                  @click=${(e: Event) => this._toggle(e, curve.entityId)}
-                  @keydown=${(e: KeyboardEvent) => this._onToggleKeyDown(e, curve.entityId)}
-                >
-                  ${curve.visible
-                    ? html`
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      `
-                    : html`
-                        <path
-                          d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
-                        />
-                        <path
-                          d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
-                        />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      `}
-                </svg>
-                ${this.canManage && this.curves.length > 1
-                  ? html`<button
-                      type="button"
-                      class="remove-icon"
-                      aria-label="Remove ${curve.friendlyName}"
-                      title="Remove ${curve.friendlyName}"
-                      @click=${(e: Event) => this._remove(e, curve)}
-                    >
+                ${confirming
+                  ? this._renderConfirmRow(curve)
+                  : html`
+                      <span class="name">${curve.friendlyName}</span>
+                      ${this.scrubberPosition !== null
+                        ? html`<span class="brightness-value"
+                            >${Math.round(
+                              sampleCurveAt(curve.controlPoints, Math.round(this.scrubberPosition))
+                            )}%</span
+                          >`
+                        : nothing}
                       <svg
+                        class="eye-icon"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
                         stroke-width="2"
                         stroke-linecap="round"
                         stroke-linejoin="round"
+                        role="button"
+                        tabindex="0"
+                        aria-label="${curve.visible ? 'Hide' : 'Show'} ${curve.friendlyName}"
+                        aria-pressed=${!curve.visible}
+                        @click=${(e: Event) => this._toggle(e, curve.entityId)}
+                        @keydown=${(e: KeyboardEvent) => this._onToggleKeyDown(e, curve.entityId)}
                       >
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path
-                          d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                        ></path>
+                        ${curve.visible
+                          ? html`
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
+                            `
+                          : html`
+                              <path
+                                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
+                              />
+                              <path
+                                d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
+                              />
+                              <line x1="1" y1="1" x2="23" y2="23" />
+                            `}
                       </svg>
-                    </button>`
-                  : nothing}
+                      ${this.canManage && this.curves.length > 1
+                        ? html`<button
+                            type="button"
+                            class="remove-icon"
+                            aria-label="Remove ${curve.friendlyName}"
+                            title="Remove ${curve.friendlyName}"
+                            ?disabled=${this.managing}
+                            @click=${(e: Event) => this._startRemove(e, curve.entityId)}
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            >
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path
+                                d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                              ></path>
+                            </svg>
+                          </button>`
+                        : nothing}
+                    `}
               </div>
-            `
-          )}
+            `;
+          })}
         </div>
-        ${this.canManage
+        ${this.canManage || this.managing
           ? html`
               <div class="add-divider"></div>
               <div class="add-row">
-                ${this._addingLight
-                  ? this._renderAddForm()
-                  : html`<button type="button" class="add-light-btn" @click=${this._startAdd}>
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
+                ${this.managing
+                  ? html`<div class="managing-row" role="status" aria-live="polite">
+                      <span class="spinner" aria-hidden="true"></span>
+                      Updating lights…
+                    </div>`
+                  : this._addingLight
+                    ? this._renderAddForm()
+                    : html`<button
+                        type="button"
+                        class="add-light-btn"
+                        ?disabled=${this.managing}
+                        @click=${this._startAdd}
                       >
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                      </svg>
-                      Add light
-                    </button>`}
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <line x1="12" y1="5" x2="12" y2="19"></line>
+                          <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add light
+                      </button>`}
               </div>
             `
           : nothing}

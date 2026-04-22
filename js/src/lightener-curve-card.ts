@@ -1274,17 +1274,19 @@ export class LightenerCurveCard extends LitElement {
 
   private async _onAddLight(e: CustomEvent): Promise<void> {
     if (!this._hass || !this._entityId || this._managingLights) return;
-    const { entityId } = e.detail as { entityId: string };
+    const { entityId, preset } = e.detail as { entityId: string; preset?: string };
     if (!entityId) return;
     if (this._previewActive) this._stopPreview();
     this._manageError = null;
     this._managingLights = true;
     try {
-      await this._hass.callWS({
+      const payload: Record<string, unknown> = {
         type: 'lightener/add_light',
         entity_id: this._entityId,
         controlled_entity_id: entityId,
-      });
+      };
+      if (preset) payload.preset = preset;
+      await this._hass.callWS(payload);
       this._undoStack = [];
       this._loaded = false;
       await this._tryLoadCurves();
@@ -1484,6 +1486,8 @@ export class LightenerCurveCard extends LitElement {
               .selectedCurveId=${this._selectedCurveId}
               .scrubberPosition=${this._scrubberPosition}
               .canManage=${this._canManageLights}
+              .managing=${this._managingLights}
+              .excludeEntityIds=${this._entityId ? [this._entityId] : []}
               .hass=${this._hass}
               @select-curve=${this._onSelectCurve}
               @toggle-curve=${this._onToggleCurve}

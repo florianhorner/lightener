@@ -497,16 +497,9 @@ async def ws_add_light(
         end_span(_LOGGER, span, status="error", error_code="self_reference")
         return
 
-    entity_registry = async_get_entity_registry(hass)
-    controlled_entry = entity_registry.async_get(controlled_entity_id)
-    if controlled_entry is not None and controlled_entry.platform == DOMAIN:
-        connection.send_error(
-            msg["id"],
-            "invalid_format",
-            f"{controlled_entity_id} is a Lightener entity and cannot be controlled by another Lightener",
-        )
-        end_span(_LOGGER, span, status="error", error_code="nested_lightener")
-        return
+    # Note: nested Lighteners (one Lightener controlling another) are allowed here,
+    # matching the config flow's behaviour. The setup wizard only excludes the
+    # current Lightener from the picker, not other Lighteners.
 
     if preset_id not in CURVE_PRESETS:
         connection.send_error(

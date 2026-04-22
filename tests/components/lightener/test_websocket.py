@@ -449,10 +449,14 @@ async def test_add_light_rejects_unknown_preset(
     assert result["error"]["code"] == "invalid_format"
 
 
-async def test_add_light_rejects_other_lightener(
+async def test_add_light_allows_nested_lightener(
     hass: HomeAssistant, hass_ws_client
 ) -> None:
-    """Test ws_add_light refuses to add another Lightener entity as a controlled light."""
+    """Test ws_add_light allows another Lightener as a controlled light.
+
+    Matches the config flow behaviour, which only excludes the *current*
+    Lightener from the picker — chaining Lighteners is a legitimate use case.
+    """
     config_entry_a = MockConfigEntry(
         domain=DOMAIN,
         unique_id=str(uuid4()),
@@ -487,8 +491,8 @@ async def test_add_light_rejects_other_lightener(
     )
     result = await ws.receive_json()
 
-    assert result["success"] is False
-    assert result["error"]["code"] == "invalid_format"
+    assert result["success"] is True
+    assert "light.group_b" in result["result"]["entities"]
 
 
 async def test_add_light_rejects_non_lightener_entity(
