@@ -196,6 +196,8 @@ export class LightenerCurveCard extends LitElement {
   @state() private _saveState: SaveState = INITIAL_SAVE_STATE;
   @state() private _loadError: string | null = null;
   @state() private _loading = false;
+  @state() private _manageError: string | null = null;
+  @state() private _managingLights = false;
 
   private get _saving(): boolean {
     return isSaving(this._saveState);
@@ -726,6 +728,20 @@ export class LightenerCurveCard extends LitElement {
     return !curvesEqual(this._curves, this._originalCurves);
   }
 
+  private get _canManageLights(): boolean {
+    return (
+      this._isAdmin &&
+      !!this._hass &&
+      !!this._entityId &&
+      !this._isDirty &&
+      !this._saving &&
+      !this._cancelAnimating &&
+      !this._loading &&
+      !this._managingLights &&
+      !this._loadError
+    );
+  }
+
   public get dirty(): boolean {
     return this._isDirty;
   }
@@ -794,11 +810,12 @@ export class LightenerCurveCard extends LitElement {
   }
 
   private _togglePresets(): void {
+    if (this._managingLights) return;
     this._showPresets = !this._showPresets;
   }
 
   private _applyPreset(preset: PresetDef): void {
-    if (this._cancelAnimating || this._saving) return;
+    if (this._cancelAnimating || this._saving || this._managingLights) return;
     if (this._curves.length === 0) return;
     this._pushUndo();
     const pts = preset.controlPoints.map((cp) => ({ ...cp }));
@@ -856,14 +873,19 @@ export class LightenerCurveCard extends LitElement {
 
     // Ctrl+S / Cmd+S to save
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-      if (this._isDirty && this._isAdmin && !this._saving) {
+      if (this._isDirty && this._isAdmin && !this._saving && !this._managingLights) {
         e.preventDefault();
         this._onSave();
       }
     }
     // Ctrl+Z / Cmd+Z to undo
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-      if (!this._saving && !this._cancelAnimating && this._undoStack.length > 0) {
+      if (
+        !this._saving &&
+        !this._cancelAnimating &&
+        !this._managingLights &&
+        this._undoStack.length > 0
+      ) {
         e.preventDefault();
         this._undo();
       }
@@ -873,7 +895,12 @@ export class LightenerCurveCard extends LitElement {
       if (this._showPresets) {
         e.preventDefault();
         this._showPresets = false;
-      } else if (this._isDirty && !this._saving && !this._cancelAnimating) {
+      } else if (
+        this._isDirty &&
+        !this._saving &&
+        !this._cancelAnimating &&
+        !this._managingLights
+      ) {
         e.preventDefault();
         this._onCancel();
       }
@@ -1256,12 +1283,78 @@ export class LightenerCurveCard extends LitElement {
     }
   }
 
+  private async _onAddLight(e: CustomEvent): Promise<void> {
+    if (!this._hass || !this._entityId || this._managingLights) return;
+    const { entityId, preset } = e.detail as { entityId: string; preset?: string };
+    if (!entityId) return;
+    if (this._previewActive) this._stopPreview();
+    this._manageError = null;
+    this._managingLights = true;
+    try {
+      const payload: Record<string, unknown> = {
+        type: 'lightener/add_light',
+        entity_id: this._entityId,
+        controlled_entity_id: entityId,
+      };
+      if (preset) payload.preset = preset;
+      await this._hass.callWS(payload);
+      this._undoStack = [];
+      this._loaded = false;
+      await this._tryLoadCurves();
+    } catch (err) {
+      console.error('[Lightener] Failed to add light:', err);
+      this._manageError = this._formatManageError(err, 'Could not add light.');
+    } finally {
+      this._managingLights = false;
+    }
+  }
+
+  private async _onRemoveLight(e: CustomEvent): Promise<void> {
+    if (!this._hass || !this._entityId || this._managingLights) return;
+    const { entityId } = e.detail as { entityId: string };
+    if (!entityId) return;
+    if (this._previewActive) this._stopPreview();
+    this._manageError = null;
+    this._managingLights = true;
+    try {
+      await this._hass.callWS({
+        type: 'lightener/remove_light',
+        entity_id: this._entityId,
+        controlled_entity_id: entityId,
+      });
+      if (this._selectedCurveId === entityId) {
+        this._selectedCurveId = null;
+      }
+      this._undoStack = [];
+      this._loaded = false;
+      await this._tryLoadCurves();
+    } catch (err) {
+      console.error('[Lightener] Failed to remove light:', err);
+      this._manageError = this._formatManageError(err, 'Could not remove light.');
+    } finally {
+      this._managingLights = false;
+    }
+  }
+
+  private _formatManageError(err: unknown, fallback: string): string {
+    const anyErr = err as { message?: string; code?: string } | null | undefined;
+    if (anyErr?.message) return anyErr.message;
+    return fallback;
+  }
+
   public async saveCurves(): Promise<boolean> {
     return this._onSave();
   }
 
   private async _onSave(): Promise<boolean> {
-    if (!this._hass || !this._entityId || this._saving || this._cancelAnimating) return false;
+    if (
+      !this._hass ||
+      !this._entityId ||
+      this._saving ||
+      this._cancelAnimating ||
+      this._managingLights
+    )
+      return false;
 
     if (this._previewActive) this._stopPreview();
 
@@ -1352,6 +1445,7 @@ export class LightenerCurveCard extends LitElement {
             ? html`<button
                 class="presets-btn ${this._showPresets ? 'active' : ''}"
                 @click=${this._togglePresets}
+                ?disabled=${this._managingLights}
                 aria-expanded=${this._showPresets}
               >
                 Presets
@@ -1369,7 +1463,7 @@ export class LightenerCurveCard extends LitElement {
                   <curve-graph
                     .curves=${this._curves}
                     .selectedCurveId=${this._selectedCurveId}
-                    .readOnly=${!this._isAdmin || this._cancelAnimating}
+                    .readOnly=${!this._isAdmin || this._cancelAnimating || this._managingLights}
                     .scrubberPosition=${this._scrubberPosition}
                     @point-move=${this._onPointMove}
                     @point-drop=${this._onPointDrop}
@@ -1381,14 +1475,14 @@ export class LightenerCurveCard extends LitElement {
 
             <curve-scrubber
               .curves=${this._curves}
-              .readOnly=${!this._isAdmin}
+              .readOnly=${!this._isAdmin || this._managingLights}
               @scrubber-move=${this._onScrubberMove}
               @scrubber-start=${this._onScrubberStart}
               @scrubber-end=${this._onScrubberEnd}
               @badge-click=${this._onBadgeClick}
             ></curve-scrubber>
 
-            ${this._isAdmin && !this._cancelAnimating
+            ${this._isAdmin && !this._cancelAnimating && !this._managingLights
               ? html`
                   <div class="preview-toggle-row">
                     ${this._previewActive
@@ -1410,17 +1504,28 @@ export class LightenerCurveCard extends LitElement {
               .curves=${this._curves}
               .selectedCurveId=${this._selectedCurveId}
               .scrubberPosition=${this._scrubberPosition}
+              .canManage=${this._canManageLights}
+              .managing=${this._managingLights}
+              .excludeEntityIds=${this._entityId ? [this._entityId] : []}
+              .hass=${this._hass}
               @select-curve=${this._onSelectCurve}
               @toggle-curve=${this._onToggleCurve}
+              @add-light=${this._onAddLight}
+              @remove-light=${this._onRemoveLight}
             ></curve-legend>
+            ${this._manageError
+              ? html`<div class="error" role="alert">${WARNING_ICON} ${this._manageError}</div>`
+              : nothing}
           </div>
 
           <div class="footer-slot">
             <curve-footer
               .dirty=${this._isDirty || this._cancelAnimating}
-              .readOnly=${!this._isAdmin}
-              .saving=${this._saving || this._cancelAnimating}
-              .canUndo=${this._undoStack.length > 0 && !this._cancelAnimating}
+              .readOnly=${!this._isAdmin || this._managingLights}
+              .saving=${this._saving || this._cancelAnimating || this._managingLights}
+              .canUndo=${this._undoStack.length > 0 &&
+              !this._cancelAnimating &&
+              !this._managingLights}
               @save-curves=${this._onSave}
               @cancel-curves=${this._onCancel}
               @undo-curves=${() => this._undo()}

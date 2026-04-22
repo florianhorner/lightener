@@ -1,4 +1,4 @@
-function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPropertyDescriptor(t,i):r;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)o=Reflect.decorate(e,t,i,r);else for(var a=e.length-1;a>=0;a--)(s=e[a])&&(o=(n<3?s(o):n>3?s(t,i,o):s(t,i))||o);return n>3&&o&&Object.defineProperty(t,i,o),o}"function"==typeof SuppressedError&&SuppressedError;const t=globalThis,i=t.ShadowRoot&&(void 0===t.ShadyCSS||t.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,r=Symbol(),s=new WeakMap;let n=class{constructor(e,t,i){if(this._$cssResult$=!0,i!==r)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=e,this.t=t}get styleSheet(){let e=this.o;const t=this.t;if(i&&void 0===e){const i=void 0!==t&&1===t.length;i&&(e=s.get(t)),void 0===e&&((this.o=e=new CSSStyleSheet).replaceSync(this.cssText),i&&s.set(t,e))}return e}toString(){return this.cssText}};const o=(e,...t)=>{const i=1===e.length?e[0]:t.reduce((t,i,r)=>t+(e=>{if(!0===e._$cssResult$)return e.cssText;if("number"==typeof e)return e;throw Error("Value passed to 'css' function must be a 'css' function result: "+e+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(i)+e[r+1],e[0]);return new n(i,e,r)},a=i?e=>e:e=>e instanceof CSSStyleSheet?(e=>{let t="";for(const i of e.cssRules)t+=i.cssText;return(e=>new n("string"==typeof e?e:e+"",void 0,r))(t)})(e):e,{is:l,defineProperty:d,getOwnPropertyDescriptor:c,getOwnPropertyNames:h,getOwnPropertySymbols:p,getPrototypeOf:u}=Object,g=globalThis,v=g.trustedTypes,_=v?v.emptyScript:"",b=g.reactiveElementPolyfillSupport,f=(e,t)=>e,y={toAttribute(e,t){switch(t){case Boolean:e=e?_:null;break;case Object:case Array:e=null==e?e:JSON.stringify(e)}return e},fromAttribute(e,t){let i=e;switch(t){case Boolean:i=null!==e;break;case Number:i=null===e?null:Number(e);break;case Object:case Array:try{i=JSON.parse(e)}catch(e){i=null}}return i}},m=(e,t)=>!l(e,t),x={attribute:!0,type:String,converter:y,reflect:!1,useDefault:!1,hasChanged:m};Symbol.metadata??=Symbol("metadata"),g.litPropertyMetadata??=new WeakMap;let $=class extends HTMLElement{static addInitializer(e){this._$Ei(),(this.l??=[]).push(e)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(e,t=x){if(t.state&&(t.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(e)&&((t=Object.create(t)).wrapped=!0),this.elementProperties.set(e,t),!t.noAccessor){const i=Symbol(),r=this.getPropertyDescriptor(e,i,t);void 0!==r&&d(this.prototype,e,r)}}static getPropertyDescriptor(e,t,i){const{get:r,set:s}=c(this.prototype,e)??{get(){return this[t]},set(e){this[t]=e}};return{get:r,set(t){const n=r?.call(this);s?.call(this,t),this.requestUpdate(e,n,i)},configurable:!0,enumerable:!0}}static getPropertyOptions(e){return this.elementProperties.get(e)??x}static _$Ei(){if(this.hasOwnProperty(f("elementProperties")))return;const e=u(this);e.finalize(),void 0!==e.l&&(this.l=[...e.l]),this.elementProperties=new Map(e.elementProperties)}static finalize(){if(this.hasOwnProperty(f("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(f("properties"))){const e=this.properties,t=[...h(e),...p(e)];for(const i of t)this.createProperty(i,e[i])}const e=this[Symbol.metadata];if(null!==e){const t=litPropertyMetadata.get(e);if(void 0!==t)for(const[e,i]of t)this.elementProperties.set(e,i)}this._$Eh=new Map;for(const[e,t]of this.elementProperties){const i=this._$Eu(e,t);void 0!==i&&this._$Eh.set(i,e)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(e){const t=[];if(Array.isArray(e)){const i=new Set(e.flat(1/0).reverse());for(const e of i)t.unshift(a(e))}else void 0!==e&&t.push(a(e));return t}static _$Eu(e,t){const i=t.attribute;return!1===i?void 0:"string"==typeof i?i:"string"==typeof e?e.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(e=>this.enableUpdating=e),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(e=>e(this))}addController(e){(this._$EO??=new Set).add(e),void 0!==this.renderRoot&&this.isConnected&&e.hostConnected?.()}removeController(e){this._$EO?.delete(e)}_$E_(){const e=new Map,t=this.constructor.elementProperties;for(const i of t.keys())this.hasOwnProperty(i)&&(e.set(i,this[i]),delete this[i]);e.size>0&&(this._$Ep=e)}createRenderRoot(){const e=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return((e,r)=>{if(i)e.adoptedStyleSheets=r.map(e=>e instanceof CSSStyleSheet?e:e.styleSheet);else for(const i of r){const r=document.createElement("style"),s=t.litNonce;void 0!==s&&r.setAttribute("nonce",s),r.textContent=i.cssText,e.appendChild(r)}})(e,this.constructor.elementStyles),e}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(e=>e.hostConnected?.())}enableUpdating(e){}disconnectedCallback(){this._$EO?.forEach(e=>e.hostDisconnected?.())}attributeChangedCallback(e,t,i){this._$AK(e,i)}_$ET(e,t){const i=this.constructor.elementProperties.get(e),r=this.constructor._$Eu(e,i);if(void 0!==r&&!0===i.reflect){const s=(void 0!==i.converter?.toAttribute?i.converter:y).toAttribute(t,i.type);this._$Em=e,null==s?this.removeAttribute(r):this.setAttribute(r,s),this._$Em=null}}_$AK(e,t){const i=this.constructor,r=i._$Eh.get(e);if(void 0!==r&&this._$Em!==r){const e=i.getPropertyOptions(r),s="function"==typeof e.converter?{fromAttribute:e.converter}:void 0!==e.converter?.fromAttribute?e.converter:y;this._$Em=r;const n=s.fromAttribute(t,e.type);this[r]=n??this._$Ej?.get(r)??n,this._$Em=null}}requestUpdate(e,t,i,r=!1,s){if(void 0!==e){const n=this.constructor;if(!1===r&&(s=this[e]),i??=n.getPropertyOptions(e),!((i.hasChanged??m)(s,t)||i.useDefault&&i.reflect&&s===this._$Ej?.get(e)&&!this.hasAttribute(n._$Eu(e,i))))return;this.C(e,t,i)}!1===this.isUpdatePending&&(this._$ES=this._$EP())}C(e,t,{useDefault:i,reflect:r,wrapped:s},n){i&&!(this._$Ej??=new Map).has(e)&&(this._$Ej.set(e,n??t??this[e]),!0!==s||void 0!==n)||(this._$AL.has(e)||(this.hasUpdated||i||(t=void 0),this._$AL.set(e,t)),!0===r&&this._$Em!==e&&(this._$Eq??=new Set).add(e))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(e){Promise.reject(e)}const e=this.scheduleUpdate();return null!=e&&await e,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(const[e,t]of this._$Ep)this[e]=t;this._$Ep=void 0}const e=this.constructor.elementProperties;if(e.size>0)for(const[t,i]of e){const{wrapped:e}=i,r=this[t];!0!==e||this._$AL.has(t)||void 0===r||this.C(t,void 0,i,r)}}let e=!1;const t=this._$AL;try{e=this.shouldUpdate(t),e?(this.willUpdate(t),this._$EO?.forEach(e=>e.hostUpdate?.()),this.update(t)):this._$EM()}catch(t){throw e=!1,this._$EM(),t}e&&this._$AE(t)}willUpdate(e){}_$AE(e){this._$EO?.forEach(e=>e.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(e)),this.updated(e)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(e){return!0}update(e){this._$Eq&&=this._$Eq.forEach(e=>this._$ET(e,this[e])),this._$EM()}updated(e){}firstUpdated(e){}};$.elementStyles=[],$.shadowRootOptions={mode:"open"},$[f("elementProperties")]=new Map,$[f("finalized")]=new Map,b?.({ReactiveElement:$}),(g.reactiveElementVersions??=[]).push("2.1.2");const w=globalThis,k=e=>e,P=w.trustedTypes,C=P?P.createPolicy("lit-html",{createHTML:e=>e}):void 0,A="$lit$",E=`lit$${Math.random().toFixed(9).slice(2)}$`,S="?"+E,I=`<${S}>`,M=document,T=()=>M.createComment(""),D=e=>null===e||"object"!=typeof e&&"function"!=typeof e,O=Array.isArray,R="[ \t\n\f\r]",U=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,z=/-->/g,L=/>/g,B=RegExp(`>|${R}(?:([^\\s"'>=/]+)(${R}*=${R}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`,"g"),H=/'/g,N=/"/g,j=/^(?:script|style|textarea|title)$/i,F=e=>(t,...i)=>({_$litType$:e,strings:t,values:i}),K=F(1),q=F(2),V=Symbol.for("lit-noChange"),W=Symbol.for("lit-nothing"),G=new WeakMap,X=M.createTreeWalker(M,129);function Y(e,t){if(!O(e)||!e.hasOwnProperty("raw"))throw Error("invalid template strings array");return void 0!==C?C.createHTML(t):t}const Z=(e,t)=>{const i=e.length-1,r=[];let s,n=2===t?"<svg>":3===t?"<math>":"",o=U;for(let t=0;t<i;t++){const i=e[t];let a,l,d=-1,c=0;for(;c<i.length&&(o.lastIndex=c,l=o.exec(i),null!==l);)c=o.lastIndex,o===U?"!--"===l[1]?o=z:void 0!==l[1]?o=L:void 0!==l[2]?(j.test(l[2])&&(s=RegExp("</"+l[2],"g")),o=B):void 0!==l[3]&&(o=B):o===B?">"===l[0]?(o=s??U,d=-1):void 0===l[1]?d=-2:(d=o.lastIndex-l[2].length,a=l[1],o=void 0===l[3]?B:'"'===l[3]?N:H):o===N||o===H?o=B:o===z||o===L?o=U:(o=B,s=void 0);const h=o===B&&e[t+1].startsWith("/>")?" ":"";n+=o===U?i+I:d>=0?(r.push(a),i.slice(0,d)+A+i.slice(d)+E+h):i+E+(-2===d?t:h)}return[Y(e,n+(e[i]||"<?>")+(2===t?"</svg>":3===t?"</math>":"")),r]};class J{constructor({strings:e,_$litType$:t},i){let r;this.parts=[];let s=0,n=0;const o=e.length-1,a=this.parts,[l,d]=Z(e,t);if(this.el=J.createElement(l,i),X.currentNode=this.el.content,2===t||3===t){const e=this.el.content.firstChild;e.replaceWith(...e.childNodes)}for(;null!==(r=X.nextNode())&&a.length<o;){if(1===r.nodeType){if(r.hasAttributes())for(const e of r.getAttributeNames())if(e.endsWith(A)){const t=d[n++],i=r.getAttribute(e).split(E),o=/([.?@])?(.*)/.exec(t);a.push({type:1,index:s,name:o[2],strings:i,ctor:"."===o[1]?re:"?"===o[1]?se:"@"===o[1]?ne:ie}),r.removeAttribute(e)}else e.startsWith(E)&&(a.push({type:6,index:s}),r.removeAttribute(e));if(j.test(r.tagName)){const e=r.textContent.split(E),t=e.length-1;if(t>0){r.textContent=P?P.emptyScript:"";for(let i=0;i<t;i++)r.append(e[i],T()),X.nextNode(),a.push({type:2,index:++s});r.append(e[t],T())}}}else if(8===r.nodeType)if(r.data===S)a.push({type:2,index:s});else{let e=-1;for(;-1!==(e=r.data.indexOf(E,e+1));)a.push({type:7,index:s}),e+=E.length-1}s++}}static createElement(e,t){const i=M.createElement("template");return i.innerHTML=e,i}}function Q(e,t,i=e,r){if(t===V)return t;let s=void 0!==r?i._$Co?.[r]:i._$Cl;const n=D(t)?void 0:t._$litDirective$;return s?.constructor!==n&&(s?._$AO?.(!1),void 0===n?s=void 0:(s=new n(e),s._$AT(e,i,r)),void 0!==r?(i._$Co??=[])[r]=s:i._$Cl=s),void 0!==s&&(t=Q(e,s._$AS(e,t.values),s,r)),t}class ee{constructor(e,t){this._$AV=[],this._$AN=void 0,this._$AD=e,this._$AM=t}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(e){const{el:{content:t},parts:i}=this._$AD,r=(e?.creationScope??M).importNode(t,!0);X.currentNode=r;let s=X.nextNode(),n=0,o=0,a=i[0];for(;void 0!==a;){if(n===a.index){let t;2===a.type?t=new te(s,s.nextSibling,this,e):1===a.type?t=new a.ctor(s,a.name,a.strings,this,e):6===a.type&&(t=new oe(s,this,e)),this._$AV.push(t),a=i[++o]}n!==a?.index&&(s=X.nextNode(),n++)}return X.currentNode=M,r}p(e){let t=0;for(const i of this._$AV)void 0!==i&&(void 0!==i.strings?(i._$AI(e,i,t),t+=i.strings.length-2):i._$AI(e[t])),t++}}class te{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(e,t,i,r){this.type=2,this._$AH=W,this._$AN=void 0,this._$AA=e,this._$AB=t,this._$AM=i,this.options=r,this._$Cv=r?.isConnected??!0}get parentNode(){let e=this._$AA.parentNode;const t=this._$AM;return void 0!==t&&11===e?.nodeType&&(e=t.parentNode),e}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(e,t=this){e=Q(this,e,t),D(e)?e===W||null==e||""===e?(this._$AH!==W&&this._$AR(),this._$AH=W):e!==this._$AH&&e!==V&&this._(e):void 0!==e._$litType$?this.$(e):void 0!==e.nodeType?this.T(e):(e=>O(e)||"function"==typeof e?.[Symbol.iterator])(e)?this.k(e):this._(e)}O(e){return this._$AA.parentNode.insertBefore(e,this._$AB)}T(e){this._$AH!==e&&(this._$AR(),this._$AH=this.O(e))}_(e){this._$AH!==W&&D(this._$AH)?this._$AA.nextSibling.data=e:this.T(M.createTextNode(e)),this._$AH=e}$(e){const{values:t,_$litType$:i}=e,r="number"==typeof i?this._$AC(e):(void 0===i.el&&(i.el=J.createElement(Y(i.h,i.h[0]),this.options)),i);if(this._$AH?._$AD===r)this._$AH.p(t);else{const e=new ee(r,this),i=e.u(this.options);e.p(t),this.T(i),this._$AH=e}}_$AC(e){let t=G.get(e.strings);return void 0===t&&G.set(e.strings,t=new J(e)),t}k(e){O(this._$AH)||(this._$AH=[],this._$AR());const t=this._$AH;let i,r=0;for(const s of e)r===t.length?t.push(i=new te(this.O(T()),this.O(T()),this,this.options)):i=t[r],i._$AI(s),r++;r<t.length&&(this._$AR(i&&i._$AB.nextSibling,r),t.length=r)}_$AR(e=this._$AA.nextSibling,t){for(this._$AP?.(!1,!0,t);e!==this._$AB;){const t=k(e).nextSibling;k(e).remove(),e=t}}setConnected(e){void 0===this._$AM&&(this._$Cv=e,this._$AP?.(e))}}class ie{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(e,t,i,r,s){this.type=1,this._$AH=W,this._$AN=void 0,this.element=e,this.name=t,this._$AM=r,this.options=s,i.length>2||""!==i[0]||""!==i[1]?(this._$AH=Array(i.length-1).fill(new String),this.strings=i):this._$AH=W}_$AI(e,t=this,i,r){const s=this.strings;let n=!1;if(void 0===s)e=Q(this,e,t,0),n=!D(e)||e!==this._$AH&&e!==V,n&&(this._$AH=e);else{const r=e;let o,a;for(e=s[0],o=0;o<s.length-1;o++)a=Q(this,r[i+o],t,o),a===V&&(a=this._$AH[o]),n||=!D(a)||a!==this._$AH[o],a===W?e=W:e!==W&&(e+=(a??"")+s[o+1]),this._$AH[o]=a}n&&!r&&this.j(e)}j(e){e===W?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,e??"")}}class re extends ie{constructor(){super(...arguments),this.type=3}j(e){this.element[this.name]=e===W?void 0:e}}class se extends ie{constructor(){super(...arguments),this.type=4}j(e){this.element.toggleAttribute(this.name,!!e&&e!==W)}}class ne extends ie{constructor(e,t,i,r,s){super(e,t,i,r,s),this.type=5}_$AI(e,t=this){if((e=Q(this,e,t,0)??W)===V)return;const i=this._$AH,r=e===W&&i!==W||e.capture!==i.capture||e.once!==i.once||e.passive!==i.passive,s=e!==W&&(i===W||r);r&&this.element.removeEventListener(this.name,this,i),s&&this.element.addEventListener(this.name,this,e),this._$AH=e}handleEvent(e){"function"==typeof this._$AH?this._$AH.call(this.options?.host??this.element,e):this._$AH.handleEvent(e)}}class oe{constructor(e,t,i){this.element=e,this.type=6,this._$AN=void 0,this._$AM=t,this.options=i}get _$AU(){return this._$AM._$AU}_$AI(e){Q(this,e)}}const ae=w.litHtmlPolyfillSupport;ae?.(J,te),(w.litHtmlVersions??=[]).push("3.3.2");const le=globalThis;class de extends ${constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){const e=super.createRenderRoot();return this.renderOptions.renderBefore??=e.firstChild,e}update(e){const t=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(e),this._$Do=((e,t,i)=>{const r=i?.renderBefore??t;let s=r._$litPart$;if(void 0===s){const e=i?.renderBefore??null;r._$litPart$=s=new te(t.insertBefore(T(),e),e,void 0,i??{})}return s._$AI(e),s})(t,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return V}}de._$litElement$=!0,de.finalized=!0,le.litElementHydrateSupport?.({LitElement:de});const ce=le.litElementPolyfillSupport;ce?.({LitElement:de}),(le.litElementVersions??=[]).push("4.2.2");const he=e=>(t,i)=>{void 0!==i?i.addInitializer(()=>{customElements.define(e,t)}):customElements.define(e,t)},pe={attribute:!0,type:String,converter:y,reflect:!1,hasChanged:m},ue=(e=pe,t,i)=>{const{kind:r,metadata:s}=i;let n=globalThis.litPropertyMetadata.get(s);if(void 0===n&&globalThis.litPropertyMetadata.set(s,n=new Map),"setter"===r&&((e=Object.create(e)).wrapped=!0),n.set(i.name,e),"accessor"===r){const{name:r}=i;return{set(i){const s=t.get.call(this);t.set.call(this,i),this.requestUpdate(r,s,e,!0,i)},init(t){return void 0!==t&&this.C(r,void 0,e,t),t}}}if("setter"===r){const{name:r}=i;return function(i){const s=this[r];t.call(this,i),this.requestUpdate(r,s,e,!0,i)}}throw Error("Unsupported decorator location: "+r)};function ge(e){return(t,i)=>"object"==typeof i?ue(e,t,i):((e,t,i)=>{const r=t.hasOwnProperty(i);return t.constructor.createProperty(i,e),r?Object.getOwnPropertyDescriptor(t,i):void 0})(e,t,i)}function ve(e){return ge({...e,state:!0,attribute:!1})}function _e(e,t){return(t,i,r)=>((e,t,i)=>(i.configurable=!0,i.enumerable=!0,Reflect.decorate&&"object"!=typeof t&&Object.defineProperty(e,t,i),i))(t,i,{get(){return(t=>t.renderRoot?.querySelector(e)??null)(this)}})}function be(e){return e.map(e=>({...e,controlPoints:e.controlPoints.map(e=>({...e}))}))}function fe(e,t,i){const[r,s]=e,[n,o]=t;return r===s?n:n+(i-r)*(o-n)/(s-r)}function ye(e){const t=new Map;t.set(0,0);for(const i of e)t.set(i.lightener,i.target);if(!t.has(100)){let e=-1,i=100;for(const[r,s]of t)0!==r&&r>e&&(e=r,i=s);t.set(100,i)}const i=[];for(const[e,r]of t)i.push({lightener:e,target:r});return i.sort((e,t)=>e.lightener-t.lightener),i}function me(e,t){return function(e,t){if(0===e.length)return 0;const i=Math.max(0,Math.min(100,t));if(i<=e[0].lightener)return e[0].target;for(let t=1;t<e.length;t++){const r=e[t-1],s=e[t];if(i===s.lightener)return s.target;if(i<s.lightener)return fe([r.lightener,s.lightener],[r.target,s.target],i)}return e[e.length-1].target}(ye(e),t)}const xe=44,$e=12,we=300,ke=200;function Pe(e){return xe+e/100*we}function Ce(e){return $e+(1-e/100)*ke}function Ae(e,t,i){return Math.max(t,Math.min(i,e))}function Ee(e,t){return Math.max(0,Math.min(100,me(e,t)))}const Se=["#42a5f5","#ef5350","#5c6bc0","#ffa726","#ab47bc","#1565c0","#ec407a","#8d6e63","#ffca28","#7e57c2"];const Ie=["","8 4","4 4","12 4 4 4","2 4"];const Me=[{id:"linear",name:"Linear",description:"Equal brightness — what you set is what you get.",controlPoints:[{lightener:0,target:0},{lightener:1,target:1},{lightener:100,target:100}]},{id:"dim_accent",name:"Dim accent",description:"Caps at ~45% — great for mood or accent lighting.",controlPoints:[{lightener:0,target:0},{lightener:1,target:1},{lightener:25,target:8},{lightener:50,target:20},{lightener:100,target:45}]},{id:"late_starter",name:"Late starter",description:"Stays very dim until ~45%, then brightens quickly.",controlPoints:[{lightener:0,target:0},{lightener:1,target:1},{lightener:45,target:1},{lightener:70,target:45},{lightener:100,target:100}]},{id:"night_mode",name:"Night mode",description:"Caps at ~25% — barely bright even at full brightness.",controlPoints:[{lightener:0,target:0},{lightener:1,target:1},{lightener:20,target:3},{lightener:50,target:10},{lightener:100,target:25}]}];const Te={phase:"idle"};let De=class extends de{constructor(){super(...arguments),this.curves=[],this.selectedCurveId=null,this.readOnly=!1,this.scrubberPosition=null,this._dragCurveIdx=-1,this._dragPointIdx=-1,this._hoveredPoint=null,this._focusedPoint=null,this._isMobile=!1,this._uid=Math.random().toString(36).slice(2,7),this._mql=null,this._wasDragging=!1,this._longPressTimer=null,this._longPressFired=!1,this._onMqlChange=e=>{this._isMobile=e.matches}}_getSvgCoords(e){const t=this._svgRef;if(!t)return null;const i=t.getScreenCTM();if(!i)return null;let r;try{r=i.inverse()}catch{return null}if(!r||isNaN(r.a))return null;const s=t.createSVGPoint();s.x=e.clientX,s.y=e.clientY;const n=s.matrixTransform(r);return{x:(a=n.x,(a-xe)/we*100),y:(o=n.y,100*(1-(o-$e)/ke))};var o,a}_isCurveInteractive(e){return!this.readOnly&&(null===this.selectedCurveId||this.curves[e]?.entityId===this.selectedCurveId)}_focusCurve(e){this.dispatchEvent(new CustomEvent("focus-curve",{detail:{entityId:e},bubbles:!0,composed:!0}))}_onPointFocus(e,t){const i=this.curves[e];i&&(this._focusedPoint={curve:e,point:t},this._hoveredPoint={curve:e,point:t},this._focusCurve(i.entityId))}_onPointBlur(e,t){this._focusedPoint?.curve===e&&this._focusedPoint?.point===t&&(this._focusedPoint=null),this._hoveredPoint?.curve===e&&this._hoveredPoint?.point===t&&(this._hoveredPoint=null)}_dispatchKeyboardMove(e,t,i,r){this.dispatchEvent(new CustomEvent("point-move",{detail:{curveIndex:e,pointIndex:t,lightener:i,target:r},bubbles:!0,composed:!0})),this.dispatchEvent(new CustomEvent("point-drop",{detail:{curveIndex:e,pointIndex:t},bubbles:!0,composed:!0}))}_getKeyboardInsertPoint(e,t){const i=e.controlPoints[t],r=e.controlPoints[t+1],s=e.controlPoints[t-1];return r&&r.lightener-i.lightener>1?{lightener:Math.round((i.lightener+r.lightener)/2),target:Math.round((i.target+r.target)/2)}:s&&i.lightener-s.lightener>1?{lightener:Math.round((s.lightener+i.lightener)/2),target:Math.round((s.target+i.target)/2)}:null}_onPointKeyDown(e,t,i){const r=this.curves[t],s=r?.controlPoints[i];if(!r||!s)return;if(this.selectedCurveId!==r.entityId&&this._focusCurve(r.entityId),0===i&&("ArrowRight"===e.key||"ArrowLeft"===e.key))return;const n=e.shiftKey?10:1,o=i>0?r.controlPoints[i-1].lightener+1:s.lightener,a=i<r.controlPoints.length-1?r.controlPoints[i+1].lightener-1:100;if("ArrowRight"===e.key)return e.preventDefault(),void this._dispatchKeyboardMove(t,i,Math.min(a,s.lightener+n),s.target);if("ArrowLeft"===e.key)return e.preventDefault(),void this._dispatchKeyboardMove(t,i,Math.max(o,s.lightener-n),s.target);if("ArrowUp"===e.key)return e.preventDefault(),void this._dispatchKeyboardMove(t,i,s.lightener,Math.min(100,s.target+n));if("ArrowDown"===e.key)return e.preventDefault(),void this._dispatchKeyboardMove(t,i,s.lightener,Math.max(0,s.target-n));if("Enter"===e.key){const s=this._getKeyboardInsertPoint(r,i);if(!s)return;return e.preventDefault(),this.dispatchEvent(new CustomEvent("point-add",{detail:{entityId:r.entityId,lightener:s.lightener,target:s.target},bubbles:!0,composed:!0})),void this.updateComplete.then(()=>this._refocusHitCircle(t,i)).catch(()=>{})}(" "===e.key||"Delete"===e.key||"Backspace"===e.key)&&i>0&&r.controlPoints.length>2&&(e.preventDefault(),this.dispatchEvent(new CustomEvent("point-remove",{detail:{curveIndex:t,pointIndex:i},bubbles:!0,composed:!0})),this.updateComplete.then(()=>this._refocusHitCircle(t,Math.max(1,i-1))).catch(()=>{}))}_refocusHitCircle(e,t){const i=this.renderRoot.querySelector(`.hit-circle[data-curve="${e}"][data-point="${t}"]`);i&&i.focus()}_onPointerDown(e,t,i){0===e.button&&this._isCurveInteractive(t)&&(e.preventDefault(),this._longPressFired=!1,this._clearLongPress(),i>0&&(this._longPressTimer=setTimeout(()=>{this._longPressFired=!0,this._dragCurveIdx=-1,this._dragPointIdx=-1,this.dispatchEvent(new CustomEvent("point-remove",{detail:{curveIndex:t,pointIndex:i},bubbles:!0,composed:!0}))},500)),this._svgRef?.setPointerCapture(e.pointerId),this._dragCurveIdx=t,this._dragPointIdx=i)}_clearLongPress(){this._longPressTimer&&(clearTimeout(this._longPressTimer),this._longPressTimer=null)}_onPointerMove(e){if(this._dragCurveIdx<0)return;e.preventDefault(),this._clearLongPress();const t=this._getSvgCoords(e);if(!t)return;const i=this.curves[this._dragCurveIdx],r=i?.controlPoints??[],s=this._dragPointIdx>0?r[this._dragPointIdx-1].lightener+1:1,n=this._dragPointIdx<r.length-1?r[this._dragPointIdx+1].lightener-1:100,o=0===this._dragPointIdx?this.curves[this._dragCurveIdx]?.controlPoints[0]?.lightener??0:Math.round(Ae(t.x,s,n)),a=Math.round(Ae(t.y,0,100));this.dispatchEvent(new CustomEvent("point-move",{detail:{curveIndex:this._dragCurveIdx,pointIndex:this._dragPointIdx,lightener:o,target:a},bubbles:!0,composed:!0}))}_onPointerUp(e){this._clearLongPress(),this._longPressFired||this._dragCurveIdx<0||(e.preventDefault(),this.dispatchEvent(new CustomEvent("point-drop",{detail:{curveIndex:this._dragCurveIdx,pointIndex:this._dragPointIdx},bubbles:!0,composed:!0})),this._dragCurveIdx=-1,this._dragPointIdx=-1,this._wasDragging=!0,setTimeout(()=>{this._wasDragging=!1},400))}_onPointContextMenu(e,t,i){e.preventDefault(),e.stopPropagation(),this.readOnly||this._isCurveInteractive(t)&&0!==i&&this.dispatchEvent(new CustomEvent("point-remove",{detail:{curveIndex:t,pointIndex:i},bubbles:!0,composed:!0}))}_onDblClick(e){if(this.readOnly)return;if(this._wasDragging)return;const t=this._getSvgCoords(e);if(!t)return;const i=Math.round(Ae(t.x,1,100)),r=Math.round(Ae(t.y,0,100));this.dispatchEvent(new CustomEvent("point-add",{detail:{lightener:i,target:r,entityId:this.selectedCurveId},bubbles:!0,composed:!0}))}_renderGrid(){return q`
+function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPropertyDescriptor(t,i):r;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)o=Reflect.decorate(e,t,i,r);else for(var a=e.length-1;a>=0;a--)(s=e[a])&&(o=(n<3?s(o):n>3?s(t,i,o):s(t,i))||o);return n>3&&o&&Object.defineProperty(t,i,o),o}"function"==typeof SuppressedError&&SuppressedError;const t=globalThis,i=t.ShadowRoot&&(void 0===t.ShadyCSS||t.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,r=Symbol(),s=new WeakMap;let n=class{constructor(e,t,i){if(this._$cssResult$=!0,i!==r)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=e,this.t=t}get styleSheet(){let e=this.o;const t=this.t;if(i&&void 0===e){const i=void 0!==t&&1===t.length;i&&(e=s.get(t)),void 0===e&&((this.o=e=new CSSStyleSheet).replaceSync(this.cssText),i&&s.set(t,e))}return e}toString(){return this.cssText}};const o=(e,...t)=>{const i=1===e.length?e[0]:t.reduce((t,i,r)=>t+(e=>{if(!0===e._$cssResult$)return e.cssText;if("number"==typeof e)return e;throw Error("Value passed to 'css' function must be a 'css' function result: "+e+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(i)+e[r+1],e[0]);return new n(i,e,r)},a=i?e=>e:e=>e instanceof CSSStyleSheet?(e=>{let t="";for(const i of e.cssRules)t+=i.cssText;return(e=>new n("string"==typeof e?e:e+"",void 0,r))(t)})(e):e,{is:l,defineProperty:d,getOwnPropertyDescriptor:c,getOwnPropertyNames:h,getOwnPropertySymbols:p,getPrototypeOf:g}=Object,u=globalThis,v=u.trustedTypes,_=v?v.emptyScript:"",b=u.reactiveElementPolyfillSupport,f=(e,t)=>e,m={toAttribute(e,t){switch(t){case Boolean:e=e?_:null;break;case Object:case Array:e=null==e?e:JSON.stringify(e)}return e},fromAttribute(e,t){let i=e;switch(t){case Boolean:i=null!==e;break;case Number:i=null===e?null:Number(e);break;case Object:case Array:try{i=JSON.parse(e)}catch(e){i=null}}return i}},y=(e,t)=>!l(e,t),x={attribute:!0,type:String,converter:m,reflect:!1,useDefault:!1,hasChanged:y};Symbol.metadata??=Symbol("metadata"),u.litPropertyMetadata??=new WeakMap;let $=class extends HTMLElement{static addInitializer(e){this._$Ei(),(this.l??=[]).push(e)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(e,t=x){if(t.state&&(t.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(e)&&((t=Object.create(t)).wrapped=!0),this.elementProperties.set(e,t),!t.noAccessor){const i=Symbol(),r=this.getPropertyDescriptor(e,i,t);void 0!==r&&d(this.prototype,e,r)}}static getPropertyDescriptor(e,t,i){const{get:r,set:s}=c(this.prototype,e)??{get(){return this[t]},set(e){this[t]=e}};return{get:r,set(t){const n=r?.call(this);s?.call(this,t),this.requestUpdate(e,n,i)},configurable:!0,enumerable:!0}}static getPropertyOptions(e){return this.elementProperties.get(e)??x}static _$Ei(){if(this.hasOwnProperty(f("elementProperties")))return;const e=g(this);e.finalize(),void 0!==e.l&&(this.l=[...e.l]),this.elementProperties=new Map(e.elementProperties)}static finalize(){if(this.hasOwnProperty(f("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(f("properties"))){const e=this.properties,t=[...h(e),...p(e)];for(const i of t)this.createProperty(i,e[i])}const e=this[Symbol.metadata];if(null!==e){const t=litPropertyMetadata.get(e);if(void 0!==t)for(const[e,i]of t)this.elementProperties.set(e,i)}this._$Eh=new Map;for(const[e,t]of this.elementProperties){const i=this._$Eu(e,t);void 0!==i&&this._$Eh.set(i,e)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(e){const t=[];if(Array.isArray(e)){const i=new Set(e.flat(1/0).reverse());for(const e of i)t.unshift(a(e))}else void 0!==e&&t.push(a(e));return t}static _$Eu(e,t){const i=t.attribute;return!1===i?void 0:"string"==typeof i?i:"string"==typeof e?e.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(e=>this.enableUpdating=e),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(e=>e(this))}addController(e){(this._$EO??=new Set).add(e),void 0!==this.renderRoot&&this.isConnected&&e.hostConnected?.()}removeController(e){this._$EO?.delete(e)}_$E_(){const e=new Map,t=this.constructor.elementProperties;for(const i of t.keys())this.hasOwnProperty(i)&&(e.set(i,this[i]),delete this[i]);e.size>0&&(this._$Ep=e)}createRenderRoot(){const e=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return((e,r)=>{if(i)e.adoptedStyleSheets=r.map(e=>e instanceof CSSStyleSheet?e:e.styleSheet);else for(const i of r){const r=document.createElement("style"),s=t.litNonce;void 0!==s&&r.setAttribute("nonce",s),r.textContent=i.cssText,e.appendChild(r)}})(e,this.constructor.elementStyles),e}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(e=>e.hostConnected?.())}enableUpdating(e){}disconnectedCallback(){this._$EO?.forEach(e=>e.hostDisconnected?.())}attributeChangedCallback(e,t,i){this._$AK(e,i)}_$ET(e,t){const i=this.constructor.elementProperties.get(e),r=this.constructor._$Eu(e,i);if(void 0!==r&&!0===i.reflect){const s=(void 0!==i.converter?.toAttribute?i.converter:m).toAttribute(t,i.type);this._$Em=e,null==s?this.removeAttribute(r):this.setAttribute(r,s),this._$Em=null}}_$AK(e,t){const i=this.constructor,r=i._$Eh.get(e);if(void 0!==r&&this._$Em!==r){const e=i.getPropertyOptions(r),s="function"==typeof e.converter?{fromAttribute:e.converter}:void 0!==e.converter?.fromAttribute?e.converter:m;this._$Em=r;const n=s.fromAttribute(t,e.type);this[r]=n??this._$Ej?.get(r)??n,this._$Em=null}}requestUpdate(e,t,i,r=!1,s){if(void 0!==e){const n=this.constructor;if(!1===r&&(s=this[e]),i??=n.getPropertyOptions(e),!((i.hasChanged??y)(s,t)||i.useDefault&&i.reflect&&s===this._$Ej?.get(e)&&!this.hasAttribute(n._$Eu(e,i))))return;this.C(e,t,i)}!1===this.isUpdatePending&&(this._$ES=this._$EP())}C(e,t,{useDefault:i,reflect:r,wrapped:s},n){i&&!(this._$Ej??=new Map).has(e)&&(this._$Ej.set(e,n??t??this[e]),!0!==s||void 0!==n)||(this._$AL.has(e)||(this.hasUpdated||i||(t=void 0),this._$AL.set(e,t)),!0===r&&this._$Em!==e&&(this._$Eq??=new Set).add(e))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(e){Promise.reject(e)}const e=this.scheduleUpdate();return null!=e&&await e,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(const[e,t]of this._$Ep)this[e]=t;this._$Ep=void 0}const e=this.constructor.elementProperties;if(e.size>0)for(const[t,i]of e){const{wrapped:e}=i,r=this[t];!0!==e||this._$AL.has(t)||void 0===r||this.C(t,void 0,i,r)}}let e=!1;const t=this._$AL;try{e=this.shouldUpdate(t),e?(this.willUpdate(t),this._$EO?.forEach(e=>e.hostUpdate?.()),this.update(t)):this._$EM()}catch(t){throw e=!1,this._$EM(),t}e&&this._$AE(t)}willUpdate(e){}_$AE(e){this._$EO?.forEach(e=>e.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(e)),this.updated(e)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(e){return!0}update(e){this._$Eq&&=this._$Eq.forEach(e=>this._$ET(e,this[e])),this._$EM()}updated(e){}firstUpdated(e){}};$.elementStyles=[],$.shadowRootOptions={mode:"open"},$[f("elementProperties")]=new Map,$[f("finalized")]=new Map,b?.({ReactiveElement:$}),(u.reactiveElementVersions??=[]).push("2.1.2");const w=globalThis,k=e=>e,P=w.trustedTypes,C=P?P.createPolicy("lit-html",{createHTML:e=>e}):void 0,A="$lit$",E=`lit$${Math.random().toFixed(9).slice(2)}$`,I="?"+E,S=`<${I}>`,M=document,L=()=>M.createComment(""),R=e=>null===e||"object"!=typeof e&&"function"!=typeof e,T=Array.isArray,D="[ \t\n\f\r]",O=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,U=/-->/g,z=/>/g,B=RegExp(`>|${D}(?:([^\\s"'>=/]+)(${D}*=${D}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`,"g"),N=/'/g,H=/"/g,j=/^(?:script|style|textarea|title)$/i,F=e=>(t,...i)=>({_$litType$:e,strings:t,values:i}),K=F(1),q=F(2),V=Symbol.for("lit-noChange"),W=Symbol.for("lit-nothing"),G=new WeakMap,X=M.createTreeWalker(M,129);function Y(e,t){if(!T(e)||!e.hasOwnProperty("raw"))throw Error("invalid template strings array");return void 0!==C?C.createHTML(t):t}const Z=(e,t)=>{const i=e.length-1,r=[];let s,n=2===t?"<svg>":3===t?"<math>":"",o=O;for(let t=0;t<i;t++){const i=e[t];let a,l,d=-1,c=0;for(;c<i.length&&(o.lastIndex=c,l=o.exec(i),null!==l);)c=o.lastIndex,o===O?"!--"===l[1]?o=U:void 0!==l[1]?o=z:void 0!==l[2]?(j.test(l[2])&&(s=RegExp("</"+l[2],"g")),o=B):void 0!==l[3]&&(o=B):o===B?">"===l[0]?(o=s??O,d=-1):void 0===l[1]?d=-2:(d=o.lastIndex-l[2].length,a=l[1],o=void 0===l[3]?B:'"'===l[3]?H:N):o===H||o===N?o=B:o===U||o===z?o=O:(o=B,s=void 0);const h=o===B&&e[t+1].startsWith("/>")?" ":"";n+=o===O?i+S:d>=0?(r.push(a),i.slice(0,d)+A+i.slice(d)+E+h):i+E+(-2===d?t:h)}return[Y(e,n+(e[i]||"<?>")+(2===t?"</svg>":3===t?"</math>":"")),r]};class J{constructor({strings:e,_$litType$:t},i){let r;this.parts=[];let s=0,n=0;const o=e.length-1,a=this.parts,[l,d]=Z(e,t);if(this.el=J.createElement(l,i),X.currentNode=this.el.content,2===t||3===t){const e=this.el.content.firstChild;e.replaceWith(...e.childNodes)}for(;null!==(r=X.nextNode())&&a.length<o;){if(1===r.nodeType){if(r.hasAttributes())for(const e of r.getAttributeNames())if(e.endsWith(A)){const t=d[n++],i=r.getAttribute(e).split(E),o=/([.?@])?(.*)/.exec(t);a.push({type:1,index:s,name:o[2],strings:i,ctor:"."===o[1]?re:"?"===o[1]?se:"@"===o[1]?ne:ie}),r.removeAttribute(e)}else e.startsWith(E)&&(a.push({type:6,index:s}),r.removeAttribute(e));if(j.test(r.tagName)){const e=r.textContent.split(E),t=e.length-1;if(t>0){r.textContent=P?P.emptyScript:"";for(let i=0;i<t;i++)r.append(e[i],L()),X.nextNode(),a.push({type:2,index:++s});r.append(e[t],L())}}}else if(8===r.nodeType)if(r.data===I)a.push({type:2,index:s});else{let e=-1;for(;-1!==(e=r.data.indexOf(E,e+1));)a.push({type:7,index:s}),e+=E.length-1}s++}}static createElement(e,t){const i=M.createElement("template");return i.innerHTML=e,i}}function Q(e,t,i=e,r){if(t===V)return t;let s=void 0!==r?i._$Co?.[r]:i._$Cl;const n=R(t)?void 0:t._$litDirective$;return s?.constructor!==n&&(s?._$AO?.(!1),void 0===n?s=void 0:(s=new n(e),s._$AT(e,i,r)),void 0!==r?(i._$Co??=[])[r]=s:i._$Cl=s),void 0!==s&&(t=Q(e,s._$AS(e,t.values),s,r)),t}class ee{constructor(e,t){this._$AV=[],this._$AN=void 0,this._$AD=e,this._$AM=t}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(e){const{el:{content:t},parts:i}=this._$AD,r=(e?.creationScope??M).importNode(t,!0);X.currentNode=r;let s=X.nextNode(),n=0,o=0,a=i[0];for(;void 0!==a;){if(n===a.index){let t;2===a.type?t=new te(s,s.nextSibling,this,e):1===a.type?t=new a.ctor(s,a.name,a.strings,this,e):6===a.type&&(t=new oe(s,this,e)),this._$AV.push(t),a=i[++o]}n!==a?.index&&(s=X.nextNode(),n++)}return X.currentNode=M,r}p(e){let t=0;for(const i of this._$AV)void 0!==i&&(void 0!==i.strings?(i._$AI(e,i,t),t+=i.strings.length-2):i._$AI(e[t])),t++}}class te{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(e,t,i,r){this.type=2,this._$AH=W,this._$AN=void 0,this._$AA=e,this._$AB=t,this._$AM=i,this.options=r,this._$Cv=r?.isConnected??!0}get parentNode(){let e=this._$AA.parentNode;const t=this._$AM;return void 0!==t&&11===e?.nodeType&&(e=t.parentNode),e}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(e,t=this){e=Q(this,e,t),R(e)?e===W||null==e||""===e?(this._$AH!==W&&this._$AR(),this._$AH=W):e!==this._$AH&&e!==V&&this._(e):void 0!==e._$litType$?this.$(e):void 0!==e.nodeType?this.T(e):(e=>T(e)||"function"==typeof e?.[Symbol.iterator])(e)?this.k(e):this._(e)}O(e){return this._$AA.parentNode.insertBefore(e,this._$AB)}T(e){this._$AH!==e&&(this._$AR(),this._$AH=this.O(e))}_(e){this._$AH!==W&&R(this._$AH)?this._$AA.nextSibling.data=e:this.T(M.createTextNode(e)),this._$AH=e}$(e){const{values:t,_$litType$:i}=e,r="number"==typeof i?this._$AC(e):(void 0===i.el&&(i.el=J.createElement(Y(i.h,i.h[0]),this.options)),i);if(this._$AH?._$AD===r)this._$AH.p(t);else{const e=new ee(r,this),i=e.u(this.options);e.p(t),this.T(i),this._$AH=e}}_$AC(e){let t=G.get(e.strings);return void 0===t&&G.set(e.strings,t=new J(e)),t}k(e){T(this._$AH)||(this._$AH=[],this._$AR());const t=this._$AH;let i,r=0;for(const s of e)r===t.length?t.push(i=new te(this.O(L()),this.O(L()),this,this.options)):i=t[r],i._$AI(s),r++;r<t.length&&(this._$AR(i&&i._$AB.nextSibling,r),t.length=r)}_$AR(e=this._$AA.nextSibling,t){for(this._$AP?.(!1,!0,t);e!==this._$AB;){const t=k(e).nextSibling;k(e).remove(),e=t}}setConnected(e){void 0===this._$AM&&(this._$Cv=e,this._$AP?.(e))}}class ie{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(e,t,i,r,s){this.type=1,this._$AH=W,this._$AN=void 0,this.element=e,this.name=t,this._$AM=r,this.options=s,i.length>2||""!==i[0]||""!==i[1]?(this._$AH=Array(i.length-1).fill(new String),this.strings=i):this._$AH=W}_$AI(e,t=this,i,r){const s=this.strings;let n=!1;if(void 0===s)e=Q(this,e,t,0),n=!R(e)||e!==this._$AH&&e!==V,n&&(this._$AH=e);else{const r=e;let o,a;for(e=s[0],o=0;o<s.length-1;o++)a=Q(this,r[i+o],t,o),a===V&&(a=this._$AH[o]),n||=!R(a)||a!==this._$AH[o],a===W?e=W:e!==W&&(e+=(a??"")+s[o+1]),this._$AH[o]=a}n&&!r&&this.j(e)}j(e){e===W?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,e??"")}}class re extends ie{constructor(){super(...arguments),this.type=3}j(e){this.element[this.name]=e===W?void 0:e}}class se extends ie{constructor(){super(...arguments),this.type=4}j(e){this.element.toggleAttribute(this.name,!!e&&e!==W)}}class ne extends ie{constructor(e,t,i,r,s){super(e,t,i,r,s),this.type=5}_$AI(e,t=this){if((e=Q(this,e,t,0)??W)===V)return;const i=this._$AH,r=e===W&&i!==W||e.capture!==i.capture||e.once!==i.once||e.passive!==i.passive,s=e!==W&&(i===W||r);r&&this.element.removeEventListener(this.name,this,i),s&&this.element.addEventListener(this.name,this,e),this._$AH=e}handleEvent(e){"function"==typeof this._$AH?this._$AH.call(this.options?.host??this.element,e):this._$AH.handleEvent(e)}}class oe{constructor(e,t,i){this.element=e,this.type=6,this._$AN=void 0,this._$AM=t,this.options=i}get _$AU(){return this._$AM._$AU}_$AI(e){Q(this,e)}}const ae=w.litHtmlPolyfillSupport;ae?.(J,te),(w.litHtmlVersions??=[]).push("3.3.2");const le=globalThis;class de extends ${constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){const e=super.createRenderRoot();return this.renderOptions.renderBefore??=e.firstChild,e}update(e){const t=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(e),this._$Do=((e,t,i)=>{const r=i?.renderBefore??t;let s=r._$litPart$;if(void 0===s){const e=i?.renderBefore??null;r._$litPart$=s=new te(t.insertBefore(L(),e),e,void 0,i??{})}return s._$AI(e),s})(t,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return V}}de._$litElement$=!0,de.finalized=!0,le.litElementHydrateSupport?.({LitElement:de});const ce=le.litElementPolyfillSupport;ce?.({LitElement:de}),(le.litElementVersions??=[]).push("4.2.2");const he=e=>(t,i)=>{void 0!==i?i.addInitializer(()=>{customElements.define(e,t)}):customElements.define(e,t)},pe={attribute:!0,type:String,converter:m,reflect:!1,hasChanged:y},ge=(e=pe,t,i)=>{const{kind:r,metadata:s}=i;let n=globalThis.litPropertyMetadata.get(s);if(void 0===n&&globalThis.litPropertyMetadata.set(s,n=new Map),"setter"===r&&((e=Object.create(e)).wrapped=!0),n.set(i.name,e),"accessor"===r){const{name:r}=i;return{set(i){const s=t.get.call(this);t.set.call(this,i),this.requestUpdate(r,s,e,!0,i)},init(t){return void 0!==t&&this.C(r,void 0,e,t),t}}}if("setter"===r){const{name:r}=i;return function(i){const s=this[r];t.call(this,i),this.requestUpdate(r,s,e,!0,i)}}throw Error("Unsupported decorator location: "+r)};function ue(e){return(t,i)=>"object"==typeof i?ge(e,t,i):((e,t,i)=>{const r=t.hasOwnProperty(i);return t.constructor.createProperty(i,e),r?Object.getOwnPropertyDescriptor(t,i):void 0})(e,t,i)}function ve(e){return ue({...e,state:!0,attribute:!1})}function _e(e,t){return(t,i,r)=>((e,t,i)=>(i.configurable=!0,i.enumerable=!0,Reflect.decorate&&"object"!=typeof t&&Object.defineProperty(e,t,i),i))(t,i,{get(){return(t=>t.renderRoot?.querySelector(e)??null)(this)}})}function be(e){return e.map(e=>({...e,controlPoints:e.controlPoints.map(e=>({...e}))}))}function fe(e,t,i){const[r,s]=e,[n,o]=t;return r===s?n:n+(i-r)*(o-n)/(s-r)}function me(e){const t=new Map;t.set(0,0);for(const i of e)t.set(i.lightener,i.target);if(!t.has(100)){let e=-1,i=100;for(const[r,s]of t)0!==r&&r>e&&(e=r,i=s);t.set(100,i)}const i=[];for(const[e,r]of t)i.push({lightener:e,target:r});return i.sort((e,t)=>e.lightener-t.lightener),i}function ye(e,t){return function(e,t){if(0===e.length)return 0;const i=Math.max(0,Math.min(100,t));if(i<=e[0].lightener)return e[0].target;for(let t=1;t<e.length;t++){const r=e[t-1],s=e[t];if(i===s.lightener)return s.target;if(i<s.lightener)return fe([r.lightener,s.lightener],[r.target,s.target],i)}return e[e.length-1].target}(me(e),t)}const xe=44,$e=12,we=300,ke=200;function Pe(e){return xe+e/100*we}function Ce(e){return $e+(1-e/100)*ke}function Ae(e,t,i){return Math.max(t,Math.min(i,e))}function Ee(e,t){return Math.max(0,Math.min(100,ye(e,t)))}const Ie=["#42a5f5","#ef5350","#5c6bc0","#ffa726","#ab47bc","#1565c0","#ec407a","#8d6e63","#ffca28","#7e57c2"];const Se=["","8 4","4 4","12 4 4 4","2 4"];const Me=[{id:"linear",name:"Linear",description:"Equal brightness — what you set is what you get.",controlPoints:[{lightener:0,target:0},{lightener:1,target:1},{lightener:100,target:100}]},{id:"dim_accent",name:"Dim accent",description:"Caps at ~45% — great for mood or accent lighting.",controlPoints:[{lightener:0,target:0},{lightener:1,target:1},{lightener:25,target:8},{lightener:50,target:20},{lightener:100,target:45}]},{id:"late_starter",name:"Late starter",description:"Stays very dim until ~45%, then brightens quickly.",controlPoints:[{lightener:0,target:0},{lightener:1,target:1},{lightener:45,target:1},{lightener:70,target:45},{lightener:100,target:100}]},{id:"night_mode",name:"Night mode",description:"Caps at ~25% — barely bright even at full brightness.",controlPoints:[{lightener:0,target:0},{lightener:1,target:1},{lightener:20,target:3},{lightener:50,target:10},{lightener:100,target:25}]}];const Le={phase:"idle"};let Re=class extends de{constructor(){super(...arguments),this.curves=[],this.selectedCurveId=null,this.readOnly=!1,this.scrubberPosition=null,this._dragCurveIdx=-1,this._dragPointIdx=-1,this._hoveredPoint=null,this._focusedPoint=null,this._isMobile=!1,this._uid=Math.random().toString(36).slice(2,7),this._mql=null,this._wasDragging=!1,this._longPressTimer=null,this._longPressFired=!1,this._onMqlChange=e=>{this._isMobile=e.matches}}_getSvgCoords(e){const t=this._svgRef;if(!t)return null;const i=t.getScreenCTM();if(!i)return null;let r;try{r=i.inverse()}catch{return null}if(!r||isNaN(r.a))return null;const s=t.createSVGPoint();s.x=e.clientX,s.y=e.clientY;const n=s.matrixTransform(r);return{x:(a=n.x,(a-xe)/we*100),y:(o=n.y,100*(1-(o-$e)/ke))};var o,a}_isCurveInteractive(e){return!this.readOnly&&(null===this.selectedCurveId||this.curves[e]?.entityId===this.selectedCurveId)}_focusCurve(e){this.dispatchEvent(new CustomEvent("focus-curve",{detail:{entityId:e},bubbles:!0,composed:!0}))}_onPointFocus(e,t){const i=this.curves[e];i&&(this._focusedPoint={curve:e,point:t},this._hoveredPoint={curve:e,point:t},this._focusCurve(i.entityId))}_onPointBlur(e,t){this._focusedPoint?.curve===e&&this._focusedPoint?.point===t&&(this._focusedPoint=null),this._hoveredPoint?.curve===e&&this._hoveredPoint?.point===t&&(this._hoveredPoint=null)}_dispatchKeyboardMove(e,t,i,r){this.dispatchEvent(new CustomEvent("point-move",{detail:{curveIndex:e,pointIndex:t,lightener:i,target:r},bubbles:!0,composed:!0})),this.dispatchEvent(new CustomEvent("point-drop",{detail:{curveIndex:e,pointIndex:t},bubbles:!0,composed:!0}))}_getKeyboardInsertPoint(e,t){const i=e.controlPoints[t],r=e.controlPoints[t+1],s=e.controlPoints[t-1];return r&&r.lightener-i.lightener>1?{lightener:Math.round((i.lightener+r.lightener)/2),target:Math.round((i.target+r.target)/2)}:s&&i.lightener-s.lightener>1?{lightener:Math.round((s.lightener+i.lightener)/2),target:Math.round((s.target+i.target)/2)}:null}_onPointKeyDown(e,t,i){const r=this.curves[t],s=r?.controlPoints[i];if(!r||!s)return;if(this.selectedCurveId!==r.entityId&&this._focusCurve(r.entityId),0===i&&("ArrowRight"===e.key||"ArrowLeft"===e.key))return;const n=e.shiftKey?10:1,o=i>0?r.controlPoints[i-1].lightener+1:s.lightener,a=i<r.controlPoints.length-1?r.controlPoints[i+1].lightener-1:100;if("ArrowRight"===e.key)return e.preventDefault(),void this._dispatchKeyboardMove(t,i,Math.min(a,s.lightener+n),s.target);if("ArrowLeft"===e.key)return e.preventDefault(),void this._dispatchKeyboardMove(t,i,Math.max(o,s.lightener-n),s.target);if("ArrowUp"===e.key)return e.preventDefault(),void this._dispatchKeyboardMove(t,i,s.lightener,Math.min(100,s.target+n));if("ArrowDown"===e.key)return e.preventDefault(),void this._dispatchKeyboardMove(t,i,s.lightener,Math.max(0,s.target-n));if("Enter"===e.key){const s=this._getKeyboardInsertPoint(r,i);if(!s)return;return e.preventDefault(),this.dispatchEvent(new CustomEvent("point-add",{detail:{entityId:r.entityId,lightener:s.lightener,target:s.target},bubbles:!0,composed:!0})),void this.updateComplete.then(()=>this._refocusHitCircle(t,i)).catch(()=>{})}(" "===e.key||"Delete"===e.key||"Backspace"===e.key)&&i>0&&r.controlPoints.length>2&&(e.preventDefault(),this.dispatchEvent(new CustomEvent("point-remove",{detail:{curveIndex:t,pointIndex:i},bubbles:!0,composed:!0})),this.updateComplete.then(()=>this._refocusHitCircle(t,Math.max(1,i-1))).catch(()=>{}))}_refocusHitCircle(e,t){const i=this.renderRoot.querySelector(`.hit-circle[data-curve="${e}"][data-point="${t}"]`);i&&i.focus()}_onPointerDown(e,t,i){0===e.button&&this._isCurveInteractive(t)&&(e.preventDefault(),this._longPressFired=!1,this._clearLongPress(),i>0&&(this._longPressTimer=setTimeout(()=>{this._longPressFired=!0,this._dragCurveIdx=-1,this._dragPointIdx=-1,this.dispatchEvent(new CustomEvent("point-remove",{detail:{curveIndex:t,pointIndex:i},bubbles:!0,composed:!0}))},500)),this._svgRef?.setPointerCapture(e.pointerId),this._dragCurveIdx=t,this._dragPointIdx=i)}_clearLongPress(){this._longPressTimer&&(clearTimeout(this._longPressTimer),this._longPressTimer=null)}_onPointerMove(e){if(this._dragCurveIdx<0)return;e.preventDefault(),this._clearLongPress();const t=this._getSvgCoords(e);if(!t)return;const i=this.curves[this._dragCurveIdx],r=i?.controlPoints??[],s=this._dragPointIdx>0?r[this._dragPointIdx-1].lightener+1:1,n=this._dragPointIdx<r.length-1?r[this._dragPointIdx+1].lightener-1:100,o=0===this._dragPointIdx?this.curves[this._dragCurveIdx]?.controlPoints[0]?.lightener??0:Math.round(Ae(t.x,s,n)),a=Math.round(Ae(t.y,0,100));this.dispatchEvent(new CustomEvent("point-move",{detail:{curveIndex:this._dragCurveIdx,pointIndex:this._dragPointIdx,lightener:o,target:a},bubbles:!0,composed:!0}))}_onPointerUp(e){this._clearLongPress(),this._longPressFired||this._dragCurveIdx<0||(e.preventDefault(),this.dispatchEvent(new CustomEvent("point-drop",{detail:{curveIndex:this._dragCurveIdx,pointIndex:this._dragPointIdx},bubbles:!0,composed:!0})),this._dragCurveIdx=-1,this._dragPointIdx=-1,this._wasDragging=!0,setTimeout(()=>{this._wasDragging=!1},400))}_onPointContextMenu(e,t,i){e.preventDefault(),e.stopPropagation(),this.readOnly||this._isCurveInteractive(t)&&0!==i&&this.dispatchEvent(new CustomEvent("point-remove",{detail:{curveIndex:t,pointIndex:i},bubbles:!0,composed:!0}))}_onDblClick(e){if(this.readOnly)return;if(this._wasDragging)return;const t=this._getSvgCoords(e);if(!t)return;const i=Math.round(Ae(t.x,1,100)),r=Math.round(Ae(t.y,0,100));this.dispatchEvent(new CustomEvent("point-add",{detail:{lightener:i,target:r,entityId:this.selectedCurveId},bubbles:!0,composed:!0}))}_renderGrid(){return q`
       <defs>
         <clipPath id="graph-area-${this._uid}">
           <rect x="${14}" y="${-18}" width="${360}" height="${260}" />
@@ -76,7 +76,7 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
             filter="url(#scrubber-glow-${i.color.replace("#","")}-${this._uid})"
             pointer-events="none"
           />
-        `});return q`${i}${r}${s}`}_renderCurve(e,t){if(!e.visible||!e.controlPoints.length)return W;try{const i=null===this.selectedCurveId||e.entityId===this.selectedCurveId,r=this._isCurveInteractive(t)&&!this.readOnly,s=ye(e.controlPoints),n=function(e){if(e.length<2)return"";let t=`M${e[0].x},${e[0].y}`;for(let i=1;i<e.length;i++)t+=` L${e[i].x},${e[i].y}`;return t}(s.map(e=>({x:Pe(e.lightener),y:Ce(e.target)}))),o=n+` L${Pe(s[s.length-1].lightener)},${Ce(0)}`+` L${Pe(0)},${Ce(0)} Z`,a=`grad-${t}-${this._uid}`,l=Ie[t%Ie.length],d=this._dragCurveIdx===t,c=e.color+"33",h=i?1:.2;let p=null;if(d&&this._dragPointIdx>=0)p=e.controlPoints[this._dragPointIdx];else if((this._hoveredPoint?.curve===t||this._focusedPoint?.curve===t)&&r){const i=this._focusedPoint?.curve===t?this._focusedPoint.point:this._hoveredPoint?.point??-1;p=e.controlPoints[i]??null}return q`
+        `});return q`${i}${r}${s}`}_renderCurve(e,t){if(!e.visible||!e.controlPoints.length)return W;try{const i=null===this.selectedCurveId||e.entityId===this.selectedCurveId,r=this._isCurveInteractive(t)&&!this.readOnly,s=me(e.controlPoints),n=function(e){if(e.length<2)return"";let t=`M${e[0].x},${e[0].y}`;for(let i=1;i<e.length;i++)t+=` L${e[i].x},${e[i].y}`;return t}(s.map(e=>({x:Pe(e.lightener),y:Ce(e.target)}))),o=n+` L${Pe(s[s.length-1].lightener)},${Ce(0)}`+` L${Pe(0)},${Ce(0)} Z`,a=`grad-${t}-${this._uid}`,l=Se[t%Se.length],d=this._dragCurveIdx===t,c=e.color+"33",h=i?1:.2;let p=null;if(d&&this._dragPointIdx>=0)p=e.controlPoints[this._dragPointIdx];else if((this._hoveredPoint?.curve===t||this._focusedPoint?.curve===t)&&r){const i=this._focusedPoint?.curve===t?this._focusedPoint.point:this._hoveredPoint?.point??-1;p=e.controlPoints[i]??null}return q`
       <defs>
         <linearGradient id="${a}" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="${e.color}" stop-opacity="${i?.45:.06}" />
@@ -184,7 +184,7 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
                 x="${340}" y="${206}"
                 >${this._isMobile?"Double-tap to add · Long-press to remove":"Double-click to add · Right-click to remove"}</text>`})()}
       </svg>
-    `}};De.styles=o`
+    `}};Re.styles=o`
     :host {
       display: block;
     }
@@ -321,7 +321,7 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
       font-size: 9.5px;
       font-family: inherit;
     }
-  `,e([ge({type:Array})],De.prototype,"curves",void 0),e([ge({type:String})],De.prototype,"selectedCurveId",void 0),e([ge({type:Boolean})],De.prototype,"readOnly",void 0),e([ge({type:Number})],De.prototype,"scrubberPosition",void 0),e([ve()],De.prototype,"_dragCurveIdx",void 0),e([ve()],De.prototype,"_dragPointIdx",void 0),e([ve()],De.prototype,"_hoveredPoint",void 0),e([ve()],De.prototype,"_focusedPoint",void 0),e([ve()],De.prototype,"_isMobile",void 0),e([_e("svg")],De.prototype,"_svgRef",void 0),De=e([he("curve-graph")],De);let Oe=class extends de{constructor(){super(...arguments),this.curves=[],this.readOnly=!1,this._position=50,this._overflowCount=0,this._expanded=!1,this._snappedMaxHeight=null,this._dragging=!1,this._trackRef=null,this._resizeObserver=null,this._observedBadgesRef=null}_badgeTextColor(e){const t=e.toLowerCase();return"#ffca28"===t?"#9e7c00":"#ffa726"===t?"#b36b00":e}_getInterpolatedValues(){const e=Math.round(this._position);return this.curves.filter(e=>e.visible).map(t=>({entityId:t.entityId,name:t.friendlyName,color:t.color,value:Math.round(Ee(t.controlPoints,e))}))}_onPointerDown(e){this.readOnly||(e.preventDefault(),this._dragging=!0,e.target.setPointerCapture(e.pointerId),this._updatePositionFromClient(e.clientX),this.dispatchEvent(new CustomEvent("scrubber-start",{bubbles:!0,composed:!0})))}_onPointerMove(e){this._dragging&&(e.preventDefault(),this._updatePositionFromClient(e.clientX))}_onPointerUp(){this._dragging&&(this._dragging=!1,this.dispatchEvent(new CustomEvent("scrubber-end",{bubbles:!0,composed:!0})))}_onTrackClick(e){this.readOnly||this._updatePositionFromClient(e.clientX)}_onKeyDown(e){if(this.readOnly)return;const t=e.shiftKey?10:1;if("ArrowRight"===e.key||"ArrowUp"===e.key)e.preventDefault(),this._position=Math.min(100,this._position+t);else if("ArrowLeft"===e.key||"ArrowDown"===e.key)e.preventDefault(),this._position=Math.max(0,this._position-t);else if("Home"===e.key)e.preventDefault(),this._position=0;else{if("End"!==e.key)return;e.preventDefault(),this._position=100}this._emitPosition()}_updatePositionFromClient(e){const t=this._trackRef;if(!t)return;const i=t.getBoundingClientRect(),r=(e-i.left)/i.width*100;this._position=Math.max(0,Math.min(100,r)),this._emitPosition()}_renderBadgeContent(e){return K`
+  `,e([ue({type:Array})],Re.prototype,"curves",void 0),e([ue({type:String})],Re.prototype,"selectedCurveId",void 0),e([ue({type:Boolean})],Re.prototype,"readOnly",void 0),e([ue({type:Number})],Re.prototype,"scrubberPosition",void 0),e([ve()],Re.prototype,"_dragCurveIdx",void 0),e([ve()],Re.prototype,"_dragPointIdx",void 0),e([ve()],Re.prototype,"_hoveredPoint",void 0),e([ve()],Re.prototype,"_focusedPoint",void 0),e([ve()],Re.prototype,"_isMobile",void 0),e([_e("svg")],Re.prototype,"_svgRef",void 0),Re=e([he("curve-graph")],Re);let Te=class extends de{constructor(){super(...arguments),this.curves=[],this.readOnly=!1,this._position=50,this._overflowCount=0,this._expanded=!1,this._snappedMaxHeight=null,this._dragging=!1,this._trackRef=null,this._resizeObserver=null,this._observedBadgesRef=null}_badgeTextColor(e){const t=e.toLowerCase();return"#ffca28"===t?"#9e7c00":"#ffa726"===t?"#b36b00":e}_getInterpolatedValues(){const e=Math.round(this._position);return this.curves.filter(e=>e.visible).map(t=>({entityId:t.entityId,name:t.friendlyName,color:t.color,value:Math.round(Ee(t.controlPoints,e))}))}_onPointerDown(e){this.readOnly||(e.preventDefault(),this._dragging=!0,e.target.setPointerCapture(e.pointerId),this._updatePositionFromClient(e.clientX),this.dispatchEvent(new CustomEvent("scrubber-start",{bubbles:!0,composed:!0})))}_onPointerMove(e){this._dragging&&(e.preventDefault(),this._updatePositionFromClient(e.clientX))}_onPointerUp(){this._dragging&&(this._dragging=!1,this.dispatchEvent(new CustomEvent("scrubber-end",{bubbles:!0,composed:!0})))}_onTrackClick(e){this.readOnly||this._updatePositionFromClient(e.clientX)}_onKeyDown(e){if(this.readOnly)return;const t=e.shiftKey?10:1;if("ArrowRight"===e.key||"ArrowUp"===e.key)e.preventDefault(),this._position=Math.min(100,this._position+t);else if("ArrowLeft"===e.key||"ArrowDown"===e.key)e.preventDefault(),this._position=Math.max(0,this._position-t);else if("Home"===e.key)e.preventDefault(),this._position=0;else{if("End"!==e.key)return;e.preventDefault(),this._position=100}this._emitPosition()}_updatePositionFromClient(e){const t=this._trackRef;if(!t)return;const i=t.getBoundingClientRect(),r=(e-i.left)/i.width*100;this._position=Math.max(0,Math.min(100,r)),this._emitPosition()}_renderBadgeContent(e){return K`
       <span class="badge-dot" style="background: ${e.color}"></span>
       <span style="color: ${this._badgeTextColor(e.color)}">${e.value}%</span>
     `}_onBadgeClick(e,t){this.dispatchEvent(new CustomEvent("badge-click",{detail:{entityId:e,value:t},bubbles:!0,composed:!0}))}_emitPosition(){this.dispatchEvent(new CustomEvent("scrubber-move",{detail:{position:this._position},bubbles:!0,composed:!0}))}connectedCallback(){super.connectedCallback(),"undefined"!=typeof ResizeObserver&&(this._resizeObserver=new ResizeObserver(()=>this._measureBadgeOverflow()))}disconnectedCallback(){super.disconnectedCallback(),this._resizeObserver?.disconnect(),this._resizeObserver=null,this._observedBadgesRef=null}firstUpdated(){this._trackRef=this.renderRoot.querySelector(".track-area"),this._bindBadgeObserver(),this._measureBadgeOverflow()}updated(){this._bindBadgeObserver()}_bindBadgeObserver(){this._resizeObserver&&this._badgesRef&&this._observedBadgesRef!==this._badgesRef&&(this._resizeObserver.disconnect(),this._resizeObserver.observe(this._badgesRef),this._observedBadgesRef=this._badgesRef)}_measureBadgeOverflow(){const e=this._badgesRef;if(!e)return;if(this._expanded)return;const t=e.clientHeight,i=[...e.querySelectorAll('.badge[data-value-badge="true"]')],r=[...i].reverse().find(e=>e.offsetTop+e.offsetHeight<=t),s=r?r.offsetTop+r.offsetHeight:t,n=i.filter(e=>e.offsetTop+e.offsetHeight>s).length;n!==this._overflowCount&&(this._overflowCount=n),s!==this._snappedMaxHeight&&(this._snappedMaxHeight=s)}render(){const e=this._getInterpolatedValues(),t=Math.round(this._position);return K`
@@ -380,7 +380,7 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
               </button>`:null}
         </div>
       </div>
-    `}};var Re;Oe.styles=o`
+    `}};var De;Te.styles=o`
     :host {
       display: block;
     }
@@ -571,13 +571,59 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
         font-size: 11px;
       }
     }
-  `,e([ge({type:Array})],Oe.prototype,"curves",void 0),e([ge({type:Boolean})],Oe.prototype,"readOnly",void 0),e([ve()],Oe.prototype,"_position",void 0),e([ve()],Oe.prototype,"_overflowCount",void 0),e([ve()],Oe.prototype,"_expanded",void 0),e([ve()],Oe.prototype,"_snappedMaxHeight",void 0),e([_e(".value-badges")],Oe.prototype,"_badgesRef",void 0),Oe=e([he("curve-scrubber")],Oe);let Ue=Re=class extends de{constructor(){super(...arguments),this.curves=[],this.selectedCurveId=null,this.scrubberPosition=null}_select(e){this.dispatchEvent(new CustomEvent("select-curve",{detail:{entityId:e},bubbles:!0,composed:!0}))}_toggle(e,t){e.stopPropagation(),this.dispatchEvent(new CustomEvent("toggle-curve",{detail:{entityId:t},bubbles:!0,composed:!0}))}_onItemKeyDown(e,t){if("Enter"!==e.key&&" "!==e.key||(e.preventDefault(),this._select(t)),"ArrowDown"===e.key||"ArrowUp"===e.key){e.preventDefault();const t=[...this.renderRoot.querySelectorAll(".legend-item")],i=t.indexOf(e.currentTarget),r="ArrowDown"===e.key?i+1:i-1;t[r]?.focus()}}_onToggleKeyDown(e,t){"Enter"!==e.key&&" "!==e.key||(e.preventDefault(),this._toggle(e,t))}render(){return K`
+  `,e([ue({type:Array})],Te.prototype,"curves",void 0),e([ue({type:Boolean})],Te.prototype,"readOnly",void 0),e([ve()],Te.prototype,"_position",void 0),e([ve()],Te.prototype,"_overflowCount",void 0),e([ve()],Te.prototype,"_expanded",void 0),e([ve()],Te.prototype,"_snappedMaxHeight",void 0),e([_e(".value-badges")],Te.prototype,"_badgesRef",void 0),Te=e([he("curve-scrubber")],Te);const Oe=[{value:"linear",label:"Linear"},{value:"dim_accent",label:"Dim accent"},{value:"late_starter",label:"Late starter"},{value:"night_mode",label:"Night mode"}];let Ue=De=class extends de{constructor(){super(...arguments),this.curves=[],this.selectedCurveId=null,this.scrubberPosition=null,this.canManage=!1,this.managing=!1,this.excludeEntityIds=[],this.presetOptions=Oe,this.hass=null,this._addingLight=!1,this._pendingAddEntity="",this._pendingPreset=Oe[0].value,this._confirmingRemove=null}_select(e){this._confirmingRemove!==e&&this.dispatchEvent(new CustomEvent("select-curve",{detail:{entityId:e},bubbles:!0,composed:!0}))}_toggle(e,t){e.stopPropagation(),this.dispatchEvent(new CustomEvent("toggle-curve",{detail:{entityId:t},bubbles:!0,composed:!0}))}willUpdate(e){super.willUpdate(e),!e.has("canManage")&&!e.has("managing")||this.canManage&&!this.managing||(this._confirmingRemove=null)}_startRemove(e,t){e.stopPropagation(),this.canManage&&!this.managing&&(this.curves.length<=1||(this._confirmingRemove=t))}_cancelRemove(e){e.stopPropagation(),this._confirmingRemove=null}_confirmRemove(e,t){e.stopPropagation(),this.canManage&&!this.managing?(this._confirmingRemove=null,this.dispatchEvent(new CustomEvent("remove-light",{detail:{entityId:t},bubbles:!0,composed:!0}))):this._confirmingRemove=null}_onItemKeyDown(e,t){if(this._confirmingRemove!==t&&("Enter"!==e.key&&" "!==e.key||(e.preventDefault(),this._select(t)),"ArrowDown"===e.key||"ArrowUp"===e.key)){e.preventDefault();const t=[...this.renderRoot.querySelectorAll(".legend-item")],i=t.indexOf(e.currentTarget),r="ArrowDown"===e.key?i+1:i-1;t[r]?.focus()}}_onToggleKeyDown(e,t){"Enter"!==e.key&&" "!==e.key||(e.preventDefault(),this._toggle(e,t))}_startAdd(){this._addingLight=!0,this._pendingAddEntity="",this._pendingPreset=this.presetOptions[0]?.value??"linear"}_cancelAdd(){this._addingLight=!1,this._pendingAddEntity=""}_onAddEntityChange(e){this._pendingAddEntity=e.detail?.value??""}_onPresetChange(e){this._pendingPreset=e.target.value}_confirmAdd(){const e=this._pendingAddEntity.trim();e&&(this.dispatchEvent(new CustomEvent("add-light",{detail:{entityId:e,preset:this._pendingPreset},bubbles:!0,composed:!0})),this._addingLight=!1,this._pendingAddEntity="")}_renderAddForm(){const e=[...this.curves.map(e=>e.entityId),...this.excludeEntityIds.filter(Boolean)];return K`
+      <div class="add-form">
+        <ha-entity-picker
+          .hass=${this.hass}
+          .value=${this._pendingAddEntity}
+          .includeDomains=${["light"]}
+          .excludeEntities=${e}
+          allow-custom-entity
+          @value-changed=${this._onAddEntityChange}
+        ></ha-entity-picker>
+        <div class="preset-field">
+          <label for="preset-select">Starting curve</label>
+          <select id="preset-select" .value=${this._pendingPreset} @change=${this._onPresetChange}>
+            ${this.presetOptions.map(e=>K`
+                <option value=${e.value} ?selected=${e.value===this._pendingPreset}>
+                  ${e.label}
+                </option>
+              `)}
+          </select>
+        </div>
+        <div class="add-form-actions">
+          <button type="button" @click=${this._cancelAdd}>Cancel</button>
+          <button
+            type="button"
+            class="primary"
+            ?disabled=${!this._pendingAddEntity}
+            @click=${this._confirmAdd}
+          >
+            Add
+          </button>
+        </div>
+      </div>
+    `}_renderConfirmRow(e){return K`
+      <div class="confirm-row">
+        <span class="confirm-text">Remove "${e.friendlyName}"?</span>
+        <button type="button" class="confirm-btn" @click=${e=>this._cancelRemove(e)}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="confirm-btn danger"
+          @click=${t=>this._confirmRemove(t,e.entityId)}
+        >
+          Remove
+        </button>
+      </div>
+    `}render(){return K`
       <div class="legend-panel">
         <div class="legend-label">Lights</div>
         <div class="legend" role="listbox" aria-label="Light curves">
-          ${this.curves.map((e,t)=>K`
+          ${this.curves.map((e,t)=>{const i=this.canManage&&!this.managing&&this._confirmingRemove===e.entityId;return K`
               <div
-                class="legend-item ${e.visible?"":"hidden"} ${this.selectedCurveId===e.entityId?"selected":""}"
+                class="legend-item ${e.visible?"":"hidden"} ${this.selectedCurveId===e.entityId?"selected":""} ${i?"confirming":""}"
                 role="option"
                 tabindex="0"
                 aria-selected=${this.selectedCurveId===e.entityId}
@@ -586,44 +632,95 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
                 style="--accent-color: ${e.color}"
               >
                 <span
-                  class="color-dot shape-${Re._shapes[t%Re._shapes.length]}"
+                  class="color-dot shape-${De._shapes[t%De._shapes.length]}"
                   style="background: ${e.color}; --dot-color: ${e.color}"
                 ></span>
-                <span class="name">${e.friendlyName}</span>
-                ${null!==this.scrubberPosition?K`<span class="brightness-value"
-                      >${Math.round(Ee(e.controlPoints,Math.round(this.scrubberPosition)))}%</span
-                    >`:W}
-                <svg
-                  class="eye-icon"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  role="button"
-                  tabindex="0"
-                  aria-label="${e.visible?"Hide":"Show"} ${e.friendlyName}"
-                  aria-pressed=${!e.visible}
-                  @click=${t=>this._toggle(t,e.entityId)}
-                  @keydown=${t=>this._onToggleKeyDown(t,e.entityId)}
-                >
-                  ${e.visible?K`
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      `:K`
-                        <path
-                          d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
-                        />
-                        <path
-                          d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
-                        />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      `}
-                </svg>
+                ${i?this._renderConfirmRow(e):K`
+                      <span class="name">${e.friendlyName}</span>
+                      ${null!==this.scrubberPosition?K`<span class="brightness-value"
+                            >${Math.round(Ee(e.controlPoints,Math.round(this.scrubberPosition)))}%</span
+                          >`:W}
+                      <svg
+                        class="eye-icon"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        role="button"
+                        tabindex="0"
+                        aria-label="${e.visible?"Hide":"Show"} ${e.friendlyName}"
+                        aria-pressed=${!e.visible}
+                        @click=${t=>this._toggle(t,e.entityId)}
+                        @keydown=${t=>this._onToggleKeyDown(t,e.entityId)}
+                      >
+                        ${e.visible?K`
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
+                            `:K`
+                              <path
+                                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
+                              />
+                              <path
+                                d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
+                              />
+                              <line x1="1" y1="1" x2="23" y2="23" />
+                            `}
+                      </svg>
+                      ${this.canManage&&this.curves.length>1?K`<button
+                            type="button"
+                            class="remove-icon"
+                            aria-label="Remove ${e.friendlyName}"
+                            title="Remove ${e.friendlyName}"
+                            ?disabled=${this.managing}
+                            @click=${t=>this._startRemove(t,e.entityId)}
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            >
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path
+                                d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                              ></path>
+                            </svg>
+                          </button>`:W}
+                    `}
               </div>
-            `)}
+            `})}
         </div>
+        ${this.canManage||this.managing?K`
+              <div class="add-divider"></div>
+              <div class="add-row">
+                ${this.managing?K`<div class="managing-row" role="status" aria-live="polite">
+                      <span class="spinner" aria-hidden="true"></span>
+                      Updating lights…
+                    </div>`:this._addingLight?this._renderAddForm():K`<button
+                        type="button"
+                        class="add-light-btn"
+                        ?disabled=${this.managing}
+                        @click=${this._startAdd}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <line x1="12" y1="5" x2="12" y2="19"></line>
+                          <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add light
+                      </button>`}
+              </div>
+            `:W}
       </div>
     `}};Ue.styles=o`
     :host {
@@ -690,6 +787,13 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
     .legend-item.selected:hover {
       background: color-mix(in srgb, var(--primary-color, #2563eb) 16%, transparent);
     }
+    .legend-item.confirming {
+      background: color-mix(in srgb, var(--error-color, #db4437) 10%, transparent);
+      cursor: default;
+    }
+    .legend-item.confirming:hover {
+      background: color-mix(in srgb, var(--error-color, #db4437) 12%, transparent);
+    }
     .color-dot {
       width: 10px;
       height: 10px;
@@ -743,6 +847,50 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
       border-radius: 4px;
       opacity: 0.9;
     }
+    .remove-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      opacity: 0;
+      transition:
+        opacity 0.15s ease,
+        color 0.15s ease;
+      padding: 4px;
+      box-sizing: content-box;
+      color: var(--secondary-text-color, #616161);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .legend-item:hover .remove-icon,
+    .legend-item:focus-within .remove-icon {
+      opacity: 0.7;
+    }
+    .remove-icon:hover {
+      opacity: 1 !important;
+      color: var(--error-color, #db4437);
+    }
+    .remove-icon:focus {
+      outline: none;
+    }
+    .remove-icon:focus-visible {
+      outline: 2px solid var(--error-color, #db4437);
+      outline-offset: 2px;
+      border-radius: 4px;
+      opacity: 1;
+    }
+    .remove-icon:disabled {
+      cursor: not-allowed;
+      opacity: 0.3 !important;
+    }
+    .remove-icon svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
     .name {
       white-space: nowrap;
       overflow: hidden;
@@ -759,6 +907,183 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
       min-width: 2.8ch;
       text-align: right;
     }
+    .confirm-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+    .confirm-text {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      color: var(--error-color, #db4437);
+      font-weight: 500;
+    }
+    .confirm-btn {
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 6px;
+      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+      background: transparent;
+      color: var(--secondary-text-color, #616161);
+      cursor: pointer;
+      font-family: inherit;
+      flex-shrink: 0;
+    }
+    .confirm-btn.danger {
+      background: var(--error-color, #db4437);
+      border-color: var(--error-color, #db4437);
+      color: #fff;
+    }
+    .confirm-btn.danger:hover {
+      opacity: 0.9;
+    }
+    .confirm-btn:focus-visible {
+      outline: 2px solid var(--primary-color, #2563eb);
+      outline-offset: 2px;
+    }
+    .add-divider {
+      height: 1px;
+      margin: 6px 10px;
+      background: var(--divider-color, rgba(127, 127, 127, 0.2));
+    }
+    .add-row {
+      padding: 6px 10px 8px;
+    }
+    .add-light-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: transparent;
+      border: 1px dashed var(--divider-color, rgba(127, 127, 127, 0.3));
+      border-radius: 8px;
+      color: var(--secondary-text-color, #616161);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      width: 100%;
+      transition:
+        border-color 0.15s ease,
+        color 0.15s ease,
+        background 0.15s ease;
+    }
+    .add-light-btn:hover:not(:disabled) {
+      border-color: var(--primary-color, #2563eb);
+      border-style: solid;
+      color: var(--primary-color, #2563eb);
+      background: color-mix(in srgb, var(--primary-color, #2563eb) 6%, transparent);
+    }
+    .add-light-btn:focus-visible {
+      outline: 2px solid var(--primary-color, #2563eb);
+      outline-offset: 2px;
+    }
+    .add-light-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .add-light-btn svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+    .add-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .add-form label {
+      font-size: 11px;
+      color: var(--secondary-text-color, #616161);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .preset-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .preset-field select {
+      padding: 6px 10px;
+      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+      border-radius: 8px;
+      background: var(--card-background-color, #fff);
+      color: var(--primary-text-color, #212121);
+      font-family: inherit;
+      font-size: 13px;
+    }
+    .preset-field select:focus {
+      outline: none;
+      border-color: var(--primary-color, #2563eb);
+      box-shadow: 0 0 0 1px var(--primary-color, #2563eb);
+    }
+    .add-form-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+    .add-form-actions button {
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 6px;
+      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+      background: transparent;
+      color: var(--secondary-text-color, #616161);
+      cursor: pointer;
+      font-family: inherit;
+      transition:
+        border-color 0.15s ease,
+        color 0.15s ease,
+        background 0.15s ease;
+    }
+    .add-form-actions button:hover:not(:disabled) {
+      border-color: var(--primary-color, #2563eb);
+      color: var(--primary-color, #2563eb);
+    }
+    .add-form-actions button.primary {
+      background: var(--primary-color, #2563eb);
+      border-color: var(--primary-color, #2563eb);
+      color: #fff;
+    }
+    .add-form-actions button.primary:hover:not(:disabled) {
+      opacity: 0.9;
+      color: #fff;
+    }
+    .add-form-actions button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .managing-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 10px;
+      color: var(--secondary-text-color, #616161);
+      font-size: 12px;
+    }
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid color-mix(in srgb, var(--secondary-text-color, #616161) 30%, transparent);
+      border-top-color: var(--primary-color, #2563eb);
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
     @media (max-width: 500px) {
       .legend-item {
         padding: 10px 10px;
@@ -774,8 +1099,15 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
         margin-left: auto;
         box-sizing: content-box;
       }
+      .remove-icon {
+        opacity: 0.6;
+      }
+      .remove-icon svg {
+        width: 18px;
+        height: 18px;
+      }
     }
-  `,Ue._shapes=["circle","square","diamond","triangle","bar"],e([ge({type:Array})],Ue.prototype,"curves",void 0),e([ge({type:String})],Ue.prototype,"selectedCurveId",void 0),e([ge({type:Number})],Ue.prototype,"scrubberPosition",void 0),Ue=Re=e([he("curve-legend")],Ue);let ze=class extends de{constructor(){super(...arguments),this.dirty=!1,this.readOnly=!1,this.saving=!1,this.canUndo=!1}_onSave(){this.dispatchEvent(new CustomEvent("save-curves",{bubbles:!0,composed:!0}))}_onCancel(){this.dispatchEvent(new CustomEvent("cancel-curves",{bubbles:!0,composed:!0}))}_onUndo(){this.dispatchEvent(new CustomEvent("undo-curves",{bubbles:!0,composed:!0}))}render(){return this.readOnly?K`
+  `,Ue._shapes=["circle","square","diamond","triangle","bar"],e([ue({type:Array})],Ue.prototype,"curves",void 0),e([ue({type:String})],Ue.prototype,"selectedCurveId",void 0),e([ue({type:Number})],Ue.prototype,"scrubberPosition",void 0),e([ue({type:Boolean})],Ue.prototype,"canManage",void 0),e([ue({type:Boolean})],Ue.prototype,"managing",void 0),e([ue({type:Array})],Ue.prototype,"excludeEntityIds",void 0),e([ue({type:Array})],Ue.prototype,"presetOptions",void 0),e([ue({attribute:!1})],Ue.prototype,"hass",void 0),e([ve()],Ue.prototype,"_addingLight",void 0),e([ve()],Ue.prototype,"_pendingAddEntity",void 0),e([ve()],Ue.prototype,"_pendingPreset",void 0),e([ve()],Ue.prototype,"_confirmingRemove",void 0),Ue=De=e([he("curve-legend")],Ue);let ze=class extends de{constructor(){super(...arguments),this.dirty=!1,this.readOnly=!1,this.saving=!1,this.canUndo=!1}_onSave(){this.dispatchEvent(new CustomEvent("save-curves",{bubbles:!0,composed:!0}))}_onCancel(){this.dispatchEvent(new CustomEvent("cancel-curves",{bubbles:!0,composed:!0}))}_onUndo(){this.dispatchEvent(new CustomEvent("undo-curves",{bubbles:!0,composed:!0}))}render(){return this.readOnly?K`
         <div class="footer">
           <div class="read-only">
             <svg
@@ -917,7 +1249,7 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
         min-height: 44px;
       }
     }
-  `,e([ge({type:Boolean})],ze.prototype,"dirty",void 0),e([ge({type:Boolean})],ze.prototype,"readOnly",void 0),e([ge({type:Boolean})],ze.prototype,"saving",void 0),e([ge({type:Boolean})],ze.prototype,"canUndo",void 0),ze=e([he("curve-footer")],ze);const Le=K`<svg
+  `,e([ue({type:Boolean})],ze.prototype,"dirty",void 0),e([ue({type:Boolean})],ze.prototype,"readOnly",void 0),e([ue({type:Boolean})],ze.prototype,"saving",void 0),e([ue({type:Boolean})],ze.prototype,"canUndo",void 0),ze=e([he("curve-footer")],ze);const Be=K`<svg
   class="status-icon"
   viewBox="0 0 24 24"
   fill="none"
@@ -931,7 +1263,7 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
   ></path>
   <line x1="12" y1="9" x2="12" y2="13"></line>
   <line x1="12" y1="17" x2="12.01" y2="17"></line>
-</svg>`;let Be=class extends de{constructor(){super(...arguments),this._config={},this._hass=null}setConfig(e){this._config=e}set hass(e){this._hass=e}_fireConfigChanged(){this.dispatchEvent(new CustomEvent("config-changed",{detail:{config:this._config},bubbles:!0,composed:!0}))}_onEntityChange(e){const t=e.detail?.value??"";this._config={...this._config,entity:t||void 0},this._fireConfigChanged()}_onTitleChange(e){const t=e.target.value;this._config={...this._config,title:t||void 0},this._fireConfigChanged()}render(){const e=this._config.entity??"",t=this._config.title??"";return K`
+</svg>`;let Ne=class extends de{constructor(){super(...arguments),this._config={},this._hass=null}setConfig(e){this._config=e}set hass(e){this._hass=e}_fireConfigChanged(){this.dispatchEvent(new CustomEvent("config-changed",{detail:{config:this._config},bubbles:!0,composed:!0}))}_onEntityChange(e){const t=e.detail?.value??"";this._config={...this._config,entity:t||void 0},this._fireConfigChanged()}_onTitleChange(e){const t=e.target.value;this._config={...this._config,title:t||void 0},this._fireConfigChanged()}render(){const e=this._config.entity??"",t=this._config.title??"";return K`
       <div class="form">
         <div class="field">
           <label>Entity</label>
@@ -954,7 +1286,7 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
           />
         </div>
       </div>
-    `}};Be.styles=o`
+    `}};Ne.styles=o`
     :host {
       display: block;
     }
@@ -994,7 +1326,7 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
       color: var(--secondary-text-color, #616161);
       opacity: 0.7;
     }
-  `,e([ve()],Be.prototype,"_config",void 0),e([ve()],Be.prototype,"_hass",void 0),Be=e([he("lightener-curve-card-editor")],Be);let He=class extends de{constructor(){super(...arguments),this._curves=[],this._originalCurves=[],this._config={},this._selectedCurveId=null,this._saveState=Te,this._loadError=null,this._loading=!1,this._scrubberPosition=null,this._cancelAnimating=!1,this._hass=null,this._undoStack=[],this._dragUndoPushed=!1,this._loaded=!1,this._loadedEntityId=void 0,this._loadErrorEntityId=void 0,this._boundKeyHandler=null,this._boundBeforeUnload=null,this._saveSuccessTimer=null,this._cancelAnimFrame=null,this._previewActive=!1,this._showPresets=!1,this._previewRafPending=!1,this._previewTrailingTimer=null,this._lastPreviewTime=0,this._previewRestoreBrightness=new Map,this._lastEmittedDirtyState=!1,this._startPreview=()=>{if(this._hass&&!this._previewActive){this._previewActive=!0,null===this._scrubberPosition&&(this._scrubberPosition=50),this._previewRestoreBrightness.clear();for(const e of this._curves){const t=this._hass.states[e.entityId];t&&this._previewRestoreBrightness.set(e.entityId,"off"===t.state?null:t.attributes.brightness??void 0)}this._previewLights(this._scrubberPosition)}},this._stopPreview=()=>{if(this._previewActive&&this._hass){this._previewActive=!1,this._previewRafPending=!1,this._previewTrailingTimer&&(clearTimeout(this._previewTrailingTimer),this._previewTrailingTimer=null);for(const[e,t]of this._previewRestoreBrightness)null===t?this._hass.callService("light","turn_off",{entity_id:e}).catch(()=>{}):void 0===t?this._hass.callService("light","turn_on",{entity_id:e}).catch(()=>{}):this._hass.callService("light","turn_on",{entity_id:e,brightness:t}).catch(()=>{});this._previewRestoreBrightness.clear()}},this._PREVIEW_INTERVAL_MS=300,this._pendingPreviewPosition=null}get _saving(){return"saving"===this._saveState.phase}get _saveSuccess(){return"saved"===this._saveState.phase}get _saveError(){return"error"===(e=this._saveState).phase?e.message:null;var e}_dispatchSave(e){this._saveState=function(e,t){switch(t.type){case"reset":return{phase:"idle"};case"dirty":return"idle"===e.phase?{phase:"dirty"}:e;case"save-start":return"saving"===e.phase?e:{phase:"saving"};case"save-success":return"saving"!==e.phase?e:{phase:"saved"};case"save-error":return"saving"!==e.phase?e:{phase:"error",message:t.message};case"save-clear":return"saved"===e.phase||"error"===e.phase?{phase:"idle"}:e}}(this._saveState,e)}get _embedded(){return!0===this._config.embedded}static getConfigElement(){return document.createElement("lightener-curve-card-editor")}static getStubConfig(){return{type:"custom:lightener-curve-card"}}setConfig(e){const t=e.entity!==this._config.entity;this._config=e,t&&(this._previewActive&&this._stopPreview(),this._loaded=!1,this._loadedEntityId=void 0,this._loadErrorEntityId=void 0,this._showPresets=!1,this._tryLoadCurves())}set hass(e){const t=!!this._hass;this._hass=e,t&&this._loaded||this._tryLoadCurves()}getCardSize(){return 4}getGridOptions(){return{columns:12,rows:9,min_columns:6,min_rows:6}}get _isAdmin(){return this._hass?.user?.is_admin??!1}get _entityId(){return this._config.entity}get _isDirty(){return!function(e,t){if(e.length!==t.length)return!1;for(let i=0;i<e.length;i++){const r=e[i].controlPoints,s=t[i].controlPoints;if(r.length!==s.length)return!1;for(let e=0;e<r.length;e++){if(r[e].lightener!==s[e].lightener)return!1;if(r[e].target!==s[e].target)return!1}}return!0}(this._curves,this._originalCurves)}get dirty(){return this._isDirty}connectedCallback(){super.connectedCallback(),this._loadErrorEntityId!==this._entityId&&(this._loaded=!1,this._loadedEntityId=void 0),this._tryLoadCurves(),this._boundKeyHandler=this._onKeyDown.bind(this),this._boundBeforeUnload=this._onBeforeUnload.bind(this),window.addEventListener("keydown",this._boundKeyHandler),window.addEventListener("beforeunload",this._boundBeforeUnload)}disconnectedCallback(){super.disconnectedCallback(),this._previewActive&&this._stopPreview(),this._boundKeyHandler&&window.removeEventListener("keydown",this._boundKeyHandler),this._boundBeforeUnload&&window.removeEventListener("beforeunload",this._boundBeforeUnload),this._saveSuccessTimer&&(clearTimeout(this._saveSuccessTimer),this._saveSuccessTimer=null),this._cancelAnimFrame&&(cancelAnimationFrame(this._cancelAnimFrame),this._cancelAnimFrame=null,this._cancelAnimating=!1)}updated(e){if(super.updated(e),e.has("_curves")||e.has("_originalCurves")||e.has("_cancelAnimating")){const e=this._isDirty;e!==this._lastEmittedDirtyState&&(this._lastEmittedDirtyState=e,this.dispatchEvent(new CustomEvent("curve-dirty-state",{detail:{dirty:e},bubbles:!0,composed:!0})),e&&this._dispatchSave({type:"dirty"}))}}_togglePresets(){this._showPresets=!this._showPresets}_applyPreset(e){if(this._cancelAnimating||this._saving)return;if(0===this._curves.length)return;this._pushUndo();const t=e.controlPoints.map(e=>({...e}));null!==this._selectedCurveId?this._curves=this._curves.map(e=>e.entityId===this._selectedCurveId?{...e,controlPoints:t}:e):this._curves=this._curves.map(e=>({...e,controlPoints:t})),this._showPresets=!1}_renderPresetsPanel(){const e=null!==this._selectedCurveId?`Applying to ${this._curves.find(e=>e.entityId===this._selectedCurveId)?.friendlyName??"selected light"}`:"Applying to all lights";return K`
+  `,e([ve()],Ne.prototype,"_config",void 0),e([ve()],Ne.prototype,"_hass",void 0),Ne=e([he("lightener-curve-card-editor")],Ne);let He=class extends de{constructor(){super(...arguments),this._curves=[],this._originalCurves=[],this._config={},this._selectedCurveId=null,this._saveState=Le,this._loadError=null,this._loading=!1,this._manageError=null,this._managingLights=!1,this._scrubberPosition=null,this._cancelAnimating=!1,this._hass=null,this._undoStack=[],this._dragUndoPushed=!1,this._loaded=!1,this._loadedEntityId=void 0,this._loadErrorEntityId=void 0,this._boundKeyHandler=null,this._boundBeforeUnload=null,this._saveSuccessTimer=null,this._cancelAnimFrame=null,this._previewActive=!1,this._showPresets=!1,this._previewRafPending=!1,this._previewTrailingTimer=null,this._lastPreviewTime=0,this._previewRestoreBrightness=new Map,this._lastEmittedDirtyState=!1,this._startPreview=()=>{if(this._hass&&!this._previewActive){this._previewActive=!0,null===this._scrubberPosition&&(this._scrubberPosition=50),this._previewRestoreBrightness.clear();for(const e of this._curves){const t=this._hass.states[e.entityId];t&&this._previewRestoreBrightness.set(e.entityId,"off"===t.state?null:t.attributes.brightness??void 0)}this._previewLights(this._scrubberPosition)}},this._stopPreview=()=>{if(this._previewActive&&this._hass){this._previewActive=!1,this._previewRafPending=!1,this._previewTrailingTimer&&(clearTimeout(this._previewTrailingTimer),this._previewTrailingTimer=null);for(const[e,t]of this._previewRestoreBrightness)null===t?this._hass.callService("light","turn_off",{entity_id:e}).catch(()=>{}):void 0===t?this._hass.callService("light","turn_on",{entity_id:e}).catch(()=>{}):this._hass.callService("light","turn_on",{entity_id:e,brightness:t}).catch(()=>{});this._previewRestoreBrightness.clear()}},this._PREVIEW_INTERVAL_MS=300,this._pendingPreviewPosition=null}get _saving(){return"saving"===this._saveState.phase}get _saveSuccess(){return"saved"===this._saveState.phase}get _saveError(){return"error"===(e=this._saveState).phase?e.message:null;var e}_dispatchSave(e){this._saveState=function(e,t){switch(t.type){case"reset":return{phase:"idle"};case"dirty":return"idle"===e.phase?{phase:"dirty"}:e;case"save-start":return"saving"===e.phase?e:{phase:"saving"};case"save-success":return"saving"!==e.phase?e:{phase:"saved"};case"save-error":return"saving"!==e.phase?e:{phase:"error",message:t.message};case"save-clear":return"saved"===e.phase||"error"===e.phase?{phase:"idle"}:e}}(this._saveState,e)}get _embedded(){return!0===this._config.embedded}static getConfigElement(){return document.createElement("lightener-curve-card-editor")}static getStubConfig(){return{type:"custom:lightener-curve-card"}}setConfig(e){const t=e.entity!==this._config.entity;this._config=e,t&&(this._previewActive&&this._stopPreview(),this._loaded=!1,this._loadedEntityId=void 0,this._loadErrorEntityId=void 0,this._showPresets=!1,this._tryLoadCurves())}set hass(e){const t=!!this._hass;this._hass=e,t&&this._loaded||this._tryLoadCurves()}getCardSize(){return 4}getGridOptions(){return{columns:12,rows:9,min_columns:6,min_rows:6}}get _isAdmin(){return this._hass?.user?.is_admin??!1}get _entityId(){return this._config.entity}get _isDirty(){return!function(e,t){if(e.length!==t.length)return!1;for(let i=0;i<e.length;i++){const r=e[i].controlPoints,s=t[i].controlPoints;if(r.length!==s.length)return!1;for(let e=0;e<r.length;e++){if(r[e].lightener!==s[e].lightener)return!1;if(r[e].target!==s[e].target)return!1}}return!0}(this._curves,this._originalCurves)}get _canManageLights(){return this._isAdmin&&!!this._hass&&!!this._entityId&&!this._isDirty&&!this._saving&&!this._cancelAnimating&&!this._loading&&!this._managingLights&&!this._loadError}get dirty(){return this._isDirty}connectedCallback(){super.connectedCallback(),this._loadErrorEntityId!==this._entityId&&(this._loaded=!1,this._loadedEntityId=void 0),this._tryLoadCurves(),this._boundKeyHandler=this._onKeyDown.bind(this),this._boundBeforeUnload=this._onBeforeUnload.bind(this),window.addEventListener("keydown",this._boundKeyHandler),window.addEventListener("beforeunload",this._boundBeforeUnload)}disconnectedCallback(){super.disconnectedCallback(),this._previewActive&&this._stopPreview(),this._boundKeyHandler&&window.removeEventListener("keydown",this._boundKeyHandler),this._boundBeforeUnload&&window.removeEventListener("beforeunload",this._boundBeforeUnload),this._saveSuccessTimer&&(clearTimeout(this._saveSuccessTimer),this._saveSuccessTimer=null),this._cancelAnimFrame&&(cancelAnimationFrame(this._cancelAnimFrame),this._cancelAnimFrame=null,this._cancelAnimating=!1)}updated(e){if(super.updated(e),e.has("_curves")||e.has("_originalCurves")||e.has("_cancelAnimating")){const e=this._isDirty;e!==this._lastEmittedDirtyState&&(this._lastEmittedDirtyState=e,this.dispatchEvent(new CustomEvent("curve-dirty-state",{detail:{dirty:e},bubbles:!0,composed:!0})),e&&this._dispatchSave({type:"dirty"}))}}_togglePresets(){this._managingLights||(this._showPresets=!this._showPresets)}_applyPreset(e){if(this._cancelAnimating||this._saving||this._managingLights)return;if(0===this._curves.length)return;this._pushUndo();const t=e.controlPoints.map(e=>({...e}));null!==this._selectedCurveId?this._curves=this._curves.map(e=>e.entityId===this._selectedCurveId?{...e,controlPoints:t}:e):this._curves=this._curves.map(e=>({...e,controlPoints:t})),this._showPresets=!1}_renderPresetsPanel(){const e=null!==this._selectedCurveId?`Applying to ${this._curves.find(e=>e.entityId===this._selectedCurveId)?.friendlyName??"selected light"}`:"Applying to all lights";return K`
       <div class="presets-panel">
         <div class="presets-header">${e}</div>
         ${Me.map(e=>K`
@@ -1020,7 +1352,7 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
             </button>
           `)}
       </div>
-    `}_onKeyDown(e){const t=document.activeElement;t&&t!==this&&t!==document.body&&!this.contains(t)||((e.ctrlKey||e.metaKey)&&"s"===e.key&&this._isDirty&&this._isAdmin&&!this._saving&&(e.preventDefault(),this._onSave()),!e.ctrlKey&&!e.metaKey||"z"!==e.key||e.shiftKey||!this._saving&&!this._cancelAnimating&&this._undoStack.length>0&&(e.preventDefault(),this._undo()),"Escape"===e.key&&(this._showPresets?(e.preventDefault(),this._showPresets=!1):!this._isDirty||this._saving||this._cancelAnimating||(e.preventDefault(),this._onCancel())))}_onBeforeUnload(e){this._isDirty&&(e.preventDefault(),e.returnValue="")}async _tryLoadCurves(){if(this._loaded&&this._loadedEntityId===this._entityId)return;if(this._loading)return;if(!this._hass||!this._entityId){if(0===this._curves.length){const e=[{entityId:"light.ceiling_light",friendlyName:"Ceiling Light",controlPoints:[{lightener:0,target:0},{lightener:20,target:0},{lightener:60,target:80},{lightener:100,target:100}],visible:!0,color:Se[0]},{entityId:"light.sofa_lamp",friendlyName:"Sofa Lamp",controlPoints:[{lightener:0,target:0},{lightener:10,target:50},{lightener:40,target:100},{lightener:70,target:100},{lightener:100,target:60}],visible:!0,color:Se[1]},{entityId:"light.led_strip",friendlyName:"LED Strip",controlPoints:[{lightener:0,target:0},{lightener:1,target:1},{lightener:100,target:100}],visible:!0,color:Se[2]}];this._curves=e,this._originalCurves=be(e)}return}this._loadError=null,this._loading=!0;const e=this._entityId;try{const s=await this._hass.callWS({type:"lightener/get_curves",entity_id:e});if(this._entityId!==e)return;const n=(t=s.entities,i=this._hass.states,r=Se,Object.keys(t).map((e,s)=>{const n=t[e]?.brightness??{},o=[{lightener:0,target:0}];for(const[e,t]of Object.entries(n)){const i=Number(e),r=Number(t);Number.isFinite(i)&&Number.isFinite(r)&&o.push({lightener:i,target:r})}o.sort((e,t)=>e.lightener-t.lightener);const a=i[e]?.attributes?.friendly_name??e.replace("light.","");return{entityId:e,friendlyName:a,controlPoints:o,visible:!0,color:r[s%r.length]}}));this._curves=n,this._originalCurves=be(n),this._loaded=!0,this._loadedEntityId=e,this._loadErrorEntityId=void 0}catch(t){if(this._entityId!==e)return;console.error("[Lightener] Failed to load curves:",t),this._loadError=String(t),this._loaded=!0,this._loadedEntityId=e,this._loadErrorEntityId=e}finally{this._loading=!1,this._entityId!==e&&this._tryLoadCurves()}var t,i,r}_onScrubberMove(e){this._scrubberPosition=e.detail.position,this._previewActive&&this._previewLights(e.detail.position)}_onScrubberStart(){}_onScrubberEnd(){}_onBadgeClick(e){if(!this._hass||!this._isAdmin)return;const{entityId:t,value:i}=e.detail;if(!this._curves.find(e=>e.entityId===t)?.visible)return;const r=Math.round(i/100*255);0===r?this._hass.callService("light","turn_off",{entity_id:t}).catch(()=>{}):this._hass.callService("light","turn_on",{entity_id:t,brightness:r}).catch(()=>{})}_previewLights(e){if(!this._previewActive||!this._hass)return;this._pendingPreviewPosition=e;const t=Date.now()-this._lastPreviewTime;t<this._PREVIEW_INTERVAL_MS?this._previewTrailingTimer||(this._previewTrailingTimer=setTimeout(()=>{this._previewTrailingTimer=null,null!==this._pendingPreviewPosition&&this._previewLights(this._pendingPreviewPosition)},this._PREVIEW_INTERVAL_MS-t)):this._previewRafPending||(this._previewTrailingTimer&&(clearTimeout(this._previewTrailingTimer),this._previewTrailingTimer=null),this._previewRafPending=!0,requestAnimationFrame(()=>{if(this._previewRafPending=!1,this._previewActive&&this._hass){this._lastPreviewTime=Date.now();for(const t of this._curves){if(!t.visible)continue;const i=Math.round(Ee(t.controlPoints,e)),r=Math.round(i/100*255);0===r?this._hass.callService("light","turn_off",{entity_id:t.entityId}).catch(()=>{}):this._hass.callService("light","turn_on",{entity_id:t.entityId,brightness:r}).catch(()=>{})}}}))}_onSelectCurve(e){if(this._cancelAnimating)return;const{entityId:t}=e.detail,i=this._curves.find(e=>e.entityId===t);i&&!i.visible||(this._selectedCurveId=this._selectedCurveId===t?null:t)}_onFocusCurve(e){if(this._cancelAnimating)return;const{entityId:t}=e.detail,i=this._curves.find(e=>e.entityId===t);i&&i.visible&&(this._selectedCurveId=t)}_pushUndo(){this._undoStack.push(be(this._curves)),this._undoStack.length>50&&this._undoStack.shift()}_undo(){0!==this._undoStack.length&&null===this._cancelAnimFrame&&this._animateCurvesTo(this._undoStack.pop())}_animateCurvesTo(e,t){const i=be(this._curves);this._cancelAnimating=!0;const r=performance.now(),s=n=>{const o=n-r,a=Math.min(o/300,1),l=function(e){return 1-Math.pow(1-e,3)}(a),d=e.map((e,t)=>{const r=i[t];if(!r)return e;const s=r.controlPoints,n=e.controlPoints,o=Math.min(s.length,n.length),d=[];for(let e=0;e<o;e++)d.push({lightener:Math.round(s[e].lightener+(n[e].lightener-s[e].lightener)*l),target:Math.round(s[e].target+(n[e].target-s[e].target)*l)});if(n.length>o&&a>=1)for(let e=o;e<n.length;e++)d.push({...n[e]});if(s.length>o&&a<1)for(let e=o;e<s.length;e++)d.push({...s[e]});return d.sort((e,t)=>e.lightener-t.lightener),{...e,controlPoints:d,visible:r.visible}});this._curves=d,a<1?this._cancelAnimFrame=requestAnimationFrame(s):(this._curves=e.map((e,t)=>({...e,visible:i[t]?.visible??e.visible})),this._cancelAnimating=!1,this._cancelAnimFrame=null,t?.())};this._cancelAnimFrame=requestAnimationFrame(s)}_onPointMove(e){if(this._cancelAnimating)return;this._showPresets=!1,this._dragUndoPushed||(this._pushUndo(),this._dragUndoPushed=!0);const{curveIndex:t,pointIndex:i,lightener:r,target:s}=e.detail,n=this._curves[t];n&&this._selectedCurveId!==n.entityId&&(this._selectedCurveId=n.entityId);const o=[...this._curves],a={...o[t]},l=[...a.controlPoints];l[i]={lightener:r,target:s},a.controlPoints=l,o[t]=a,this._curves=o}_onPointDrop(e){this._dragUndoPushed=!1}_onPointAdd(e){if(this._cancelAnimating)return;const{lightener:t,target:i,entityId:r}=e.detail,s=r??this._selectedCurveId;if(!s)return;const n=this._curves.findIndex(e=>e.entityId===s);if(n<0)return;if(this._curves[n].controlPoints.some(e=>e.lightener===t))return;this._pushUndo();const o=[...this._curves],a={...o[n]},l=[...a.controlPoints,{lightener:t,target:i}];l.sort((e,t)=>e.lightener-t.lightener),a.controlPoints=l,o[n]=a,this._curves=o}_onPointRemove(e){if(this._cancelAnimating)return;this._dragUndoPushed=!1;const{curveIndex:t,pointIndex:i}=e.detail,r=this._curves[t];if(!r)return;if(r.controlPoints.length<=2)return;if(0===i)return;this._pushUndo();const s=[...this._curves],n={...s[t]};n.controlPoints=n.controlPoints.filter((e,t)=>t!==i),s[t]=n,this._curves=s}_onToggleCurve(e){if(this._cancelAnimating)return;const{entityId:t}=e.detail,i=this._curves.map(e=>e.entityId===t?{...e,visible:!e.visible}:e);if(this._curves=i,this._selectedCurveId===t){const e=i.find(e=>e.entityId===t);e&&!e.visible&&(this._selectedCurveId=null)}}async saveCurves(){return this._onSave()}async _onSave(){if(!this._hass||!this._entityId||this._saving||this._cancelAnimating)return!1;this._previewActive&&this._stopPreview();const e=this._entityId;this._dispatchSave({type:"save-start"});try{const t=function(e){const t={};for(const i of e){const e={};let r=-1,s=0;for(const t of i.controlPoints)0!==t.lightener&&(e[String(t.lightener)]=String(t.target),t.lightener>r&&(r=t.lightener,s=t.target));!("100"in e)&&r>=0&&(e[100]=String(s)),t[i.entityId]={brightness:e}}return t}(this._curves);return await this._hass.callWS({type:"lightener/save_curves",entity_id:e,curves:t}),this._entityId!==e?(this._previewActive&&this._stopPreview(),this._undoStack=[],this._dispatchSave({type:"reset"}),!1):(this._originalCurves=be(this._curves),this._undoStack=[],this._loaded=!1,this._tryLoadCurves(),this._dispatchSave({type:"save-success"}),this._saveSuccessTimer&&clearTimeout(this._saveSuccessTimer),this._saveSuccessTimer=setTimeout(()=>{this._dispatchSave({type:"save-clear"}),this._saveSuccessTimer=null},2e3),!0)}catch(e){return console.error("[Lightener] Failed to save curves:",e),this._dispatchSave({type:"save-error",message:"Save failed. Check connection."}),!1}}_retryLoad(){this._loaded=!1,this._loadError=null,this._loadErrorEntityId=void 0,this._tryLoadCurves()}_onCancel(){this._cancelAnimating||(this._previewActive&&this._stopPreview(),this._showPresets=!1,this._undoStack=[],this._animateCurvesTo(be(this._originalCurves),()=>{this._selectedCurveId=null,this._dispatchSave({type:"reset"})}))}_renderLoadingSkeleton(){return K`
+    `}_onKeyDown(e){const t=document.activeElement;t&&t!==this&&t!==document.body&&!this.contains(t)||((e.ctrlKey||e.metaKey)&&"s"===e.key&&this._isDirty&&this._isAdmin&&!this._saving&&!this._managingLights&&(e.preventDefault(),this._onSave()),!e.ctrlKey&&!e.metaKey||"z"!==e.key||e.shiftKey||!this._saving&&!this._cancelAnimating&&!this._managingLights&&this._undoStack.length>0&&(e.preventDefault(),this._undo()),"Escape"===e.key&&(this._showPresets?(e.preventDefault(),this._showPresets=!1):!this._isDirty||this._saving||this._cancelAnimating||this._managingLights||(e.preventDefault(),this._onCancel())))}_onBeforeUnload(e){this._isDirty&&(e.preventDefault(),e.returnValue="")}async _tryLoadCurves(){if(this._loaded&&this._loadedEntityId===this._entityId)return;if(this._loading)return;if(!this._hass||!this._entityId){if(0===this._curves.length){const e=[{entityId:"light.ceiling_light",friendlyName:"Ceiling Light",controlPoints:[{lightener:0,target:0},{lightener:20,target:0},{lightener:60,target:80},{lightener:100,target:100}],visible:!0,color:Ie[0]},{entityId:"light.sofa_lamp",friendlyName:"Sofa Lamp",controlPoints:[{lightener:0,target:0},{lightener:10,target:50},{lightener:40,target:100},{lightener:70,target:100},{lightener:100,target:60}],visible:!0,color:Ie[1]},{entityId:"light.led_strip",friendlyName:"LED Strip",controlPoints:[{lightener:0,target:0},{lightener:1,target:1},{lightener:100,target:100}],visible:!0,color:Ie[2]}];this._curves=e,this._originalCurves=be(e)}return}this._loadError=null,this._loading=!0;const e=this._entityId;try{const s=await this._hass.callWS({type:"lightener/get_curves",entity_id:e});if(this._entityId!==e)return;const n=(t=s.entities,i=this._hass.states,r=Ie,Object.keys(t).map((e,s)=>{const n=t[e]?.brightness??{},o=[{lightener:0,target:0}];for(const[e,t]of Object.entries(n)){const i=Number(e),r=Number(t);Number.isFinite(i)&&Number.isFinite(r)&&o.push({lightener:i,target:r})}o.sort((e,t)=>e.lightener-t.lightener);const a=i[e]?.attributes?.friendly_name??e.replace("light.","");return{entityId:e,friendlyName:a,controlPoints:o,visible:!0,color:r[s%r.length]}}));this._curves=n,this._originalCurves=be(n),this._loaded=!0,this._loadedEntityId=e,this._loadErrorEntityId=void 0}catch(t){if(this._entityId!==e)return;console.error("[Lightener] Failed to load curves:",t),this._loadError=String(t),this._loaded=!0,this._loadedEntityId=e,this._loadErrorEntityId=e}finally{this._loading=!1,this._entityId!==e&&this._tryLoadCurves()}var t,i,r}_onScrubberMove(e){this._scrubberPosition=e.detail.position,this._previewActive&&this._previewLights(e.detail.position)}_onScrubberStart(){}_onScrubberEnd(){}_onBadgeClick(e){if(!this._hass||!this._isAdmin)return;const{entityId:t,value:i}=e.detail;if(!this._curves.find(e=>e.entityId===t)?.visible)return;const r=Math.round(i/100*255);0===r?this._hass.callService("light","turn_off",{entity_id:t}).catch(()=>{}):this._hass.callService("light","turn_on",{entity_id:t,brightness:r}).catch(()=>{})}_previewLights(e){if(!this._previewActive||!this._hass)return;this._pendingPreviewPosition=e;const t=Date.now()-this._lastPreviewTime;t<this._PREVIEW_INTERVAL_MS?this._previewTrailingTimer||(this._previewTrailingTimer=setTimeout(()=>{this._previewTrailingTimer=null,null!==this._pendingPreviewPosition&&this._previewLights(this._pendingPreviewPosition)},this._PREVIEW_INTERVAL_MS-t)):this._previewRafPending||(this._previewTrailingTimer&&(clearTimeout(this._previewTrailingTimer),this._previewTrailingTimer=null),this._previewRafPending=!0,requestAnimationFrame(()=>{if(this._previewRafPending=!1,this._previewActive&&this._hass){this._lastPreviewTime=Date.now();for(const t of this._curves){if(!t.visible)continue;const i=Math.round(Ee(t.controlPoints,e)),r=Math.round(i/100*255);0===r?this._hass.callService("light","turn_off",{entity_id:t.entityId}).catch(()=>{}):this._hass.callService("light","turn_on",{entity_id:t.entityId,brightness:r}).catch(()=>{})}}}))}_onSelectCurve(e){if(this._cancelAnimating)return;const{entityId:t}=e.detail,i=this._curves.find(e=>e.entityId===t);i&&!i.visible||(this._selectedCurveId=this._selectedCurveId===t?null:t)}_onFocusCurve(e){if(this._cancelAnimating)return;const{entityId:t}=e.detail,i=this._curves.find(e=>e.entityId===t);i&&i.visible&&(this._selectedCurveId=t)}_pushUndo(){this._undoStack.push(be(this._curves)),this._undoStack.length>50&&this._undoStack.shift()}_undo(){0!==this._undoStack.length&&null===this._cancelAnimFrame&&this._animateCurvesTo(this._undoStack.pop())}_animateCurvesTo(e,t){const i=be(this._curves);this._cancelAnimating=!0;const r=performance.now(),s=n=>{const o=n-r,a=Math.min(o/300,1),l=function(e){return 1-Math.pow(1-e,3)}(a),d=e.map((e,t)=>{const r=i[t];if(!r)return e;const s=r.controlPoints,n=e.controlPoints,o=Math.min(s.length,n.length),d=[];for(let e=0;e<o;e++)d.push({lightener:Math.round(s[e].lightener+(n[e].lightener-s[e].lightener)*l),target:Math.round(s[e].target+(n[e].target-s[e].target)*l)});if(n.length>o&&a>=1)for(let e=o;e<n.length;e++)d.push({...n[e]});if(s.length>o&&a<1)for(let e=o;e<s.length;e++)d.push({...s[e]});return d.sort((e,t)=>e.lightener-t.lightener),{...e,controlPoints:d,visible:r.visible}});this._curves=d,a<1?this._cancelAnimFrame=requestAnimationFrame(s):(this._curves=e.map((e,t)=>({...e,visible:i[t]?.visible??e.visible})),this._cancelAnimating=!1,this._cancelAnimFrame=null,t?.())};this._cancelAnimFrame=requestAnimationFrame(s)}_onPointMove(e){if(this._cancelAnimating)return;this._showPresets=!1,this._dragUndoPushed||(this._pushUndo(),this._dragUndoPushed=!0);const{curveIndex:t,pointIndex:i,lightener:r,target:s}=e.detail,n=this._curves[t];n&&this._selectedCurveId!==n.entityId&&(this._selectedCurveId=n.entityId);const o=[...this._curves],a={...o[t]},l=[...a.controlPoints];l[i]={lightener:r,target:s},a.controlPoints=l,o[t]=a,this._curves=o}_onPointDrop(e){this._dragUndoPushed=!1}_onPointAdd(e){if(this._cancelAnimating)return;const{lightener:t,target:i,entityId:r}=e.detail,s=r??this._selectedCurveId;if(!s)return;const n=this._curves.findIndex(e=>e.entityId===s);if(n<0)return;if(this._curves[n].controlPoints.some(e=>e.lightener===t))return;this._pushUndo();const o=[...this._curves],a={...o[n]},l=[...a.controlPoints,{lightener:t,target:i}];l.sort((e,t)=>e.lightener-t.lightener),a.controlPoints=l,o[n]=a,this._curves=o}_onPointRemove(e){if(this._cancelAnimating)return;this._dragUndoPushed=!1;const{curveIndex:t,pointIndex:i}=e.detail,r=this._curves[t];if(!r)return;if(r.controlPoints.length<=2)return;if(0===i)return;this._pushUndo();const s=[...this._curves],n={...s[t]};n.controlPoints=n.controlPoints.filter((e,t)=>t!==i),s[t]=n,this._curves=s}_onToggleCurve(e){if(this._cancelAnimating)return;const{entityId:t}=e.detail,i=this._curves.map(e=>e.entityId===t?{...e,visible:!e.visible}:e);if(this._curves=i,this._selectedCurveId===t){const e=i.find(e=>e.entityId===t);e&&!e.visible&&(this._selectedCurveId=null)}}async _onAddLight(e){if(!this._hass||!this._entityId||this._managingLights)return;const{entityId:t,preset:i}=e.detail;if(t){this._previewActive&&this._stopPreview(),this._manageError=null,this._managingLights=!0;try{const e={type:"lightener/add_light",entity_id:this._entityId,controlled_entity_id:t};i&&(e.preset=i),await this._hass.callWS(e),this._undoStack=[],this._loaded=!1,await this._tryLoadCurves()}catch(e){console.error("[Lightener] Failed to add light:",e),this._manageError=this._formatManageError(e,"Could not add light.")}finally{this._managingLights=!1}}}async _onRemoveLight(e){if(!this._hass||!this._entityId||this._managingLights)return;const{entityId:t}=e.detail;if(t){this._previewActive&&this._stopPreview(),this._manageError=null,this._managingLights=!0;try{await this._hass.callWS({type:"lightener/remove_light",entity_id:this._entityId,controlled_entity_id:t}),this._selectedCurveId===t&&(this._selectedCurveId=null),this._undoStack=[],this._loaded=!1,await this._tryLoadCurves()}catch(e){console.error("[Lightener] Failed to remove light:",e),this._manageError=this._formatManageError(e,"Could not remove light.")}finally{this._managingLights=!1}}}_formatManageError(e,t){const i=e;return i?.message?i.message:t}async saveCurves(){return this._onSave()}async _onSave(){if(!this._hass||!this._entityId||this._saving||this._cancelAnimating||this._managingLights)return!1;this._previewActive&&this._stopPreview();const e=this._entityId;this._dispatchSave({type:"save-start"});try{const t=function(e){const t={};for(const i of e){const e={};let r=-1,s=0;for(const t of i.controlPoints)0!==t.lightener&&(e[String(t.lightener)]=String(t.target),t.lightener>r&&(r=t.lightener,s=t.target));!("100"in e)&&r>=0&&(e[100]=String(s)),t[i.entityId]={brightness:e}}return t}(this._curves);return await this._hass.callWS({type:"lightener/save_curves",entity_id:e,curves:t}),this._entityId!==e?(this._previewActive&&this._stopPreview(),this._undoStack=[],this._dispatchSave({type:"reset"}),!1):(this._originalCurves=be(this._curves),this._undoStack=[],this._loaded=!1,this._tryLoadCurves(),this._dispatchSave({type:"save-success"}),this._saveSuccessTimer&&clearTimeout(this._saveSuccessTimer),this._saveSuccessTimer=setTimeout(()=>{this._dispatchSave({type:"save-clear"}),this._saveSuccessTimer=null},2e3),!0)}catch(e){return console.error("[Lightener] Failed to save curves:",e),this._dispatchSave({type:"save-error",message:"Save failed. Check connection."}),!1}}_retryLoad(){this._loaded=!1,this._loadError=null,this._loadErrorEntityId=void 0,this._tryLoadCurves()}_onCancel(){this._cancelAnimating||(this._previewActive&&this._stopPreview(),this._showPresets=!1,this._undoStack=[],this._animateCurvesTo(be(this._originalCurves),()=>{this._selectedCurveId=null,this._dispatchSave({type:"reset"})}))}_renderLoadingSkeleton(){return K`
       <div class="loading-indicator" role="status" aria-live="polite">
         <div class="loading-graph" aria-hidden="true"></div>
         <div class="loading-caption">Loading curves…</div>
@@ -1047,6 +1379,7 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
           ${!this._loading&&this._isAdmin?K`<button
                 class="presets-btn ${this._showPresets?"active":""}"
                 @click=${this._togglePresets}
+                ?disabled=${this._managingLights}
                 aria-expanded=${this._showPresets}
               >
                 Presets
@@ -1061,7 +1394,7 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
                   <curve-graph
                     .curves=${this._curves}
                     .selectedCurveId=${this._selectedCurveId}
-                    .readOnly=${!this._isAdmin||this._cancelAnimating}
+                    .readOnly=${!this._isAdmin||this._cancelAnimating||this._managingLights}
                     .scrubberPosition=${this._scrubberPosition}
                     @point-move=${this._onPointMove}
                     @point-drop=${this._onPointDrop}
@@ -1073,14 +1406,14 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
 
             <curve-scrubber
               .curves=${this._curves}
-              .readOnly=${!this._isAdmin}
+              .readOnly=${!this._isAdmin||this._managingLights}
               @scrubber-move=${this._onScrubberMove}
               @scrubber-start=${this._onScrubberStart}
               @scrubber-end=${this._onScrubberEnd}
               @badge-click=${this._onBadgeClick}
             ></curve-scrubber>
 
-            ${this._isAdmin&&!this._cancelAnimating?K`
+            ${!this._isAdmin||this._cancelAnimating||this._managingLights?W:K`
                   <div class="preview-toggle-row">
                     ${this._previewActive?K`<button class="preview-toggle-btn active" @click=${this._stopPreview}>
                           <span class="preview-live-dot"></span>
@@ -1090,7 +1423,7 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
                           Preview on lights
                         </button>`}
                   </div>
-                `:W}
+                `}
           </div>
 
           <div class="side-rail">
@@ -1098,17 +1431,24 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
               .curves=${this._curves}
               .selectedCurveId=${this._selectedCurveId}
               .scrubberPosition=${this._scrubberPosition}
+              .canManage=${this._canManageLights}
+              .managing=${this._managingLights}
+              .excludeEntityIds=${this._entityId?[this._entityId]:[]}
+              .hass=${this._hass}
               @select-curve=${this._onSelectCurve}
               @toggle-curve=${this._onToggleCurve}
+              @add-light=${this._onAddLight}
+              @remove-light=${this._onRemoveLight}
             ></curve-legend>
+            ${this._manageError?K`<div class="error" role="alert">${Be} ${this._manageError}</div>`:W}
           </div>
 
           <div class="footer-slot">
             <curve-footer
               .dirty=${this._isDirty||this._cancelAnimating}
-              .readOnly=${!this._isAdmin}
-              .saving=${this._saving||this._cancelAnimating}
-              .canUndo=${this._undoStack.length>0&&!this._cancelAnimating}
+              .readOnly=${!this._isAdmin||this._managingLights}
+              .saving=${this._saving||this._cancelAnimating||this._managingLights}
+              .canUndo=${this._undoStack.length>0&&!this._cancelAnimating&&!this._managingLights}
               @save-curves=${this._onSave}
               @cancel-curves=${this._onCancel}
               @undo-curves=${()=>this._undo()}
@@ -1135,11 +1475,11 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
                 Saved successfully
               </div>`:W}
           ${this._loadError?K`<div class="error" role="alert">
-                ${Le} Failed to load curves
+                ${Be} Failed to load curves
                 <button type="button" class="retry-link" @click=${this._retryLoad}>Retry</button>
               </div>`:W}
           ${this._saveError?K`<div class="error" role="alert">
-                ${Le} Save failed
+                ${Be} Save failed
                 <button type="button" class="retry-link" @click=${this._onSave}>Retry</button>
               </div>`:W}
         </div>
@@ -1574,4 +1914,4 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
         transform: scale(0.8);
       }
     }
-  `,e([ve()],He.prototype,"_curves",void 0),e([ve()],He.prototype,"_originalCurves",void 0),e([ve()],He.prototype,"_config",void 0),e([ve()],He.prototype,"_selectedCurveId",void 0),e([ve()],He.prototype,"_saveState",void 0),e([ve()],He.prototype,"_loadError",void 0),e([ve()],He.prototype,"_loading",void 0),e([ve()],He.prototype,"_scrubberPosition",void 0),e([ve()],He.prototype,"_cancelAnimating",void 0),e([ve()],He.prototype,"_hass",void 0),e([ve()],He.prototype,"_previewActive",void 0),e([ve()],He.prototype,"_showPresets",void 0),He=e([he("lightener-curve-card")],He);export{He as LightenerCurveCard,Be as LightenerCurveCardEditor};
+  `,e([ve()],He.prototype,"_curves",void 0),e([ve()],He.prototype,"_originalCurves",void 0),e([ve()],He.prototype,"_config",void 0),e([ve()],He.prototype,"_selectedCurveId",void 0),e([ve()],He.prototype,"_saveState",void 0),e([ve()],He.prototype,"_loadError",void 0),e([ve()],He.prototype,"_loading",void 0),e([ve()],He.prototype,"_manageError",void 0),e([ve()],He.prototype,"_managingLights",void 0),e([ve()],He.prototype,"_scrubberPosition",void 0),e([ve()],He.prototype,"_cancelAnimating",void 0),e([ve()],He.prototype,"_hass",void 0),e([ve()],He.prototype,"_previewActive",void 0),e([ve()],He.prototype,"_showPresets",void 0),He=e([he("lightener-curve-card")],He);export{He as LightenerCurveCard,Ne as LightenerCurveCardEditor};
