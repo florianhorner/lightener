@@ -6,6 +6,18 @@ import type { LightCurve } from '../utils/types.js';
 import { LEGEND_SHAPES, sampleCurveAt } from '../utils/graph-math.js';
 
 beforeAll(async () => {
+  // Register ha-entity-picker stub so _pickerReady resolves to true in tests.
+  if (!customElements.get('ha-entity-picker')) {
+    customElements.define(
+      'ha-entity-picker',
+      class extends HTMLElement {
+        excludeEntities: string[] = [];
+        value = '';
+        hass: unknown = null;
+        includeDomains: string[] = [];
+      }
+    );
+  }
   await import('./curve-legend.js');
 });
 

@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.15.0-dev.3] - 2026-04-23
+
+### Fixed
+
+- `<ha-entity-picker>` now loads correctly in the card editor and the add-light
+  form. HA lazy-registers this custom element; if the lightener card is the first
+  on the page to reference it, the element was never defined and rendered blank.
+  We now force registration via `loadCardHelpers()` / `hui-entities-card`, with
+  a plain text fallback and a post-timeout upgrade subscription so a late
+  registration is never permanently missed.
+- Badge overflow count in the "At brightness" scrubber no longer shows "+N more"
+  incorrectly on first render. Measurement is deferred to after first paint via
+  `requestAnimationFrame`, and a `tallestBadge` floor prevents the container from
+  collapsing during font-swap races.
+- "At brightness" scrubber label casing corrected (was ALL CAPS).
+- Badge pill background strengthened in light mode for better visibility.
+
 ## [2.15.0-dev.2] - 2026-04-19
 
 ### Added

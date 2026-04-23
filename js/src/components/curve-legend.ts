@@ -30,6 +30,8 @@ export class CurveLegend extends LitElement {
   @state() private _pendingAddEntity = '';
   @state() private _pendingPreset: string = DEFAULT_PRESET_OPTIONS[0].value;
   @state() private _confirmingRemove: string | null = null;
+  @state() private _pickerReady = false;
+  private _pickerLoadStarted = false;
 
   static styles = css`
     :host {
@@ -308,6 +310,22 @@ export class CurveLegend extends LitElement {
       flex-direction: column;
       gap: 8px;
     }
+    .add-form input[type='text'] {
+      padding: 6px 10px;
+      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+      border-radius: 8px;
+      background: var(--card-background-color, #fff);
+      color: var(--primary-text-color, #212121);
+      font-family: inherit;
+      font-size: 13px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .add-form input[type='text']:focus {
+      outline: none;
+      border-color: var(--primary-color, #2563eb);
+      box-shadow: 0 0 0 1px var(--primary-color, #2563eb);
+    }
     .add-form label {
       font-size: 11px;
       color: var(--secondary-text-color, #616161);
@@ -502,6 +520,64 @@ export class CurveLegend extends LitElement {
     }
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    this._ensurePickerLoaded();
+  }
+
+  protected updated(changed: Map<string, unknown>): void {
+    if (changed.has('hass') && this.hass) this._ensurePickerLoaded();
+  }
+
+  private _ensurePickerLoaded(): void {
+    if (this._pickerLoadStarted) return;
+    this._pickerLoadStarted = true;
+    if (customElements.get('ha-entity-picker')) {
+      this._pickerReady = true;
+      return;
+    }
+    const kickLoaders = async () => {
+      try {
+        const loadHelpers = (window as unknown as { loadCardHelpers?: () => Promise<unknown> })
+          .loadCardHelpers;
+        if (typeof loadHelpers === 'function') await loadHelpers();
+      } catch {
+        /* ignore */
+      }
+      try {
+        const entitiesCard = customElements.get('hui-entities-card') as
+          | (CustomElementConstructor & { getConfigElement?: () => Promise<HTMLElement> })
+          | undefined;
+        await entitiesCard?.getConfigElement?.();
+      } catch {
+        /* ignore */
+      }
+    };
+    kickLoaders();
+    const ready = customElements.whenDefined('ha-entity-picker');
+    const timeout = new Promise<void>((r) => setTimeout(r, 1500));
+    Promise.race([ready, timeout]).then(() => {
+      if (!this.isConnected) return;
+      this._pickerReady = !!customElements.get('ha-entity-picker');
+      if (!this._pickerReady) {
+        console.warn(
+          '[lightener-curve-card] <ha-entity-picker> not available in add-light form — falling back to plain input.'
+        );
+        // Picker may register after the 1500ms window; upgrade when it does.
+        customElements.whenDefined('ha-entity-picker').then(() => {
+          if (!this.isConnected) return;
+          this._pickerReady = true;
+          this.requestUpdate();
+        });
+      }
+      this.requestUpdate();
+    });
+  }
+
+  private _onFallbackAddEntityInput(e: Event): void {
+    this._pendingAddEntity = (e.target as HTMLInputElement).value.trim();
+  }
+
   private _startAdd() {
     this._addingLight = true;
     this._pendingAddEntity = '';
@@ -544,14 +620,21 @@ export class CurveLegend extends LitElement {
     ];
     return html`
       <div class="add-form">
-        <ha-entity-picker
-          .hass=${this.hass}
-          .value=${this._pendingAddEntity}
-          .includeDomains=${['light']}
-          .excludeEntities=${excluded}
-          allow-custom-entity
-          @value-changed=${this._onAddEntityChange}
-        ></ha-entity-picker>
+        ${this._pickerReady
+          ? html`<ha-entity-picker
+              .hass=${this.hass}
+              .value=${this._pendingAddEntity}
+              .includeDomains=${['light']}
+              .excludeEntities=${excluded}
+              allow-custom-entity
+              @value-changed=${this._onAddEntityChange}
+            ></ha-entity-picker>`
+          : html`<input
+              type="text"
+              .value=${this._pendingAddEntity}
+              placeholder="light.entity_id"
+              @input=${this._onFallbackAddEntityInput}
+            />`}
         <div class="preset-field">
           <label for="preset-select">Starting curve</label>
           <select id="preset-select" .value=${this._pendingPreset} @change=${this._onPresetChange}>

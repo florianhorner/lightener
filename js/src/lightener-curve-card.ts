@@ -83,6 +83,8 @@ function createMockCurves(): LightCurve[] {
 export class LightenerCurveCardEditor extends LitElement {
   @state() private _config: Record<string, unknown> = {};
   @state() private _hass: Hass | null = null;
+  @state() private _pickerReady = false;
+  private _pickerLoadStarted = false;
 
   static styles = css`
     :host {
@@ -126,12 +128,19 @@ export class LightenerCurveCardEditor extends LitElement {
     }
   `;
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    this._ensurePickerLoaded();
+  }
+
   setConfig(config: Record<string, unknown>): void {
     this._config = config;
+    this._ensurePickerLoaded();
   }
 
   set hass(hass: Hass) {
     this._hass = hass;
+    this._ensurePickerLoaded();
   }
 
   private _fireConfigChanged(): void {
@@ -156,6 +165,62 @@ export class LightenerCurveCardEditor extends LitElement {
     this._fireConfigChanged();
   }
 
+  // HA lazy-loads <ha-entity-picker>; when our editor is the first thing on
+  // the page to reference it, the tag is never registered and the element
+  // renders blank. Pull it into the registry ourselves by instantiating a
+  // core card's config editor (hui-entities-card transitively defines it).
+  // Falls back to a plain <input> if the picker never becomes available.
+  private _ensurePickerLoaded(): void {
+    if (this._pickerLoadStarted) return;
+    this._pickerLoadStarted = true;
+    if (customElements.get('ha-entity-picker')) {
+      this._pickerReady = true;
+      return;
+    }
+    const kickLoaders = async () => {
+      try {
+        const loadHelpers = (window as unknown as { loadCardHelpers?: () => Promise<unknown> })
+          .loadCardHelpers;
+        if (typeof loadHelpers === 'function') await loadHelpers();
+      } catch {
+        /* ignore — we still have the direct path below */
+      }
+      try {
+        const entitiesCard = customElements.get('hui-entities-card') as
+          | (CustomElementConstructor & { getConfigElement?: () => Promise<HTMLElement> })
+          | undefined;
+        await entitiesCard?.getConfigElement?.();
+      } catch {
+        /* ignore — whenDefined below will time out and we fall back */
+      }
+    };
+    kickLoaders();
+    const ready = customElements.whenDefined('ha-entity-picker');
+    const timeout = new Promise<void>((r) => setTimeout(r, 1500));
+    Promise.race([ready, timeout]).then(() => {
+      if (!this.isConnected) return;
+      this._pickerReady = !!customElements.get('ha-entity-picker');
+      if (!this._pickerReady) {
+        console.warn(
+          '[lightener-curve-card] <ha-entity-picker> not available — falling back to plain input.'
+        );
+        // Picker may register after the 1500ms window; upgrade when it does.
+        customElements.whenDefined('ha-entity-picker').then(() => {
+          if (!this.isConnected) return;
+          this._pickerReady = true;
+          this.requestUpdate();
+        });
+      }
+      this.requestUpdate();
+    });
+  }
+
+  private _onFallbackEntityInput(e: Event): void {
+    const value = (e.target as HTMLInputElement).value.trim();
+    this._config = { ...this._config, entity: value || undefined };
+    this._fireConfigChanged();
+  }
+
   render() {
     const currentEntity = (this._config.entity as string) ?? '';
     const currentTitle = (this._config.title as string) ?? '';
@@ -164,14 +229,29 @@ export class LightenerCurveCardEditor extends LitElement {
       <div class="form">
         <div class="field">
           <label>Entity</label>
-          <ha-entity-picker
-            .hass=${this._hass}
-            .value=${currentEntity}
-            .includeDomains=${['light']}
-            allow-custom-entity
-            @value-changed=${this._onEntityChange}
-          ></ha-entity-picker>
-          <span class="hint">Select a Lightener group to edit its brightness curves.</span>
+          ${this._pickerReady
+            ? html`
+                <ha-entity-picker
+                  .hass=${this._hass}
+                  .value=${currentEntity}
+                  .includeDomains=${['light']}
+                  allow-custom-entity
+                  @value-changed=${this._onEntityChange}
+                ></ha-entity-picker>
+                <span class="hint">Select a Lightener group to edit its brightness curves.</span>
+              `
+            : html`
+                <input
+                  type="text"
+                  .value=${currentEntity}
+                  placeholder="light.your_lightener_group"
+                  @change=${this._onFallbackEntityInput}
+                />
+                <span class="hint">
+                  Entity picker unavailable — enter a Lightener light entity ID manually (must start
+                  with <code>light.</code>).
+                </span>
+              `}
         </div>
         <div class="field">
           <label>Title (optional)</label>
