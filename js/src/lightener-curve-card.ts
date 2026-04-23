@@ -231,7 +231,10 @@ export class LightenerCurveCard extends LitElement {
   private _previewTrailingTimer: ReturnType<typeof setTimeout> | null = null;
   private _lastPreviewTime = 0;
   private _previewRestoreBrightness: Map<string, number | null | undefined> = new Map();
+  private _lastPreviewBrightness: Map<string, number | 'off'> = new Map();
   private _lastEmittedDirtyState = false;
+  private _dirtyVersion = 0;
+  private _cleanVersion = 0;
 
   private get _embedded(): boolean {
     return this._config.embedded === true;
@@ -725,7 +728,7 @@ export class LightenerCurveCard extends LitElement {
   }
 
   private get _isDirty(): boolean {
-    return !curvesEqual(this._curves, this._originalCurves);
+    return this._dirtyVersion !== this._cleanVersion;
   }
 
   private get _canManageLights(): boolean {
@@ -826,6 +829,7 @@ export class LightenerCurveCard extends LitElement {
     } else {
       this._curves = this._curves.map((c) => ({ ...c, controlPoints: pts }));
     }
+    this._dirtyVersion++;
     this._showPresets = false;
   }
 
@@ -925,6 +929,7 @@ export class LightenerCurveCard extends LitElement {
         const mock = createMockCurves();
         this._curves = mock;
         this._originalCurves = cloneCurves(mock);
+        this._cleanVersion = this._dirtyVersion;
       }
       return;
     }
@@ -948,6 +953,7 @@ export class LightenerCurveCard extends LitElement {
       const curves = wsPayloadToCurves(result.entities, this._hass.states, CURVE_COLORS);
       this._curves = curves;
       this._originalCurves = cloneCurves(curves);
+      this._cleanVersion = this._dirtyVersion;
       this._loaded = true;
       this._loadedEntityId = requestedEntity;
       this._loadErrorEntityId = undefined;
@@ -1010,6 +1016,7 @@ export class LightenerCurveCard extends LitElement {
     // Snapshot current brightness for each controlled light so we can restore later.
     // null = was off; undefined = was on but no brightness attribute (on/off-only light).
     this._previewRestoreBrightness.clear();
+    this._lastPreviewBrightness.clear();
     for (const curve of this._curves) {
       const state = this._hass.states[curve.entityId];
       if (state) {
@@ -1044,6 +1051,7 @@ export class LightenerCurveCard extends LitElement {
       }
     }
     this._previewRestoreBrightness.clear();
+    this._lastPreviewBrightness.clear();
   };
 
   /**
@@ -1093,10 +1101,14 @@ export class LightenerCurveCard extends LitElement {
         // Convert 0-100% to HA brightness 0-255
         const brightness = Math.round((value / 100) * 255);
         if (brightness === 0) {
+          if (this._lastPreviewBrightness.get(curve.entityId) === 'off') continue;
+          this._lastPreviewBrightness.set(curve.entityId, 'off');
           this._hass
             .callService('light', 'turn_off', { entity_id: curve.entityId })
             .catch(() => {});
         } else {
+          if (this._lastPreviewBrightness.get(curve.entityId) === brightness) continue;
+          this._lastPreviewBrightness.set(curve.entityId, brightness);
           this._hass
             .callService('light', 'turn_on', { entity_id: curve.entityId, brightness })
             .catch(() => {});
@@ -1191,6 +1203,10 @@ export class LightenerCurveCard extends LitElement {
         }));
         this._cancelAnimating = false;
         this._cancelAnimFrame = null;
+        // If undo/cancel landed back at the clean state, sync versions so _isDirty is O(1).
+        if (curvesEqual(this._curves, this._originalCurves)) {
+          this._cleanVersion = this._dirtyVersion;
+        }
         onComplete?.();
       }
     };
@@ -1219,6 +1235,7 @@ export class LightenerCurveCard extends LitElement {
     curve.controlPoints = points;
     curves[curveIndex] = curve;
     this._curves = curves;
+    this._dirtyVersion++;
   }
 
   private _onPointDrop(_e: CustomEvent): void {
@@ -1246,6 +1263,7 @@ export class LightenerCurveCard extends LitElement {
     curve.controlPoints = points;
     curves[curveIdx] = curve;
     this._curves = curves;
+    this._dirtyVersion++;
   }
 
   private _onPointRemove(e: CustomEvent): void {
@@ -1265,6 +1283,7 @@ export class LightenerCurveCard extends LitElement {
     updated.controlPoints = updated.controlPoints.filter((_, i) => i !== pointIndex);
     curves[curveIndex] = updated;
     this._curves = curves;
+    this._dirtyVersion++;
   }
 
   private _onToggleCurve(e: CustomEvent): void {
@@ -1376,6 +1395,7 @@ export class LightenerCurveCard extends LitElement {
         return false;
       }
       this._originalCurves = cloneCurves(this._curves);
+      this._cleanVersion = this._dirtyVersion;
       this._undoStack = [];
       // Re-fetch from backend in case reload normalised data
       this._loaded = false;
