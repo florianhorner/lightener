@@ -36,8 +36,6 @@ export class CurveScrubber extends LitElement {
     .scrubber-label {
       font-size: 11px;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
       color: var(--secondary-text-color, #616161);
       margin-bottom: 10px;
     }
