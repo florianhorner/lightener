@@ -85,6 +85,19 @@ regressions without flagging small refactors.
 - `scripts/ha-sync` never restarts Home Assistant. If Python code changed, tell the user a manual HA restart or equivalent reload is still required.
 - Only use the release/HACS flow when validating packaging, distribution, or an actual release candidate.
 
+### Triaging bundle / caching issues
+
+If a user reports that a recently-shipped card feature is missing, a card
+editor field is blank, or a button "does nothing" after an upgrade, **do
+not treat them as independent bugs**. The most common cause is that the
+live `lightener-curve-card` class in the user's browser is from a prior
+bundle (HACS install-version vs on-disk mismatch, or browser
+SW/HTTP-cache serving the old bundle first; `customElements.define` is
+one-shot, so the old class wins and the fresh bundle is silently ignored).
+
+See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for the diagnostic
+snippet and full recovery sequence before writing any source patch.
+
 ### Backend test entrypoint
 
 - Never rely on bare `pytest` from the ambient shell PATH in this repo.
