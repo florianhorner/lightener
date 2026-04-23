@@ -99,5 +99,6 @@ Run these in order. Stop as soon as the diagnostic above is healthy.
 ## Permanent fix (tracked)
 
 This will recur for every user upgrading across a bundle change until the
-served path is version-stamped. See GitHub issue referenced in
-[CLAUDE.md](../CLAUDE.md#triaging-bundle--caching-issues).
+served path is version-stamped. Track progress in the
+[GitHub issue tracker](https://github.com/florianhorner/lightener-curve-editor/issues)
+or search for "version-stamped bundle path".

@@ -198,11 +198,18 @@ export class LightenerCurveCardEditor extends LitElement {
     const ready = customElements.whenDefined('ha-entity-picker');
     const timeout = new Promise<void>((r) => setTimeout(r, 1500));
     Promise.race([ready, timeout]).then(() => {
+      if (!this.isConnected) return;
       this._pickerReady = !!customElements.get('ha-entity-picker');
       if (!this._pickerReady) {
         console.warn(
           '[lightener-curve-card] <ha-entity-picker> not available — falling back to plain input.'
         );
+        // Picker may register after the 1500ms window; upgrade when it does.
+        customElements.whenDefined('ha-entity-picker').then(() => {
+          if (!this.isConnected) return;
+          this._pickerReady = true;
+          this.requestUpdate();
+        });
       }
       this.requestUpdate();
     });
