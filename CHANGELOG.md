@@ -4,52 +4,78 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [2.15.0-dev.3] - 2026-04-23
+## [2.15.0] - 2026-04-25
+
+### Added
+
+- **In-card light management** — admin users can now add and remove lights from a
+  Lightener group directly from the curve editor card. New manage panel with entity
+  picker (or plain text fallback), preset selection, inline remove-confirm row, and
+  pending-state guards. Uses new admin-gated WebSocket commands `add_light` /
+  `remove_light`.
+- Clicking any light badge in the "At brightness" scrubber now controls that
+  individual light directly, setting it to the interpolated brightness at the current
+  scrubber position.
+- `getGridOptions()` implemented — the card declares its preferred grid size
+  (12 columns × 9 rows, min 6 × 6) to HA's Sections dashboard so it auto-sizes
+  correctly on first drop.
+
+### Changed
+
+- Curve rendering is now clipped to the graph plot area — curves and control points
+  no longer bleed outside the graph boundary. Uses a per-instance unique `clipPath`
+  ID to support multiple cards on one dashboard.
+- Legend row hover and selected states now use the HA primary-color tint (matching
+  sidebar hover) instead of a grey overlay.
+- Selected legend row uses a filled background instead of an absolutely-positioned
+  bottom line marker.
+- Browser focus ring on legend rows suppressed; replaced with a rounded `box-shadow`
+  ring that respects `border-radius`.
+- Native browser tooltip (`title` attribute) removed from legend rows — it was
+  appearing as a dark overlay on hover. Full name preserved via `aria-label` for
+  screen readers.
+- Curve endpoint control point is now removable: `Space`, `Delete`, and right-click
+  work on the last point the same as on interior points. The minimum 2-point guard
+  still applies.
+- When a curve has no explicit 100 control point, the UI saves an explicit
+  `(100, last_target)` entry so the curve flattens at the last configured level on
+  reload.
+- ARIA labels on graph points now use two categories — origin (Y-only, no remove)
+  and all other points (free move + remove) — replacing the prior three-way
+  distinction.
 
 ### Fixed
 
 - `<ha-entity-picker>` now loads correctly in the card editor and the add-light
   form. HA lazy-registers this custom element; if the lightener card is the first
   on the page to reference it, the element was never defined and rendered blank.
-  We now force registration via `loadCardHelpers()` / `hui-entities-card`, with
-  a plain text fallback and a post-timeout upgrade subscription so a late
-  registration is never permanently missed.
+  We now force registration via `loadCardHelpers()` / `hui-entities-card`, with a
+  plain text fallback and a post-timeout upgrade subscription so a late registration
+  is never permanently missed.
 - Badge overflow count in the "At brightness" scrubber no longer shows "+N more"
   incorrectly on first render. Measurement is deferred to after first paint via
   `requestAnimationFrame`, and a `tallestBadge` floor prevents the container from
   collapsing during font-swap races.
 - "At brightness" scrubber label casing corrected (was ALL CAPS).
 - Badge pill background strengthened in light mode for better visibility.
-
-## [2.15.0-dev.2] - 2026-04-19
-
-### Added
-
-- Clicking any light badge in the "At brightness" scrubber now controls that individual light directly, setting it to the interpolated brightness at the current scrubber position.
-- `getGridOptions()` implemented — the card declares its preferred grid size (12 columns × 9 rows, min 6 × 6) to HA's Sections dashboard so it auto-sizes correctly on first drop.
-
-### Changed
-
-- Curve rendering is now clipped to the graph plot area — curves and control points no longer bleed outside the graph boundary. Uses a per-instance unique `clipPath` ID to support multiple cards on one dashboard.
-- Legend row hover and selected states now use the HA primary-color tint (matching sidebar hover) instead of a grey overlay.
-- Selected legend row uses a filled background instead of an absolutely-positioned bottom line marker.
-- Browser focus ring on legend rows suppressed; replaced with a rounded `box-shadow` ring that respects `border-radius`.
-- Native browser tooltip (`title` attribute) removed from legend rows — it was appearing as a dark overlay on hover. Full name preserved via `aria-label` for screen readers.
-- Curve endpoint control point is now removable: `Space`, `Delete`, and right-click work on the last point the same as on interior points. The minimum 2-point guard still applies.
-- When a curve has no explicit 100 control point, the UI saves an explicit `(100, last_target)` entry so the curve flattens at the last configured level on reload.
-- ARIA labels on graph points now use two categories — origin (Y-only, no remove) and all other points (free move + remove) — replacing the prior three-way distinction.
-
-### Fixed
-
 - Badge click in scrubber correctly skips hidden (visibility-off) lights.
-- Curve graph rendering and preview sampling now use the same piecewise-linear interpolation as the backend brightness map, so scrubber values, previewed brightness, and saved behavior no longer diverge.
-- Preview restore correctly handles on/off-only lights (no brightness attribute): they are restored with `turn_on` without a brightness argument.
-- Save-success timer is cleared before re-arming on rapid successive saves, preventing a status flap when saves complete inside the 2-second display window.
+- Curve graph rendering and preview sampling now use the same piecewise-linear
+  interpolation as the backend brightness map, so scrubber values, previewed
+  brightness, and saved behavior no longer diverge.
+- Preview restore correctly handles on/off-only lights (no brightness attribute):
+  they are restored with `turn_on` without a brightness argument.
+- Save-success timer is cleared before re-arming on rapid successive saves,
+  preventing a status flap when saves complete inside the 2-second display window.
 
 ### Security
 
-- Release workflow now validates the tag name against a strict semver regex before use and passes it via `strenv()` instead of shell interpolation, closing a CI script injection vector in the `yq` version-patching step.
-- `ws_list_entities` access control decision documented: the endpoint intentionally omits `require_admin` so non-admin users can view curves in read-only mode via the sidebar panel. `config_entry_id` is intentionally included because the panel uses it for per-entry filtering.
+- Release workflow now validates the tag name against a strict semver regex before
+  use and passes it via `strenv()` instead of shell interpolation, closing a CI
+  script injection vector in the `yq` version-patching step.
+- `ws_list_entities` access control decision documented: the endpoint intentionally
+  omits `require_admin` so non-admin users can view curves in read-only mode via
+  the sidebar panel. `config_entry_id` is intentionally included because the panel
+  uses it for per-entry filtering.
 
 ## [2.14.0] - 2026-04-17
 
