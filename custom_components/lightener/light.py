@@ -97,8 +97,11 @@ async def async_setup_entry(
     """Set up entities for config entries."""
     unique_id = config_entry.entry_id
 
-    # The unique id of the light will simply match the config entry ID.
-    async_add_entities([LightenerLight(hass, config_entry.data, unique_id)])
+    entity = LightenerLight(hass, config_entry.data, unique_id)
+    # Store a reference so ws_save_curves can do a targeted curve refresh
+    # without triggering a full config entry reload.
+    hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = entity
+    async_add_entities([entity])
 
 
 async def async_setup_platform(
@@ -167,6 +170,22 @@ class LightenerLight(LightGroup):
             "Created lightener `%s`",
             config_data[CONF_FRIENDLY_NAME],
         )
+
+    def reload_curves(self, entities_data: dict) -> None:
+        """Update brightness curve maps in-place without a full platform reload.
+
+        Called by ws_save_curves when only curve data changes (no entity add/remove).
+        """
+        new_entities = []
+        new_entities_by_id = {}
+        for entity_id, entity_config in entities_data.items():
+            controlled = LightenerControlledLight(
+                entity_id, entity_config, hass=self.hass
+            )
+            new_entities.append(controlled)
+            new_entities_by_id[entity_id] = controlled
+        self._entities = new_entities
+        self._entities_by_id = new_entities_by_id
 
     @property
     def color_mode(self) -> str | None:
@@ -278,13 +297,18 @@ class LightenerLight(LightGroup):
         ) -> None:
             """Call a service for an entity, logging success and guarding failures."""
             nonlocal service_failures
-            child_span = start_span(
-                _LOGGER,
-                "lightener.turn_on.service_call",
-                trace_id=root_span.trace_id,
-                parent_span_id=root_span.span_id,
-                service=service,
-                controlled_entity_ref=entity_ref(entity.entity_id),
+            child_span = (
+                start_span(
+                    _LOGGER,
+                    "lightener.turn_on.service_call",
+                    trace_id=root_span.trace_id,
+                    parent_span_id=root_span.span_id,
+                    sampled=root_span.sampled,
+                    service=service,
+                    controlled_entity_ref=entity_ref(entity.entity_id),
+                )
+                if root_span.sampled
+                else root_span
             )
             call_started = monotonic()
             try:
@@ -503,6 +527,7 @@ class LightenerLight(LightGroup):
             # Calculates the brighteness by checking if the current levels in al controlled lights
             # preciselly match one of the possible values for this lightener.
             common_levels: set[int] | None = None
+            _levels_cache: dict[tuple[str, int], set[int]] = {}
             for entity_id in self._entity_ids:
                 state = self.hass.states.get(entity_id)
 
@@ -540,9 +565,13 @@ class LightenerLight(LightGroup):
                     )
 
                     if entity_brightness is not None:
-                        entity_levels = set(
-                            entity.translate_brightness_back(entity_brightness)
-                        )
+                        cache_key = (entity.entity_id, entity_brightness)
+                        entity_levels = _levels_cache.get(cache_key)
+                        if entity_levels is None:
+                            entity_levels = set(
+                                entity.translate_brightness_back(entity_brightness)
+                            )
+                            _levels_cache[cache_key] = entity_levels
                     else:
                         entity_levels = set()
 

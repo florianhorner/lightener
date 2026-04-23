@@ -20,6 +20,7 @@ class Span:
     span_id: str
     parent_span_id: str | None
     start_ts: float
+    sampled: bool = True
 
 
 def entity_ref(entity_id: str) -> str:
@@ -39,6 +40,8 @@ def log_event(
     **fields: Any,
 ) -> None:
     """Emit a structured event log."""
+    if not logger.isEnabledFor(level):
+        return
     payload = {"event": event, **fields}
     logger.log(level, _serialize(payload))
 
@@ -68,6 +71,7 @@ def start_span(
     *,
     trace_id: str | None = None,
     parent_span_id: str | None = None,
+    sampled: bool = True,
     **fields: Any,
 ) -> Span:
     """Start a new span and emit a start event."""
@@ -77,6 +81,7 @@ def start_span(
         span_id=uuid.uuid4().hex[:16],
         parent_span_id=parent_span_id,
         start_ts=monotonic(),
+        sampled=sampled,
     )
     log_event(
         logger,

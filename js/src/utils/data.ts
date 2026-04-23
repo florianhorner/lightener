@@ -71,12 +71,14 @@ export function wsPayloadToCurves(
   });
 }
 
+/** Deep-clone a single LightCurve. */
+export function cloneCurve(curve: LightCurve): LightCurve {
+  return { ...curve, controlPoints: curve.controlPoints.map((cp) => ({ ...cp })) };
+}
+
 /** Deep-clone an array of LightCurves (for dirty-state tracking). */
 export function cloneCurves(curves: LightCurve[]): LightCurve[] {
-  return curves.map((c) => ({
-    ...c,
-    controlPoints: c.controlPoints.map((cp) => ({ ...cp })),
-  }));
+  return curves.map(cloneCurve);
 }
 
 /**

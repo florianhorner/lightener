@@ -60,13 +60,20 @@ class LightenerEditorPanel extends HTMLElement {
     if (!this._hass || !this._hass.states) {
       return [];
     }
-    return Object.keys(this._hass.states)
-      .filter((entityId) => entityId.startsWith("light.") && this._hass.states[entityId]?.attributes?.entity_id)
+    const statesRef = this._hass.states;
+    if (this._fallbackEntitiesCache && this._fallbackEntitiesStatesRef === statesRef) {
+      return this._fallbackEntitiesCache;
+    }
+    const result = Object.keys(statesRef)
+      .filter((entityId) => entityId.startsWith("light.") && statesRef[entityId]?.attributes?.entity_id)
       .map((entityId) => ({
         entity_id: entityId,
-        name: this._hass.states[entityId].attributes.friendly_name || entityId,
+        name: statesRef[entityId].attributes.friendly_name || entityId,
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
+    this._fallbackEntitiesCache = result;
+    this._fallbackEntitiesStatesRef = statesRef;
+    return result;
   }
 
   _getEditorEntities() {

@@ -724,17 +724,21 @@ async def test_remove_light_reports_reload_failure(
     assert result["error"]["code"] == "reload_failed"
 
 
-async def test_save_curves_reports_reload_failure(
+async def test_save_curves_uses_targeted_refresh_not_reload(
     hass: HomeAssistant, hass_ws_client
 ) -> None:
-    """ws_save_curves surfaces reload_failed when async_reload returns False."""
+    """ws_save_curves updates curves in-place without triggering async_reload."""
+    from unittest.mock import AsyncMock, patch
+
     await _setup_lightener(
         hass,
         {"light.test1": {"brightness": {"60": "100", "10": "50"}}},
     )
 
     ws = await hass_ws_client(hass)
-    with patch.object(hass.config_entries, "async_reload", return_value=False):
+    with patch.object(
+        hass.config_entries, "async_reload", new_callable=AsyncMock
+    ) as mock_reload:
         await ws.send_json(
             {
                 "id": 1,
@@ -745,5 +749,5 @@ async def test_save_curves_reports_reload_failure(
         )
         result = await ws.receive_json()
 
-    assert result["success"] is False
-    assert result["error"]["code"] == "reload_failed"
+    assert result["success"] is True
+    mock_reload.assert_not_called()
