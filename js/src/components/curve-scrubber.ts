@@ -344,7 +344,11 @@ export class CurveScrubber extends LitElement {
   protected firstUpdated(): void {
     this._trackRef = this.renderRoot.querySelector('.track-area');
     this._bindBadgeObserver();
-    this._measureBadgeOverflow();
+    // Defer past first paint so badge offsetHeights are stable before
+    // _measureBadgeOverflow snaps the max-height. A synchronous call here
+    // can catch the container mid-layout (e.g. while fonts are swapping),
+    // producing a wrong snapped height that collapses badges incorrectly.
+    requestAnimationFrame(() => this._measureBadgeOverflow());
   }
 
   protected updated(): void {
@@ -372,20 +376,22 @@ export class CurveScrubber extends LitElement {
     const clipHeight = container.clientHeight;
     const badges = [...container.querySelectorAll<HTMLElement>('.badge[data-value-badge="true"]')];
 
-    // Bail if badges haven't been laid out yet — offsetHeight is 0 before the
-    // browser's first layout pass. Measuring then snaps max-height to 0 which
-    // collapses the container, causing the ResizeObserver to report all badges
-    // as overflowing (the "+N more" wrong-count bug).
+    // Bail if badges haven't been laid out yet (offsetHeight 0 = pre-paint).
     if (badges.length > 0 && badges.some((b) => b.offsetHeight === 0)) return;
+
+    const tallestBadge = badges.reduce((max, b) => Math.max(max, b.offsetHeight), 0);
 
     // Snap the max-height to the bottom of the last fully-visible badge so no
     // badge is shown half-cut. "Fully visible" = bottom edge within clipHeight.
     const lastFullyVisible = [...badges]
       .reverse()
       .find((badge) => badge.offsetTop + badge.offsetHeight <= clipHeight);
-    const snapped = lastFullyVisible
+    const rawSnapped = lastFullyVisible
       ? lastFullyVisible.offsetTop + lastFullyVisible.offsetHeight
       : clipHeight;
+    // Never snap below a single badge row — a smaller value means the container
+    // hasn't settled (font swap, partial layout) and would wrongly hide all badges.
+    const snapped = Math.max(rawSnapped, tallestBadge);
 
     // Count badges whose bottom exceeds the snapped boundary — those are the
     // ones actually hidden by the snap. Counting against raw clipHeight would
