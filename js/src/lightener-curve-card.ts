@@ -79,6 +79,8 @@ function createMockCurves(): LightCurve[] {
 
 // --- Visual card editor for the HA dashboard UI ---
 
+const LIGHT_DOMAINS = ['light'];
+
 @customElement('lightener-curve-card-editor')
 export class LightenerCurveCardEditor extends LitElement {
   @state() private _config: Record<string, unknown> = {};
@@ -234,7 +236,7 @@ export class LightenerCurveCardEditor extends LitElement {
                 <ha-entity-picker
                   .hass=${this._hass}
                   .value=${currentEntity}
-                  .includeDomains=${['light']}
+                  .includeDomains=${LIGHT_DOMAINS}
                   allow-custom-entity
                   @value-changed=${this._onEntityChange}
                 ></ha-entity-picker>
