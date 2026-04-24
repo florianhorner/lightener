@@ -161,4 +161,45 @@ describe('lightener-editor-panel', () => {
     expect(select.value).toBe('light.beta');
     expect(panel.shadowRoot!.querySelector('#switch-guard')!.hasAttribute('hidden')).toBe(true);
   });
+
+  it('completes a pending switch when the current card becomes clean outside the guard actions', async () => {
+    const Panel = customElements.get('lightener-editor-panel');
+    if (!Panel) {
+      throw new Error('lightener-editor-panel was not defined');
+    }
+    const panel = new Panel() as HTMLElement & {
+      hass: unknown;
+      _card: HTMLElement & {
+        emitDirtyState: (dirty: boolean) => void;
+        config?: { entity: string };
+      };
+      _lightenerEntities: Array<{ entity_id: string; name: string }>;
+      _pendingEntity: string | null;
+    };
+
+    document.body.appendChild(panel);
+    panel._lightenerEntities = [
+      { entity_id: 'light.alpha', name: 'Alpha' },
+      { entity_id: 'light.beta', name: 'Beta' },
+    ];
+    panel.hass = { states: {}, callWS: async () => ({ entities: [] }) };
+    await Promise.resolve();
+
+    panel._card.emitDirtyState(true);
+
+    const select = panel.shadowRoot!.querySelector('#entity-select') as HTMLSelectElement;
+    select.value = 'light.beta';
+    select.dispatchEvent(new Event('change'));
+
+    expect(panel._pendingEntity).toBe('light.beta');
+    expect(select.value).toBe('light.alpha');
+
+    panel._card.emitDirtyState(false);
+    await Promise.resolve();
+
+    expect(panel._pendingEntity).toBeNull();
+    expect(panel._card.config).toMatchObject({ entity: 'light.beta' });
+    expect(select.value).toBe('light.beta');
+    expect(panel.shadowRoot!.querySelector('#switch-guard')!.hasAttribute('hidden')).toBe(true);
+  });
 });

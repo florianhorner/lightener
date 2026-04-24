@@ -133,9 +133,10 @@ runtime is standardized on Python 3.13.
 Fast local loop: `scripts/test-fast frontend`
 
 After changing any TypeScript file, run `npm run build` inside `js/` to
-regenerate the bundled JS file in `custom_components/lightener/frontend/`.
-This built file is committed to the repo so that HACS installs work without
-a build step.
+regenerate the committed bundles in `custom_components/lightener/frontend/`
+and `docs/`. The Home Assistant bundle is committed so that HACS installs work
+without a build step, and the docs bundle keeps the GitHub Pages demo in sync
+with the shipped card.
 
 ### Pre-commit hooks
 

@@ -3,6 +3,7 @@
 from unittest.mock import patch
 from uuid import uuid4
 
+import pytest
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -131,6 +132,92 @@ async def test_save_curves_updates_config(hass: HomeAssistant, hass_ws_client) -
         "20": "80",
         "50": "90",
     }
+
+
+async def test_save_curves_refreshes_live_entity_state(
+    hass: HomeAssistant, hass_ws_client
+) -> None:
+    """Saving curves should immediately refresh the live Lightener state."""
+    config_entry = await _setup_lightener(
+        hass,
+        {
+            "light.test1": {
+                "brightness": {"50": "0"},
+            },
+        },
+    )
+    lightener = hass.data[DOMAIN][config_entry.entry_id]
+
+    hass.states.async_set(
+        "light.test1",
+        "on",
+        attributes={"brightness": 1},
+    )
+    lightener.async_update_group_state()
+    lightener.async_write_ha_state()
+    brightness_before = hass.states.get("light.test").attributes["brightness"]
+
+    ws = await hass_ws_client(hass)
+    await ws.send_json(
+        {
+            "id": 10,
+            "type": "lightener/save_curves",
+            "entity_id": "light.test",
+            "curves": {
+                "light.test1": {
+                    "brightness": {"1": "1", "100": "100"},
+                },
+            },
+        }
+    )
+    result = await ws.receive_json()
+
+    assert result["success"] is True
+
+    brightness_after_save = hass.states.get("light.test").attributes["brightness"]
+    lightener.async_update_group_state()
+    lightener.async_write_ha_state()
+    brightness_after_manual_refresh = hass.states.get("light.test").attributes[
+        "brightness"
+    ]
+
+    assert brightness_before != brightness_after_manual_refresh
+    assert brightness_after_save == brightness_after_manual_refresh
+
+
+async def test_save_curves_rolls_back_on_reload_failure(
+    hass: HomeAssistant, hass_ws_client
+) -> None:
+    """A failed save reload must not leave the config entry mutated."""
+    original_entities = {
+        "light.test1": {
+            "brightness": {"60": "100", "10": "50"},
+        },
+    }
+    config_entry = await _setup_lightener(hass, original_entities)
+    hass.data.get(DOMAIN, {}).pop(config_entry.entry_id, None)
+
+    ws = await hass_ws_client(hass)
+    with patch.object(hass.config_entries, "async_reload", return_value=False):
+        await ws.send_json(
+            {
+                "id": 11,
+                "type": "lightener/save_curves",
+                "entity_id": "light.test",
+                "curves": {
+                    "light.test1": {
+                        "brightness": {"20": "80", "50": "90"},
+                    },
+                },
+            }
+        )
+        result = await ws.receive_json()
+
+    assert result["success"] is False
+    assert result["error"]["code"] == "reload_failed"
+
+    updated_entry = hass.config_entries.async_get_entry(config_entry.entry_id)
+    assert dict(updated_entry.data["entities"]) == original_entities
 
 
 async def test_save_curves_validates_range(hass: HomeAssistant, hass_ws_client) -> None:
@@ -320,18 +407,18 @@ async def test_add_light_appends_entity(hass: HomeAssistant, hass_ws_client) -> 
             "id": 1,
             "type": "lightener/add_light",
             "entity_id": "light.test",
-            "controlled_entity_id": "light.new_light",
+            "controlled_entity_id": "light.test2",
         }
     )
     result = await ws.receive_json()
 
     assert result["success"] is True
-    assert "light.new_light" in result["result"]["entities"]
+    assert "light.test2" in result["result"]["entities"]
 
     updated_entry = hass.config_entries.async_get_entry(config_entry.entry_id)
-    assert "light.new_light" in updated_entry.data["entities"]
+    assert "light.test2" in updated_entry.data["entities"]
     # Default preset is linear: 1->1, 100->100
-    assert updated_entry.data["entities"]["light.new_light"]["brightness"] == {
+    assert updated_entry.data["entities"]["light.test2"]["brightness"] == {
         "1": "1",
         "100": "100",
     }
@@ -349,14 +436,14 @@ async def test_add_light_with_preset(hass: HomeAssistant, hass_ws_client) -> Non
             "id": 1,
             "type": "lightener/add_light",
             "entity_id": "light.test",
-            "controlled_entity_id": "light.new_light",
+            "controlled_entity_id": "light.test2",
             "preset": "night_mode",
         }
     )
     result = await ws.receive_json()
 
     assert result["success"] is True
-    assert result["result"]["entities"]["light.new_light"]["brightness"] == {
+    assert result["result"]["entities"]["light.test2"]["brightness"] == {
         "1": "1",
         "20": "3",
         "50": "10",
@@ -426,6 +513,27 @@ async def test_add_light_rejects_non_light_entity(
 
     assert result["success"] is False
     assert result["error"]["code"] == "invalid_format"
+
+
+async def test_add_light_rejects_unknown_light_entity(
+    hass: HomeAssistant, hass_ws_client
+) -> None:
+    """Test ws_add_light rejects light ids that do not exist."""
+    await _setup_lightener(hass)
+
+    ws = await hass_ws_client(hass)
+    await ws.send_json(
+        {
+            "id": 12,
+            "type": "lightener/add_light",
+            "entity_id": "light.test",
+            "controlled_entity_id": "light.not_real",
+        }
+    )
+    result = await ws.receive_json()
+
+    assert result["success"] is False
+    assert result["error"]["code"] == "not_found"
 
 
 async def test_add_light_rejects_unknown_preset(
@@ -569,6 +677,50 @@ async def test_remove_light_drops_entity(hass: HomeAssistant, hass_ws_client) ->
     assert "light.test2" in updated_entry.data["entities"]
 
 
+@pytest.mark.parametrize(
+    ("msg", "entities"),
+    [
+        (
+            {
+                "id": 13,
+                "type": "lightener/add_light",
+                "entity_id": "light.test",
+                "controlled_entity_id": "light.test2",
+            },
+            {"light.test1": {"brightness": {"100": "100"}}},
+        ),
+        (
+            {
+                "id": 14,
+                "type": "lightener/remove_light",
+                "entity_id": "light.test",
+                "controlled_entity_id": "light.test1",
+            },
+            {
+                "light.test1": {"brightness": {"100": "100"}},
+                "light.test2": {"brightness": {"100": "80"}},
+            },
+        ),
+    ],
+)
+async def test_light_mutations_roll_back_on_reload_failure(
+    hass: HomeAssistant, hass_ws_client, msg: dict, entities: dict
+) -> None:
+    """Add/remove websocket mutations should roll back if the reload fails."""
+    config_entry = await _setup_lightener(hass, entities)
+
+    ws = await hass_ws_client(hass)
+    with patch.object(hass.config_entries, "async_reload", return_value=False):
+        await ws.send_json(msg)
+        result = await ws.receive_json()
+
+    assert result["success"] is False
+    assert result["error"]["code"] == "reload_failed"
+
+    updated_entry = hass.config_entries.async_get_entry(config_entry.entry_id)
+    assert dict(updated_entry.data["entities"]) == entities
+
+
 async def test_remove_light_rejects_last_light(
     hass: HomeAssistant, hass_ws_client
 ) -> None:
@@ -687,7 +839,7 @@ async def test_add_light_reports_reload_failure(
                 "id": 1,
                 "type": "lightener/add_light",
                 "entity_id": "light.test",
-                "controlled_entity_id": "light.new_light",
+                "controlled_entity_id": "light.test2",
             }
         )
         result = await ws.receive_json()

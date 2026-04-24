@@ -1,10 +1,12 @@
 """WebSocket API for Lightener curve editor."""
 
 import logging
+from collections.abc import Awaitable, Callable
 from time import monotonic
 
 import voluptuous as vol
 from homeassistant.components import websocket_api
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 
@@ -31,6 +33,51 @@ def _set_entity_list_cache(hass: HomeAssistant, entities: list) -> None:
 
 def _invalidate_entity_list_cache(hass: HomeAssistant) -> None:
     hass.data.pop(_ENTITY_LIST_CACHE_KEY, None)
+
+
+async def _async_restore_config_entry_data(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    previous_data: dict,
+) -> None:
+    """Restore prior config entry data after a failed post-update apply step."""
+    hass.config_entries.async_update_entry(config_entry, data=previous_data)
+    try:
+        await hass.config_entries.async_reload(config_entry.entry_id)
+    except Exception:
+        _LOGGER.exception("Failed to restore Lightener config entry after rollback")
+
+
+async def _async_apply_config_entry_update(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    new_data: dict,
+    apply_change: Callable[[], Awaitable[bool]],
+) -> bool:
+    """Persist new entry data, rolling back if the follow-up apply step fails."""
+    previous_data = dict(config_entry.data)
+    hass.config_entries.async_update_entry(config_entry, data=new_data)
+    try:
+        applied = await apply_change()
+    except Exception:
+        _LOGGER.exception("Failed to apply Lightener config update; rolling back")
+        await _async_restore_config_entry_data(hass, config_entry, previous_data)
+        return False
+
+    if applied:
+        return True
+
+    await _async_restore_config_entry_data(hass, config_entry, previous_data)
+    return False
+
+
+def _controlled_light_exists(hass: HomeAssistant, entity_id: str) -> bool:
+    """Return whether a controlled light entity currently exists in HA."""
+    entity_registry = async_get_entity_registry(hass)
+    return (
+        entity_registry.async_get(entity_id) is not None
+        or hass.states.get(entity_id) is not None
+    )
 
 
 def async_register_commands(hass: HomeAssistant) -> None:
@@ -407,28 +454,30 @@ async def ws_save_curves(
 
     new_data["entities"] = new_entities
 
-    hass.config_entries.async_update_entry(config_entry, data=new_data)
-    _invalidate_entity_list_cache(hass)
+    async def _apply_updated_curves() -> bool:
+        """Refresh the live entity or reload the entry after saving curves."""
+        lightener_entity = hass.data.get(DOMAIN, {}).get(config_entry.entry_id)
+        if lightener_entity is not None:
+            lightener_entity.reload_curves(new_entities)
+            return True
+        return await hass.config_entries.async_reload(config_entry.entry_id)
 
-    # Targeted in-place curve refresh — avoids full platform teardown/setup.
-    # Falls back to full reload if the entity reference is unavailable.
-    lightener_entity = hass.data.get(DOMAIN, {}).get(config_entry.entry_id)
-    if lightener_entity is not None:
-        lightener_entity.reload_curves(new_entities)
-    else:
-        reloaded = await hass.config_entries.async_reload(config_entry.entry_id)
-        if not reloaded:
-            metric(
-                _LOGGER,
-                "lightener.ws.save_curves.reload_failures_total",
-                "counter",
-                1,
-            )
-            end_span(_LOGGER, span, status="error", error_code="reload_failed")
-            connection.send_error(
-                msg["id"], "reload_failed", "Config entry reload failed"
-            )
-            return
+    applied = await _async_apply_config_entry_update(
+        hass,
+        config_entry,
+        new_data,
+        _apply_updated_curves,
+    )
+    if not applied:
+        metric(
+            _LOGGER,
+            "lightener.ws.save_curves.reload_failures_total",
+            "counter",
+            1,
+        )
+        end_span(_LOGGER, span, status="error", error_code="reload_failed")
+        connection.send_error(msg["id"], "reload_failed", "Config entry reload failed")
+        return
 
     connection.send_result(msg["id"])
     duration_ms = (monotonic() - op_started) * 1000
@@ -553,6 +602,20 @@ async def ws_add_light(
         end_span(_LOGGER, span, status="error", error_code="unknown_preset")
         return
 
+    if not _controlled_light_exists(hass, controlled_entity_id):
+        connection.send_error(
+            msg["id"],
+            "not_found",
+            f"Light entity {controlled_entity_id} not found",
+        )
+        end_span(
+            _LOGGER,
+            span,
+            status="error",
+            error_code="controlled_entity_not_found",
+        )
+        return
+
     new_data = dict(config_entry.data)
     new_entities = dict(new_data.get("entities", {}))
 
@@ -568,10 +631,13 @@ async def ws_add_light(
     new_entities[controlled_entity_id] = {"brightness": dict(CURVE_PRESETS[preset_id])}
     new_data["entities"] = new_entities
 
-    hass.config_entries.async_update_entry(config_entry, data=new_data)
-    reloaded = await hass.config_entries.async_reload(config_entry.entry_id)
-    _invalidate_entity_list_cache(hass)
-    if not reloaded:
+    applied = await _async_apply_config_entry_update(
+        hass,
+        config_entry,
+        new_data,
+        lambda: hass.config_entries.async_reload(config_entry.entry_id),
+    )
+    if not applied:
         metric(
             _LOGGER,
             "lightener.ws.add_light.reload_failures_total",
@@ -581,6 +647,7 @@ async def ws_add_light(
         end_span(_LOGGER, span, status="error", error_code="reload_failed")
         connection.send_error(msg["id"], "reload_failed", "Config entry reload failed")
         return
+    _invalidate_entity_list_cache(hass)
 
     connection.send_result(msg["id"], {"entities": new_entities})
     duration_ms = (monotonic() - op_started) * 1000
@@ -677,10 +744,13 @@ async def ws_remove_light(
     del new_entities[controlled_entity_id]
     new_data["entities"] = new_entities
 
-    hass.config_entries.async_update_entry(config_entry, data=new_data)
-    reloaded = await hass.config_entries.async_reload(config_entry.entry_id)
-    _invalidate_entity_list_cache(hass)
-    if not reloaded:
+    applied = await _async_apply_config_entry_update(
+        hass,
+        config_entry,
+        new_data,
+        lambda: hass.config_entries.async_reload(config_entry.entry_id),
+    )
+    if not applied:
         metric(
             _LOGGER,
             "lightener.ws.remove_light.reload_failures_total",
@@ -690,6 +760,7 @@ async def ws_remove_light(
         end_span(_LOGGER, span, status="error", error_code="reload_failed")
         connection.send_error(msg["id"], "reload_failed", "Config entry reload failed")
         return
+    _invalidate_entity_list_cache(hass)
 
     connection.send_result(msg["id"], {"entities": new_entities})
     duration_ms = (monotonic() - op_started) * 1000
