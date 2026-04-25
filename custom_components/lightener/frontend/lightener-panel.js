@@ -15,6 +15,10 @@ class LightenerEditorPanel extends HTMLElement {
     this._onCardDirtyState = (event) => {
       this._cardDirty = event.detail?.dirty === true;
       if (!this._cardDirty && !this._switchSaving) {
+        if (this._pendingEntity) {
+          this._setSelectedEntity(this._pendingEntity);
+          return;
+        }
         this._pendingEntity = null;
       }
       this._renderPendingSwitch();

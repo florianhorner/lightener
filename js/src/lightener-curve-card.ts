@@ -79,6 +79,8 @@ function createMockCurves(): LightCurve[] {
 
 // --- Visual card editor for the HA dashboard UI ---
 
+const LIGHT_DOMAINS = ['light'];
+
 @customElement('lightener-curve-card-editor')
 export class LightenerCurveCardEditor extends LitElement {
   @state() private _config: Record<string, unknown> = {};
@@ -234,7 +236,7 @@ export class LightenerCurveCardEditor extends LitElement {
                 <ha-entity-picker
                   .hass=${this._hass}
                   .value=${currentEntity}
-                  .includeDomains=${['light']}
+                  .includeDomains=${LIGHT_DOMAINS}
                   allow-custom-entity
                   @value-changed=${this._onEntityChange}
                 ></ha-entity-picker>
@@ -1372,6 +1374,7 @@ export class LightenerCurveCard extends LitElement {
     const curves = this._curves.map((c) =>
       c.entityId === entityId ? { ...c, visible: !c.visible } : c
     );
+    // Intentionally no _dirtyVersion++ — visibility is local UI state, not persisted to backend.
     this._curves = curves;
     // If hiding the selected curve, clear selection
     if (this._selectedCurveId === entityId) {

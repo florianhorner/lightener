@@ -186,6 +186,10 @@ class LightenerLight(LightGroup):
             new_entities_by_id[entity_id] = controlled
         self._entities = new_entities
         self._entities_by_id = new_entities_by_id
+        # Recompute the group brightness immediately so the Lightener entity state
+        # stays in sync with the new curve mapping while controlled lights remain on.
+        self.async_update_group_state()
+        self.async_write_ha_state()
 
     @property
     def color_mode(self) -> str | None:

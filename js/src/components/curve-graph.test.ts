@@ -137,6 +137,73 @@ describe('curve-graph SVG def ID scoping', () => {
   });
 });
 
+describe('curve-graph render order', () => {
+  beforeEach(() => {
+    document.body.replaceChildren();
+  });
+
+  function makeMultiGraph(selectedId: string | null) {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.first',
+        friendlyName: 'First',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 100, target: 100 },
+        ],
+        visible: true,
+        color: '#ff0000',
+      },
+      {
+        entityId: 'light.second',
+        friendlyName: 'Second',
+        controlPoints: [
+          { lightener: 0, target: 50 },
+          { lightener: 100, target: 50 },
+        ],
+        visible: true,
+        color: '#00ff00',
+      },
+      {
+        entityId: 'light.third',
+        friendlyName: 'Third',
+        controlPoints: [
+          { lightener: 0, target: 80 },
+          { lightener: 100, target: 20 },
+        ],
+        visible: true,
+        color: '#0000ff',
+      },
+    ];
+    graph.selectedCurveId = selectedId;
+    document.body.appendChild(graph);
+    return graph;
+  }
+
+  it('renders selected curve last (on top) when first curve (index 0) is selected', async () => {
+    const graph = makeMultiGraph('light.first');
+    await graph.updateComplete;
+    const paths = [...graph.shadowRoot!.querySelectorAll<SVGPathElement>('.curve-line')];
+    // Selected curve must be the last rendered path (SVG painters model: last = on top)
+    expect(paths[paths.length - 1].getAttribute('stroke')).toBe('#ff0000');
+  });
+
+  it('renders selected curve last (on top) when a middle curve (index 1) is selected', async () => {
+    const graph = makeMultiGraph('light.second');
+    await graph.updateComplete;
+    const paths = [...graph.shadowRoot!.querySelectorAll<SVGPathElement>('.curve-line')];
+    expect(paths[paths.length - 1].getAttribute('stroke')).toBe('#00ff00');
+  });
+
+  it('renders in original order when no curve is selected', async () => {
+    const graph = makeMultiGraph(null);
+    await graph.updateComplete;
+    const paths = [...graph.shadowRoot!.querySelectorAll<SVGPathElement>('.curve-line')];
+    expect(paths.map((p) => p.getAttribute('stroke'))).toEqual(['#ff0000', '#00ff00', '#0000ff']);
+  });
+});
+
 describe('curve-graph line rendering', () => {
   beforeEach(() => {
     document.body.replaceChildren();

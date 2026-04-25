@@ -854,7 +854,7 @@ export class CurveGraph extends LitElement {
             ? this.curves.findIndex((c) => c.entityId === this.selectedCurveId)
             : -1;
           const order =
-            selectedIdx > 0
+            selectedIdx >= 0
               ? [
                   ...this.curves.slice(0, selectedIdx).map((c, i) => ({ curve: c, idx: i })),
                   ...this.curves
