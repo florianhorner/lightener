@@ -96,6 +96,14 @@ regressions without flagging small refactors.
   behavioral change.
 - When fixing regressions, prefer a narrow patch on top of the released behavior
   over reworking the whole editor surface.
+- Before landing curve editor changes, write down the editor contract being
+  preserved: current feature inventory, native Home Assistant interaction
+  pattern, visual curve behavior, backend brightness semantics, and local
+  preview scenarios. Validate against that contract, not just against tests.
+- Keep visual rendering and real integration behavior separate. A curve may be
+  rendered smoothly, but badges, list values, saved config, and live light
+  preview must stay aligned with backend interpolation unless the backend
+  behavior changes in the same PR.
 
 ### Triaging bundle / caching issues
 

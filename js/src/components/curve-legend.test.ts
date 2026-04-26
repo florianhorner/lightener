@@ -95,6 +95,16 @@ describe('curve-legend', () => {
     expect(items[1]!.classList.contains('selected')).toBe(true);
   });
 
+  it('shows an explicit editing affordance on the selected curve', async () => {
+    const el = makeLegend({ selectedCurveId: 'light.a' });
+    await el.updateComplete;
+    const selected = el.renderRoot.querySelector<HTMLElement>('.legend-item.selected')!;
+    expect(selected.querySelector('.editing-chip')?.textContent).toContain('Editing');
+    expect(selected.querySelector('.clear-edit-icon')?.getAttribute('aria-label')).toBe(
+      'Stop editing Alpha'
+    );
+  });
+
   it('sets aria-selected matching selectedCurveId', async () => {
     const el = makeLegend({ selectedCurveId: 'light.a' });
     await el.updateComplete;
@@ -160,6 +170,17 @@ describe('curve-legend', () => {
     eye.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
     expect(toggleSpy).toHaveBeenCalledTimes(1);
     expect(selectSpy).not.toHaveBeenCalled();
+  });
+
+  it('dispatches select-curve from the stop-editing affordance only once', async () => {
+    const el = makeLegend({ selectedCurveId: 'light.a' });
+    await el.updateComplete;
+    const spy = vi.fn();
+    el.addEventListener('select-curve', spy);
+    const clear = el.renderRoot.querySelector<HTMLButtonElement>('.clear-edit-icon')!;
+    clear.click();
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0]![0].detail).toEqual({ entityId: 'light.a' });
   });
 
   it('dispatches select-curve on item Enter key', async () => {

@@ -219,6 +219,53 @@ export class CurveLegend extends LitElement {
       min-width: 2.8ch;
       text-align: right;
     }
+    .editing-chip {
+      flex-shrink: 0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: color-mix(in srgb, var(--primary-color, #2563eb) 12%, transparent);
+      color: var(--primary-color, #2563eb);
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+    .clear-edit-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      padding: 4px;
+      box-sizing: content-box;
+      color: var(--primary-color, #2563eb);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.7;
+      transition:
+        opacity 0.15s ease,
+        background 0.15s ease;
+    }
+    .clear-edit-icon:hover {
+      opacity: 1;
+      background: color-mix(in srgb, var(--primary-color, #2563eb) 10%, transparent);
+      border-radius: 4px;
+    }
+    .clear-edit-icon:focus {
+      outline: none;
+    }
+    .clear-edit-icon:focus-visible {
+      outline: 2px solid var(--primary-color, #2563eb);
+      outline-offset: 2px;
+      border-radius: 4px;
+      opacity: 1;
+    }
+    .clear-edit-icon svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
     .confirm-row {
       display: flex;
       align-items: center;
@@ -438,6 +485,20 @@ export class CurveLegend extends LitElement {
         width: 18px;
         height: 18px;
       }
+      .editing-chip {
+        font-size: 10px;
+      }
+      .clear-edit-icon {
+        width: 20px;
+        height: 20px;
+        padding: 12px;
+        margin: -12px;
+        box-sizing: content-box;
+      }
+      .clear-edit-icon svg {
+        width: 18px;
+        height: 18px;
+      }
     }
   `;
 
@@ -461,6 +522,11 @@ export class CurveLegend extends LitElement {
         composed: true,
       })
     );
+  }
+
+  private _clearSelection(e: Event, entityId: string) {
+    e.stopPropagation();
+    this._select(entityId);
   }
 
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
@@ -729,6 +795,30 @@ export class CurveLegend extends LitElement {
                               sampleCurveAt(curve.controlPoints, Math.round(this.scrubberPosition))
                             )}%</span
                           >`
+                        : nothing}
+                      ${this.selectedCurveId === curve.entityId
+                        ? html`
+                            <span class="editing-chip">Editing</span>
+                            <button
+                              type="button"
+                              class="clear-edit-icon"
+                              aria-label="Stop editing ${curve.friendlyName}"
+                              title="Stop editing ${curve.friendlyName}"
+                              @click=${(e: Event) => this._clearSelection(e, curve.entityId)}
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              >
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                              </svg>
+                            </button>
+                          `
                         : nothing}
                       <svg
                         class="eye-icon"
