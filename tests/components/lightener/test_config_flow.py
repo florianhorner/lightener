@@ -1,6 +1,7 @@
 """Tests for config_flow."""
 
 from typing import Any
+from unittest.mock import patch
 from uuid import uuid4
 
 import voluptuous as vol
@@ -218,6 +219,40 @@ async def test_options_flow_applies_preset_only_to_new_lights(
         "light.test1": {CONF_BRIGHTNESS: {"10": "20", "80": "90"}},
         "light.test2": {CONF_BRIGHTNESS: dict(CURVE_PRESETS["late_starter"])},
     }
+
+
+async def test_options_flow_rolls_back_when_reload_fails(
+    hass: HomeAssistant,
+) -> None:
+    """Failed options reload should restore the previous config entry data."""
+
+    original_data = {
+        CONF_ENTITIES: {
+            "light.test1": {CONF_BRIGHTNESS: {"10": "20", "80": "90"}},
+        }
+    }
+    entry = MockConfigEntry(
+        domain="lightener",
+        version=LightenerConfigFlow.VERSION,
+        unique_id=str(uuid4()),
+        data=original_data,
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    with patch.object(hass.config_entries, "async_reload", return_value=False):
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            user_input={
+                "controlled_entities": ["light.test1", "light.test2"],
+                "curve_preset": "linear",
+            },
+        )
+
+    assert result["type"] == "form"
+    assert result["errors"]["base"] == "reload_failed"
+    assert dict(entry.data) == original_data
 
 
 async def test_step_lights_no_lightener(hass: HomeAssistant) -> None:

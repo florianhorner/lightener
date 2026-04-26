@@ -1,5 +1,6 @@
 """The config flow for Lightener."""
 
+import logging
 from typing import Any
 
 import voluptuous as vol
@@ -14,6 +15,8 @@ from homeassistant.helpers.entity_registry import (
 from homeassistant.helpers.selector import selector
 
 from .const import CURVE_PRESETS, DEFAULT_BRIGHTNESS, DEFAULT_CURVE_PRESET, DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class LightenerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -135,11 +138,13 @@ class LightenerFlow:
         )
 
     async def async_step_lights(
-        self, user_input: dict[str, Any] | None = None
+        self,
+        user_input: dict[str, Any] | None = None,
+        errors: dict[str, str] | None = None,
     ) -> FlowResult:
         """Manage the selection of the lights controlled by the Lightener light."""
 
-        errors = {}
+        errors = errors or {}
 
         lightener_entities = []
         controlled_entities = []
@@ -240,12 +245,35 @@ class LightenerFlow:
             )
 
         # In an options flow, update the config entry.
+        previous_data = dict(self.config_entry.data)
+        previous_options = self.config_entry.options
         self.flow_handler.hass.config_entries.async_update_entry(
             self.config_entry, data=persist_data, options=self.config_entry.options
         )
 
-        await self.flow_handler.hass.config_entries.async_reload(
-            self.config_entry.entry_id
-        )
+        try:
+            reloaded = await self.flow_handler.hass.config_entries.async_reload(
+                self.config_entry.entry_id
+            )
+        except Exception:
+            _LOGGER.exception(
+                "Failed to reload Lightener config entry after options update"
+            )
+            reloaded = False
+
+        if reloaded is False:
+            self.flow_handler.hass.config_entries.async_update_entry(
+                self.config_entry, data=previous_data, options=previous_options
+            )
+            try:
+                await self.flow_handler.hass.config_entries.async_reload(
+                    self.config_entry.entry_id
+                )
+            except Exception:
+                _LOGGER.exception(
+                    "Failed to restore Lightener config entry after options rollback"
+                )
+            self.data = previous_data.copy()
+            return await self.async_step_lights(None, errors={"base": "reload_failed"})
 
         return self.flow_handler.async_create_entry(title="", data={})
