@@ -43,6 +43,15 @@ describe('curvesToWsPayload', () => {
     expect(payload['light.test'].brightness).toEqual({});
   });
 
+  it('preserves a non-zero origin dim floor', () => {
+    const curves = [makeCurve({ controlPoints: [{ lightener: 0, target: 12 }] })];
+    const payload = curvesToWsPayload(curves);
+    expect(payload['light.test'].brightness).toEqual({
+      '0': '12',
+      '100': '12',
+    });
+  });
+
   it('injects explicit 100 key with last_target when curve has no 100', () => {
     const curves = [
       makeCurve({
@@ -112,6 +121,17 @@ describe('wsPayloadToCurves', () => {
     };
     const curves = wsPayloadToCurves(entities, {}, COLORS);
     expect(curves[0].controlPoints[0]).toEqual({ lightener: 0, target: 0 });
+  });
+
+  it('preserves explicit 0 origin from backend payload', () => {
+    const entities = {
+      'light.a': { brightness: { '0': '12', '100': '90' } },
+    };
+    const curves = wsPayloadToCurves(entities, {}, COLORS);
+    expect(curves[0].controlPoints).toEqual([
+      { lightener: 0, target: 12 },
+      { lightener: 100, target: 90 },
+    ]);
   });
 
   it('sorts control points by lightener value', () => {

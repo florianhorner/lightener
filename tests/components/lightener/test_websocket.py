@@ -226,7 +226,7 @@ async def test_save_curves_validates_range(hass: HomeAssistant, hass_ws_client) 
 
     ws = await hass_ws_client(hass)
 
-    # Key out of range (0 is below minimum of 1)
+    # Key out of range (below minimum of 0)
     await ws.send_json(
         {
             "id": 1,
@@ -234,7 +234,7 @@ async def test_save_curves_validates_range(hass: HomeAssistant, hass_ws_client) 
             "entity_id": "light.test",
             "curves": {
                 "light.test1": {
-                    "brightness": {"0": "50"},
+                    "brightness": {"-1": "50"},
                 },
             },
         }
@@ -364,6 +364,65 @@ async def test_save_curves_rejects_non_numeric_values(
 
     assert result["success"] is False
     assert result["error"]["code"] == "invalid_format"
+
+
+@pytest.mark.parametrize(
+    "curves",
+    [
+        {"light.test1": {"brightness": {"50": 50.5}}},
+        {"light.test1": {"brightness": {"50": True}}},
+        {"light.test1": {"brightness": {"50": False}}},
+        {"light.test1": {}},
+    ],
+)
+async def test_save_curves_rejects_non_integer_or_missing_brightness(
+    hass: HomeAssistant, hass_ws_client, curves: dict
+) -> None:
+    """Test ws_save_curves rejects ambiguous values that int() would truncate."""
+    await _setup_lightener(hass)
+
+    ws = await hass_ws_client(hass)
+    await ws.send_json(
+        {
+            "id": 2,
+            "type": "lightener/save_curves",
+            "entity_id": "light.test",
+            "curves": curves,
+        }
+    )
+    result = await ws.receive_json()
+
+    assert result["success"] is False
+    assert result["error"]["code"] == "invalid_format"
+
+
+async def test_save_curves_preserves_origin_dim_floor(
+    hass: HomeAssistant, hass_ws_client
+) -> None:
+    """Test ws_save_curves accepts and normalizes an explicit 0% origin target."""
+    config_entry = await _setup_lightener(hass)
+
+    ws = await hass_ws_client(hass)
+    await ws.send_json(
+        {
+            "id": 3,
+            "type": "lightener/save_curves",
+            "entity_id": "light.test",
+            "curves": {
+                "light.test1": {
+                    "brightness": {"0": "12", "100": "85"},
+                },
+            },
+        }
+    )
+    result = await ws.receive_json()
+
+    assert result["success"] is True
+    updated_entry = hass.config_entries.async_get_entry(config_entry.entry_id)
+    assert updated_entry.data["entities"]["light.test1"]["brightness"] == {
+        "0": "12",
+        "100": "85",
+    }
 
 
 async def test_save_curves_requires_admin(

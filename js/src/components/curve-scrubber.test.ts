@@ -178,7 +178,7 @@ describe('curve-scrubber — badges', () => {
     expect(valueSpan.style.color).toContain('rgb(179, 107, 0)');
   });
 
-  it('renders the linear interpolated badge value for a peak curve', async () => {
+  it('renders the smooth curve badge value for a peak curve', async () => {
     const el = makeScrubber({
       curves: [
         {
@@ -200,7 +200,7 @@ describe('curve-scrubber — badges', () => {
     await el.updateComplete;
 
     const badge = el.renderRoot.querySelector<HTMLElement>('.badge')!;
-    expect(badge.textContent).toContain('50%');
+    expect(badge.textContent).toContain('63%');
   });
 });
 

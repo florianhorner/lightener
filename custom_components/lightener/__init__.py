@@ -26,30 +26,49 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     websocket.async_register_commands(hass)
 
     # Serve the frontend card and panel JS.
-    # hass.http is unavailable during tests and StaticPathConfig may not
-    # exist in older HA versions, so guard both the import and the call.
+    # hass.http is unavailable during some tests. StaticPathConfig is preferred
+    # when available, with a fallback for older HA versions.
     try:
-        from homeassistant.components.http import StaticPathConfig
-
         if getattr(hass, "http", None) is not None:
-            await hass.http.async_register_static_paths(
-                [
-                    StaticPathConfig(
-                        "/lightener/lightener-curve-card.js",
-                        str(
-                            Path(__file__).parent
-                            / "frontend"
-                            / "lightener-curve-card.js"
-                        ),
-                        cache_headers=False,
-                    ),
-                    StaticPathConfig(
-                        "/lightener/lightener-panel.js",
-                        str(Path(__file__).parent / "frontend" / "lightener-panel.js"),
-                        cache_headers=False,
-                    ),
-                ]
-            )
+            static_paths = [
+                (
+                    "/lightener/lightener-curve-card.js",
+                    str(Path(__file__).parent / "frontend" / "lightener-curve-card.js"),
+                ),
+                (
+                    "/lightener/lightener-panel.js",
+                    str(Path(__file__).parent / "frontend" / "lightener-panel.js"),
+                ),
+            ]
+            registered = False
+
+            try:
+                from homeassistant.components.http import StaticPathConfig
+
+                register_paths = getattr(hass.http, "async_register_static_paths", None)
+                if register_paths is not None:
+                    await register_paths(
+                        [
+                            StaticPathConfig(url_path, path, cache_headers=False)
+                            for url_path, path in static_paths
+                        ]
+                    )
+                    registered = True
+            except ImportError:
+                registered = False
+
+            if not registered:
+                async_register_static_path = getattr(
+                    hass.http, "async_register_static_path", None
+                )
+                register_static_path = getattr(hass.http, "register_static_path", None)
+                for url_path, path in static_paths:
+                    if async_register_static_path is not None:
+                        await async_register_static_path(
+                            url_path, path, cache_headers=False
+                        )
+                    elif register_static_path is not None:
+                        register_static_path(url_path, path, cache_headers=False)
     except Exception:
         _LOGGER.debug("Could not register static paths for frontend assets")
 

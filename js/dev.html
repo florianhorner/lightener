@@ -1,8 +1,9 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
     <title>Lightener Curve Card - Dev Preview</title>
     <style>
       * {
@@ -10,9 +11,9 @@
       }
       body {
         margin: 0;
-        padding: 40px;
-        background: #1a1a1a;
-        font-family: "Roboto", "Segoe UI", sans-serif;
+        padding: 56px 40px 40px;
+        background: #171717;
+        font-family: 'Roboto', 'Segoe UI', sans-serif;
         display: flex;
         justify-content: center;
         align-items: flex-start;
@@ -20,10 +21,10 @@
         min-height: 100vh;
       }
       .preview-container {
-        width: 400px;
+        width: min(560px, calc(50vw - 56px));
       }
       .label {
-        color: #666;
+        color: #777;
         font-size: 12px;
         margin-bottom: 8px;
         text-transform: uppercase;
@@ -52,9 +53,15 @@
         color: #aaa;
         cursor: pointer;
       }
-      .scenario-btn:hover { border-color: #666; color: #fff; }
-      .scenario-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
-      body { padding-top: 56px; }
+      .scenario-btn:hover {
+        border-color: #666;
+        color: #fff;
+      }
+      .scenario-btn.active {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #fff;
+      }
       .light-theme {
         --primary-text-color: #212121;
         --secondary-text-color: #616161;
@@ -62,7 +69,8 @@
         --ha-card-background: #fff;
         --divider-color: rgba(0, 0, 0, 0.12);
         --ha-card-border-radius: 12px;
-        --ha-card-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        --ha-card-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+        --primary-color: #2563eb;
         --error-color: #db4437;
         --success-color: #2563eb;
       }
@@ -73,9 +81,24 @@
         --ha-card-background: #1c1c1c;
         --divider-color: rgba(255, 255, 255, 0.12);
         --ha-card-border-radius: 12px;
-        --ha-card-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+        --ha-card-box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+        --primary-color: #4f8cff;
         --error-color: #ef5350;
-        --success-color: #2563eb;
+        --success-color: #4f8cff;
+      }
+      @media (max-width: 900px) {
+        body {
+          padding-inline: 16px;
+          flex-direction: column;
+          align-items: center;
+        }
+        .preview-container {
+          width: min(560px, 100%);
+        }
+        .scenario-bar {
+          overflow-x: auto;
+          justify-content: flex-start;
+        }
       }
     </style>
   </head>
@@ -85,6 +108,7 @@
       <button class="scenario-btn" data-scenario="two">2 Lights</button>
       <button class="scenario-btn" data-scenario="many">20 Lights</button>
       <button class="scenario-btn" data-scenario="long-ids">Long IDs</button>
+      <button class="scenario-btn" data-scenario="empty">Empty</button>
     </div>
 
     <div class="preview-container light-theme">
@@ -97,116 +121,367 @@
     </div>
 
     <script type="module">
-      import "../custom_components/lightener/frontend/lightener-curve-card.js";
+      import '../custom_components/lightener/frontend/lightener-curve-card.js';
 
-      await customElements.whenDefined("lightener-curve-card");
+      if (!customElements.get('ha-entity-picker')) {
+        customElements.define(
+          'ha-entity-picker',
+          class extends HTMLElement {
+            _value = '';
 
+            connectedCallback() {
+              this.render();
+            }
+
+            set value(value) {
+              this._value = value || '';
+              this.render();
+            }
+
+            get value() {
+              return this._value;
+            }
+
+            set hass(_hass) {
+              this.render();
+            }
+
+            set includeDomains(_domains) {}
+
+            set excludeEntities(_entities) {}
+
+            render() {
+              this.innerHTML = `
+                <input
+                  type="text"
+                  placeholder="light.new_lamp"
+                  value="${this._value}"
+                  style="
+                    width: 100%;
+                    padding: 8px 10px;
+                    border-radius: 8px;
+                    border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+                    background: var(--card-background-color, #fff);
+                    color: var(--primary-text-color, #212121);
+                    font: inherit;
+                  "
+                />
+              `;
+              this.querySelector('input').addEventListener('input', (event) => {
+                this._value = event.target.value;
+                this.dispatchEvent(
+                  new CustomEvent('value-changed', {
+                    detail: { value: this._value },
+                    bubbles: true,
+                    composed: true,
+                  })
+                );
+              });
+            }
+          }
+        );
+      }
+
+      await customElements.whenDefined('lightener-curve-card');
+
+      const LIGHTENER_ENTITY = 'light.preview_lightener';
       const COLORS = [
-        "#42a5f5", "#ef5350", "#5c6bc0", "#ffa726", "#ab47bc",
-        "#26c6da", "#ec407a", "#8d6e63", "#ffca28", "#7e57c2",
+        '#42a5f5',
+        '#ef5350',
+        '#5c6bc0',
+        '#ffa726',
+        '#ab47bc',
+        '#26c6da',
+        '#ec407a',
+        '#8d6e63',
+        '#ffca28',
+        '#7e57c2',
       ];
+      const PRESETS = {
+        linear: { 1: '1', 100: '100' },
+        dim_accent: { 1: '1', 25: '8', 50: '20', 100: '45' },
+        late_starter: { 1: '1', 45: '1', 70: '45', 100: '100' },
+        night_mode: { 1: '1', 20: '3', 50: '10', 100: '25' },
+      };
 
       function makeCurve(id, name, points, colorIdx) {
         return {
           entityId: id,
           friendlyName: name,
-          controlPoints: points.map(([l, t]) => ({ lightener: l, target: t })),
+          controlPoints: points.map(([lightener, target]) => ({ lightener, target })),
           visible: true,
           color: COLORS[colorIdx % COLORS.length],
         };
       }
 
+      const names = [
+        'Ceiling',
+        'Floor Lamp',
+        'LED Strip',
+        'Desk Lamp',
+        'Wall Sconce',
+        'Pendant',
+        'Spotlight A',
+        'Spotlight B',
+        'Under Cabinet',
+        'Accent Left',
+        'Accent Right',
+        'Hallway',
+        'Bathroom',
+        'Mirror Light',
+        'Closet',
+        'Reading Lamp',
+        'TV Backlight',
+        'Kitchen Island',
+        'Dining Table',
+        'Entry',
+      ];
+
       const scenarios = {
         default: [
-          makeCurve("light.ceiling_light", "Ceiling Light", [[0,0],[20,0],[60,80],[100,100]], 0),
-          makeCurve("light.sofa_lamp", "Sofa Lamp", [[0,0],[10,50],[40,100],[70,100],[100,60]], 1),
-          makeCurve("light.led_strip", "LED Strip", [[0,0],[1,1],[100,100]], 2),
+          makeCurve(
+            'light.ceiling_light',
+            'Ceiling Light',
+            [
+              [0, 0],
+              [25, 4],
+              [58, 78],
+              [100, 100],
+            ],
+            0
+          ),
+          makeCurve(
+            'light.sofa_lamp',
+            'Sofa Lamp',
+            [
+              [0, 12],
+              [12, 48],
+              [42, 100],
+              [82, 88],
+              [100, 64],
+            ],
+            1
+          ),
+          makeCurve(
+            'light.led_strip',
+            'LED Strip',
+            [
+              [0, 0],
+              [8, 4],
+              [34, 32],
+              [72, 84],
+              [100, 96],
+            ],
+            2
+          ),
         ],
         two: [
-          makeCurve("light.bedroom_main", "Bedroom Main", [[0,0],[30,20],[70,90],[100,100]], 0),
-          makeCurve("light.bedside_lamp", "Bedside Lamp", [[0,0],[5,60],[50,100],[100,80]], 1),
+          makeCurve(
+            'light.bedroom_main',
+            'Bedroom Main',
+            [
+              [0, 0],
+              [30, 20],
+              [70, 90],
+              [100, 100],
+            ],
+            0
+          ),
+          makeCurve(
+            'light.bedside_lamp',
+            'Bedside Lamp',
+            [
+              [0, 20],
+              [10, 58],
+              [50, 100],
+              [100, 80],
+            ],
+            1
+          ),
         ],
-        many: Array.from({ length: 20 }, (_, i) => {
-          const names = [
-            "Ceiling", "Floor Lamp", "LED Strip", "Desk Lamp", "Wall Sconce",
-            "Pendant", "Spotlight A", "Spotlight B", "Under Cabinet", "Accent Left",
-            "Accent Right", "Hallway", "Bathroom", "Mirror Light", "Closet",
-            "Reading Lamp", "TV Backlight", "Kitchen Island", "Dining Table", "Entry",
-          ];
-          const mid = 20 + Math.round(Math.random() * 60);
-          return makeCurve(
-            `light.room_${names[i].toLowerCase().replace(/\s+/g, "_")}`,
-            names[i],
-            [[0,0],[mid, Math.round(20 + Math.random() * 80)],[100, Math.round(50 + Math.random() * 50)]],
+        many: names.map((name, i) =>
+          makeCurve(
+            `light.room_${name.toLowerCase().replace(/\s+/g, '_')}`,
+            name,
+            [
+              [0, i % 5 === 0 ? 8 : 0],
+              [18 + ((i * 7) % 46), 18 + ((i * 13) % 76)],
+              [64 + ((i * 5) % 28), 44 + ((i * 11) % 52)],
+              [100, 58 + ((i * 9) % 42)],
+            ],
             i
-          );
-        }),
-        "long-ids": [
+          )
+        ),
+        'long-ids': [
           makeCurve(
-            "light.ground_floor_living_room_main_ceiling_chandelier_warm_white",
-            "Ground Floor Living Room Main Ceiling Chandelier (Warm White)",
-            [[0,0],[25,10],[50,60],[75,90],[100,100]], 0
+            'light.ground_floor_living_room_main_ceiling_chandelier_warm_white',
+            'Ground Floor Living Room Main Ceiling Chandelier (Warm White)',
+            [
+              [0, 0],
+              [25, 10],
+              [50, 60],
+              [75, 90],
+              [100, 100],
+            ],
+            0
           ),
           makeCurve(
-            "light.second_floor_master_bedroom_bedside_table_lamp_left_side",
-            "Second Floor Master Bedroom Bedside Table Lamp (Left)",
-            [[0,0],[10,40],[60,100],[100,80]], 1
+            'light.second_floor_master_bedroom_bedside_table_lamp_left_side',
+            'Second Floor Master Bedroom Bedside Table Lamp (Left)',
+            [
+              [0, 18],
+              [10, 40],
+              [60, 100],
+              [100, 80],
+            ],
+            1
           ),
           makeCurve(
-            "light.basement_home_theater_ambient_led_strip_behind_screen",
-            "Basement Home Theater Ambient LED Strip (Behind Screen)",
-            [[0,0],[5,80],[30,100],[100,100]], 2
+            'light.basement_home_theater_ambient_led_strip_behind_screen',
+            'Basement Home Theater Ambient LED Strip (Behind Screen)',
+            [
+              [0, 0],
+              [5, 80],
+              [30, 100],
+              [100, 100],
+            ],
+            2
           ),
         ],
+        empty: [],
       };
+
+      let currentScenario = 'default';
+      let backendEntities = {};
 
       const hass = {
         user: { is_admin: true },
-        states: {},
-        language: "en",
-        themes: { default_theme: "default" },
+        states: {
+          [LIGHTENER_ENTITY]: {
+            state: 'on',
+            attributes: { friendly_name: 'Preview Lightener' },
+          },
+        },
+        language: 'en',
+        themes: { default_theme: 'default' },
+        callService: async (domain, service, data) => {
+          console.info('[preview callService]', domain, service, data);
+        },
+        callWS: async (msg) => {
+          console.info('[preview callWS]', msg);
+          await new Promise((resolve) => setTimeout(resolve, 180));
+          if (msg.type === 'lightener/get_curves') {
+            return { entities: clone(backendEntities) };
+          }
+          if (msg.type === 'lightener/save_curves') {
+            backendEntities = clone(msg.curves);
+            setTimeout(refreshCards, 0);
+            return {};
+          }
+          if (msg.type === 'lightener/add_light') {
+            const id = msg.controlled_entity_id;
+            const label = id.replace(/^light\./, '').replace(/_/g, ' ');
+            hass.states[id] = {
+              state: 'off',
+              attributes: { friendly_name: titleCase(label) },
+            };
+            backendEntities[id] = {
+              brightness: { ...(PRESETS[msg.preset] ?? PRESETS.linear) },
+            };
+            setTimeout(refreshCards, 0);
+            return { entities: clone(backendEntities) };
+          }
+          if (msg.type === 'lightener/remove_light') {
+            delete backendEntities[msg.controlled_entity_id];
+            delete hass.states[msg.controlled_entity_id];
+            setTimeout(refreshCards, 0);
+            return { entities: clone(backendEntities) };
+          }
+          return {};
+        },
       };
 
-      const cardLight = document.getElementById("card-light");
-      const cardDark = document.getElementById("card-dark");
+      const cards = [document.getElementById('card-light'), document.getElementById('card-dark')];
 
-      function loadScenario(name) {
-        const curves = JSON.parse(JSON.stringify(scenarios[name]));
-        for (const card of [cardLight, cardDark]) {
-          card._curves = JSON.parse(JSON.stringify(curves));
-          card._originalCurves = JSON.parse(JSON.stringify(curves));
-          card._selectedCurveId = null;
-          card.requestUpdate();
+      function clone(value) {
+        return JSON.parse(JSON.stringify(value));
+      }
+
+      function titleCase(value) {
+        return value.replace(/\b\w/g, (char) => char.toUpperCase());
+      }
+
+      function curveToBrightness(curve) {
+        const brightness = {};
+        for (const point of curve.controlPoints) {
+          if (point.lightener === 0 && point.target === 0) continue;
+          brightness[String(point.lightener)] = String(point.target);
         }
-        document.querySelectorAll(".scenario-btn").forEach((b) => {
-          b.classList.toggle("active", b.dataset.scenario === name);
+        return brightness;
+      }
+
+      function curvesToEntities(curves) {
+        return Object.fromEntries(
+          curves.map((curve) => [curve.entityId, { brightness: curveToBrightness(curve) }])
+        );
+      }
+
+      function updateStates(curves) {
+        for (const curve of curves) {
+          hass.states[curve.entityId] = {
+            state: 'on',
+            attributes: {
+              friendly_name: curve.friendlyName,
+              brightness: 180,
+            },
+          };
+        }
+      }
+
+      async function loadScenario(name) {
+        currentScenario = name;
+        const curves = clone(scenarios[name]);
+        backendEntities = curvesToEntities(curves);
+        updateStates(curves);
+        for (const card of cards) {
+          card._loaded = false;
+          card._loadedEntityId = undefined;
+          card._loadError = null;
+          card._showPresets = false;
+          card._selectedCurveId = curves[0]?.entityId ?? null;
+          await card._tryLoadCurves?.();
+        }
+        document.querySelectorAll('.scenario-btn').forEach((button) => {
+          button.classList.toggle('active', button.dataset.scenario === name);
         });
       }
 
-      for (const card of [cardLight, cardDark]) {
-        card.setConfig({ type: "custom:lightener-curve-card" });
-        setTimeout(() => { card.hass = hass; }, 0);
+      function refreshCards() {
+        for (const card of cards) {
+          card._loaded = false;
+          card._loadedEntityId = undefined;
+          card._tryLoadCurves?.();
+        }
       }
 
-      document.querySelectorAll(".scenario-btn").forEach((btn) => {
-        btn.addEventListener("click", () => loadScenario(btn.dataset.scenario));
+      for (const card of cards) {
+        card.setConfig({
+          type: 'custom:lightener-curve-card',
+          entity: LIGHTENER_ENTITY,
+          title: 'Brightness Curves',
+        });
+        card.hass = hass;
+      }
+
+      document.querySelectorAll('.scenario-btn').forEach((button) => {
+        button.addEventListener('click', () => loadScenario(button.dataset.scenario));
       });
 
-      // Sync both cards
-      let syncing = false;
-      function syncCards(source, target) {
-        if (syncing) return;
-        syncing = true;
-        target._curves = JSON.parse(JSON.stringify(source._curves));
-        target._selectedCurveId = source._selectedCurveId;
-        target._originalCurves = JSON.parse(JSON.stringify(source._originalCurves));
-        target.requestUpdate();
-        syncing = false;
-      }
-      for (const evt of ["pointerup", "click", "dblclick", "contextmenu", "keyup"]) {
-        cardLight.addEventListener(evt, () => requestAnimationFrame(() => syncCards(cardLight, cardDark)));
-        cardDark.addEventListener(evt, () => requestAnimationFrame(() => syncCards(cardDark, cardLight)));
-      }
+      document.addEventListener('curve-dirty-state', (event) => {
+        console.info('[preview dirty]', event.detail);
+      });
+
+      await loadScenario(currentScenario);
     </script>
   </body>
 </html>

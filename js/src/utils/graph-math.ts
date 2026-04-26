@@ -4,7 +4,7 @@
  */
 
 import { ControlPoint } from './types.js';
-import { sampleInterpolatedCurve } from './interpolation.js';
+import { prepareBrightnessConfig } from './interpolation.js';
 
 // Graph coordinate system: SVG viewBox with padding for axis labels.
 export const PAD_LEFT = 44;
@@ -139,12 +139,12 @@ export function sampleSmoothCurveAt(points: { x: number; y: number }[], targetX:
   return mt * mt * mt * p0y + 3 * mt * mt * t * p1y + 3 * mt * t * t * p2y + t * t * t * p3y;
 }
 
-/**
- * Sample the curve using the same piecewise-linear interpolation as the backend.
- * Used by the graph scrubber dots, legend values, scrubber badges, and preview.
- */
 export function sampleCurveAt(controlPoints: ControlPoint[], position: number): number {
-  return Math.max(0, Math.min(100, sampleInterpolatedCurve(controlPoints, position)));
+  // Keep scrubber dots, legend values, and live preview on the same smooth curve
+  // that curve-graph renders.
+  const prepared = prepareBrightnessConfig(controlPoints);
+  const pathPoints = prepared.map((cp) => ({ x: cp.lightener, y: cp.target }));
+  return Math.max(0, Math.min(100, sampleSmoothCurveAt(pathPoints, position)));
 }
 
 /** Colorblind-safe curve palette — shared between card and tests. */

@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- Restored the release-native curve editor model: the v2.14 smooth curve graph
+  and sampler are paired with the v2.15 in-card add/remove light management
+  surface.
+- The local dev preview now uses a fake Home Assistant WebSocket backend so the
+  card can exercise save, preview, add-light, and remove-light flows on a local
+  server.
+
+### Fixed
+
+- Non-zero origin points now save and reload end-to-end, preserving dim-floor
+  curves created by dragging the 0% control point vertically.
+- WebSocket curve saves now reject booleans, floats, missing brightness payloads,
+  and out-of-range points before mutating config entry data.
+- Options-flow updates now roll back config entry data when the follow-up reload
+  fails.
+- Read-only curve endpoints now filter entities through Home Assistant read
+  permissions before returning data.
+
 ## [2.15.0] - 2026-04-25
 
 ### Added

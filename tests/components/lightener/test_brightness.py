@@ -74,6 +74,18 @@ def test_prepare_brightness_config_preserves_explicit_max() -> None:
     assert d[255] == 128
 
 
+def test_prepare_brightness_config_preserves_explicit_origin_dim_floor() -> None:
+    """An explicit 0 key can define the first non-zero target brightness."""
+    result = prepare_brightness_config({"0": "12", "100": "80"})
+    d = dict(result)
+    assert d[0] > 0
+    assert d[255] < 255
+
+    brightness_map = create_brightness_map(result)
+    assert brightness_map[0] == 0
+    assert brightness_map[1] > 0
+
+
 def test_create_brightness_map_fills_full_range() -> None:
     """Map covers every lightener level 0..255 exactly once."""
     config = prepare_brightness_config({"50": "50"})

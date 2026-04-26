@@ -611,7 +611,7 @@ describe('preview restore state', () => {
     rafSpy.mockRestore();
   });
 
-  it('previews the backend-linear brightness for a peak curve', async () => {
+  it('previews the smooth curve brightness for a peak curve', async () => {
     const entityId = 'light.preview_peak';
     const { card, callService, rafSpy } = makePreviewCard(
       {
@@ -636,7 +636,7 @@ describe('preview restore state', () => {
     expect(callService).toHaveBeenCalledTimes(1);
     expect(callService).toHaveBeenCalledWith('light', 'turn_on', {
       entity_id: entityId,
-      brightness: 128,
+      brightness: 161,
     });
 
     rafSpy.mockRestore();

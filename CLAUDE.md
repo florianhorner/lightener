@@ -85,6 +85,18 @@ regressions without flagging small refactors.
 - `scripts/ha-sync` never restarts Home Assistant. If Python code changed, tell the user a manual HA restart or equivalent reload is still required.
 - Only use the release/HACS flow when validating packaging, distribution, or an actual release candidate.
 
+### Curve editor release baseline
+
+- Before changing the Lightener curve editor UI, graph behavior, scrubber,
+  presets, add/remove-light flow, or card layout, inspect both MemPalace
+  (`wing=lightener`) and the latest relevant release tag.
+- Treat the released editor interaction model as the baseline. Do not replace
+  native-feeling Home Assistant patterns, smooth curve behavior, or existing
+  add/edit/remove-light features unless the task explicitly asks for that
+  behavioral change.
+- When fixing regressions, prefer a narrow patch on top of the released behavior
+  over reworking the whole editor surface.
+
 ### Triaging bundle / caching issues
 
 If a user reports that a recently-shipped card feature is missing, a card

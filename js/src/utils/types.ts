@@ -1,5 +1,5 @@
 export interface ControlPoint {
-  lightener: number; // 1-100
+  lightener: number; // 0-100
   target: number; // 0-100
 }
 
