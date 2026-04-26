@@ -209,7 +209,7 @@ describe('curve-graph line rendering', () => {
     document.body.replaceChildren();
   });
 
-  it('renders the curve as straight line segments instead of cubic smoothing', async () => {
+  it('renders multi-point curves with cubic smoothing', async () => {
     const graph = document.createElement('curve-graph') as CurveGraph;
     graph.curves = [
       {
@@ -228,7 +228,6 @@ describe('curve-graph line rendering', () => {
     await graph.updateComplete;
 
     const path = graph.shadowRoot!.querySelector<SVGPathElement>('.curve-line')!;
-    expect(path.getAttribute('d')).toContain(' L');
-    expect(path.getAttribute('d')).not.toContain(' C');
+    expect(path.getAttribute('d')).toContain(' C');
   });
 });

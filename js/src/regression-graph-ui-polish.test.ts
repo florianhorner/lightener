@@ -185,15 +185,14 @@ describe('sampleCurveAt clamping', () => {
   });
 
   it('returns values clamped to [0, 100] for out-of-range input', () => {
-    // Extreme positions that might cause overshoot in the cubic interpolation
+    // Extreme positions should be clamped before backend-linear sampling
     expect(sampleCurveAt(controlPoints, -50)).toBeGreaterThanOrEqual(0);
     expect(sampleCurveAt(controlPoints, -50)).toBeLessThanOrEqual(100);
     expect(sampleCurveAt(controlPoints, 200)).toBeGreaterThanOrEqual(0);
     expect(sampleCurveAt(controlPoints, 200)).toBeLessThanOrEqual(100);
   });
 
-  it('clamps overshoot from steep ramp curves', () => {
-    // A steep ramp can cause cubic Hermite overshoot beyond 100
+  it('keeps steep ramp curves inside the backend brightness range', () => {
     const steepPoints = [
       { lightener: 0, target: 0 },
       { lightener: 5, target: 100 },

@@ -15,8 +15,8 @@ import {
   fromSvgX,
   fromSvgY,
   clamp,
-  sampleCurveAt,
-  buildLinearPath,
+  sampleRenderedCurveAt,
+  buildSmoothPath,
   DASH_PATTERNS,
 } from '../utils/graph-math.js';
 
@@ -645,7 +645,7 @@ export class CurveGraph extends LitElement {
     const dots = this.curves
       .filter((c) => c.visible)
       .map((c) => {
-        const cy = toSvgY(sampleCurveAt(c.controlPoints, pos));
+        const cy = toSvgY(sampleRenderedCurveAt(c.controlPoints, pos));
 
         return svg`
           <circle
@@ -670,13 +670,13 @@ export class CurveGraph extends LitElement {
       const isInteractive = this._isCurveInteractive(curveIdx);
       const showPoints = isInteractive && !this.readOnly;
 
-      // Build a piecewise-linear path so the rendered graph matches backend interpolation.
+      // Build smooth bezier path through the prepared control points.
       const prepared = prepareBrightnessConfig(curve.controlPoints);
       const pathPoints = prepared.map((cp) => ({
         x: toSvgX(cp.lightener),
         y: toSvgY(cp.target),
       }));
-      const curvePath = buildLinearPath(pathPoints);
+      const curvePath = buildSmoothPath(pathPoints);
 
       // Gradient fill path: close the curve to the x-axis
       const fillPath =

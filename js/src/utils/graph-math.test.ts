@@ -14,7 +14,9 @@ import {
   fromSvgY,
   clamp,
   computeMonotoneTangents,
+  sampleCurveAt,
   sampleSmoothCurveAt,
+  sampleRenderedCurveAt,
   buildSmoothPath,
   buildLinearPath,
   DASH_PATTERNS,
@@ -281,6 +283,30 @@ describe('sampleSmoothCurveAt', () => {
     for (let i = 40; i <= 60; i++) {
       expect(sampleSmoothCurveAt(pts, i)).toBeCloseTo(50, 5);
     }
+  });
+});
+
+describe('sampleCurveAt', () => {
+  it('uses backend-linear interpolation for user-visible values', () => {
+    const peakCurve = [
+      { lightener: 0, target: 0 },
+      { lightener: 50, target: 100 },
+      { lightener: 100, target: 0 },
+    ];
+
+    expect(sampleCurveAt(peakCurve, 25)).toBeCloseTo(50, 5);
+  });
+});
+
+describe('sampleRenderedCurveAt', () => {
+  it('uses the smooth rendered curve for graph-only indicators', () => {
+    const peakCurve = [
+      { lightener: 0, target: 0 },
+      { lightener: 50, target: 100 },
+      { lightener: 100, target: 0 },
+    ];
+
+    expect(sampleRenderedCurveAt(peakCurve, 25)).toBeGreaterThan(sampleCurveAt(peakCurve, 25));
   });
 });
 
