@@ -227,4 +227,40 @@ describe('lightener-curve-card — light management', () => {
     await card.updateComplete;
     expect(legend.managing).toBe(false);
   });
+
+  it('hides presets, scrubber, and live preview controls when no lights are configured', async () => {
+    const { card } = await mountCard({});
+
+    const buttons = [...card.renderRoot.querySelectorAll('button')].map((button) =>
+      button.textContent?.trim()
+    );
+    expect(buttons).not.toContain('Presets');
+    expect(buttons).not.toContain('Preview on lights');
+    expect(card.renderRoot.querySelector('curve-scrubber')).toBeNull();
+
+    const graph = card.renderRoot.querySelector('curve-graph')!;
+    await graph.updateComplete;
+    expect(graph.shadowRoot?.textContent).toContain('Add a light below to get started');
+  });
+
+  it('keeps Presets and Add light mutually exclusive', async () => {
+    const { card } = await mountCard({
+      'light.a': { brightness: { '100': '100' } },
+    });
+
+    card.renderRoot.querySelector<HTMLButtonElement>('.presets-btn')!.click();
+    await card.updateComplete;
+    expect(card.renderRoot.querySelector('.presets-panel')).not.toBeNull();
+
+    fireLegend(card, 'add-panel-open', {});
+    await card.updateComplete;
+    expect(card.renderRoot.querySelector('.presets-panel')).toBeNull();
+
+    card.renderRoot.querySelector<HTMLButtonElement>('.presets-btn')!.click();
+    await card.updateComplete;
+    const legend = card.renderRoot.querySelector('curve-legend') as unknown as {
+      closeAddSignal: number;
+    };
+    expect(legend.closeAddSignal).toBeGreaterThan(0);
+  });
 });

@@ -867,6 +867,9 @@ export class CurveGraph extends LitElement {
         })()}
         <!-- Scrubber glow filters (only re-render when curves change, not on every position update) -->
         <defs>
+          <clipPath id="editing-label-clip-${this._uid}">
+            <rect x="${PAD_LEFT + 4}" y="${PAD_TOP - 4}" width="${GRAPH_W - 12}" height="24" />
+          </clipPath>
           ${this.curves
             .filter((c) => c.visible)
             .map((c) => {
@@ -886,6 +889,11 @@ export class CurveGraph extends LitElement {
         ${this._renderScrubberIndicator()}
         ${(() => {
           if (this.readOnly) return nothing;
+          if (this.curves.length === 0) {
+            return svg`<text class="hint hint-select" text-anchor="middle"
+                x="${PAD_LEFT + GRAPH_W / 2}" y="${PAD_TOP + GRAPH_H / 2}"
+                >Add a light below to get started</text>`;
+          }
           if (this.selectedCurveId === null && this._dragCurveIdx < 0) {
             return svg`<text class="hint hint-select" text-anchor="middle"
                 x="${PAD_LEFT + GRAPH_W / 2}" y="${PAD_TOP + GRAPH_H / 2}"
@@ -896,6 +904,7 @@ export class CurveGraph extends LitElement {
               <text class="editing-label"
                 x="${PAD_LEFT + 6}" y="${PAD_TOP + 14}"
                 fill="${selected?.color ?? 'currentColor'}"
+                clip-path="url(#editing-label-clip-${this._uid})"
                 >Editing ${selected?.friendlyName ?? ''}</text>
               <text class="hint" text-anchor="end"
                 x="${PAD_LEFT + GRAPH_W - 4}" y="${PAD_TOP + GRAPH_H - 6}"

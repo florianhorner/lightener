@@ -382,11 +382,27 @@ describe('curve-legend', () => {
       const el = makeLegend();
       el.canManage = true;
       await el.updateComplete;
+      const spy = vi.fn();
+      el.addEventListener('add-panel-open', spy);
       const addBtn = el.renderRoot.querySelector<HTMLButtonElement>('.add-light-btn')!;
       addBtn.click();
       await el.updateComplete;
+      expect(spy).toHaveBeenCalledTimes(1);
       expect(el.renderRoot.querySelector('ha-entity-picker')).not.toBeNull();
       expect(el.renderRoot.querySelector('.preset-field select')).not.toBeNull();
+    });
+
+    it('closes the add form when closeAddSignal changes', async () => {
+      const el = makeLegend();
+      el.canManage = true;
+      await el.updateComplete;
+      el.renderRoot.querySelector<HTMLButtonElement>('.add-light-btn')!.click();
+      await el.updateComplete;
+      expect(el.renderRoot.querySelector('.add-form')).not.toBeNull();
+
+      el.closeAddSignal = 1;
+      await el.updateComplete;
+      expect(el.renderRoot.querySelector('.add-form')).toBeNull();
     });
 
     it('Add button is disabled until an entity is selected', async () => {

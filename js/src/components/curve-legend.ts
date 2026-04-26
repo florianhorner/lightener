@@ -24,6 +24,7 @@ export class CurveLegend extends LitElement {
   @property({ type: Boolean }) managing = false;
   @property({ type: Array }) excludeEntityIds: string[] = [];
   @property({ type: Array }) presetOptions: LegendPresetOption[] = DEFAULT_PRESET_OPTIONS;
+  @property({ type: Number }) closeAddSignal = 0;
   @property({ attribute: false }) hass: Hass | null = null;
 
   @state() private _addingLight = false;
@@ -468,6 +469,9 @@ export class CurveLegend extends LitElement {
     ) {
       this._confirmingRemove = null;
     }
+    if (changed.has('closeAddSignal')) {
+      this._cancelAdd();
+    }
   }
 
   private _startRemove(e: Event, entityId: string) {
@@ -582,6 +586,12 @@ export class CurveLegend extends LitElement {
     this._addingLight = true;
     this._pendingAddEntity = '';
     this._pendingPreset = this.presetOptions[0]?.value ?? 'linear';
+    this.dispatchEvent(
+      new CustomEvent('add-panel-open', {
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
   private _cancelAdd() {
