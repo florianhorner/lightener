@@ -1054,6 +1054,7 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
     }
     .add-form-actions button {
       padding: 4px 12px;
+      min-height: 44px;
       font-size: 12px;
       font-weight: 500;
       border-radius: 6px;
@@ -1124,6 +1125,11 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
       }
       .remove-icon {
         opacity: 0.6;
+        width: 20px;
+        height: 20px;
+        padding: 12px;
+        margin: -12px;
+        box-sizing: content-box;
       }
       .remove-icon svg {
         width: 18px;
