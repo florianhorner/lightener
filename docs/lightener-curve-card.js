@@ -1441,6 +1441,7 @@ function e(e,t,i,r){var s,n=arguments.length,o=n<3?t:null===r?r=Object.getOwnPro
                     @focus-curve=${this._onFocusCurve}
                   ></curve-graph>
                 </div>`}
+
             ${this._curves.length>0?V`<curve-scrubber
                   .curves=${this._curves}
                   .readOnly=${!this._isAdmin||this._managingLights}

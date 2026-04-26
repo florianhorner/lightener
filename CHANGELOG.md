@@ -8,9 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Restored the release-native curve editor model: the v2.14 smooth curve graph
-  and sampler are paired with the v2.15 in-card add/remove light management
-  surface.
+- Restored the release-native curve editor model: the smooth curve graph and
+  sampler are paired with the in-card add/remove light management surface.
 - The local dev preview now uses a fake Home Assistant WebSocket backend so the
   card can exercise save, preview, add-light, and remove-light flows on a local
   server.
