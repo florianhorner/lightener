@@ -19,6 +19,108 @@ _ENTITY_LIST_CACHE_KEY = f"{DOMAIN}_entity_list_cache"
 _ENTITY_LIST_CACHE_TTL = 5.0  # seconds
 
 
+class CurveValidationError(ValueError):
+    """Raised when a websocket curve payload fails validation."""
+
+    def __init__(self, metric_code: str, message: str) -> None:
+        """Initialize the validation error with a metric code and message."""
+        super().__init__(message)
+        self.metric_code = metric_code
+        self.message = message
+
+
+def _connection_can_read_entity(
+    connection: websocket_api.ActiveConnection, entity_id: str
+) -> bool:
+    """Return whether this websocket connection may read an entity."""
+    user = getattr(connection, "user", None)
+    if user is None or getattr(user, "is_admin", False):
+        return True
+
+    permissions = getattr(user, "permissions", None)
+    check_entity = getattr(permissions, "check_entity", None)
+    if check_entity is None:
+        return True
+
+    try:
+        return bool(check_entity(entity_id, "read"))
+    except TypeError:
+        try:
+            return bool(check_entity("read", entity_id))
+        except Exception:
+            return False
+    except Exception:
+        return False
+
+
+def _parse_curve_percent(raw_value, field: str) -> int:
+    """Parse a websocket curve percentage, rejecting bools/floats/truncation."""
+    if isinstance(raw_value, bool | float):
+        raise CurveValidationError(
+            "non_integer_curve_value",
+            f"Brightness {field} must be an integer percent: {raw_value}",
+        )
+
+    if isinstance(raw_value, int):
+        return raw_value
+
+    if isinstance(raw_value, str):
+        value = raw_value.strip()
+        numeric = value[1:] if value.startswith("-") else value
+        if not numeric or not numeric.isdecimal():
+            raise CurveValidationError(
+                "non_numeric_curve_value",
+                f"Brightness {field} must be numeric: {raw_value}",
+            )
+        return int(value)
+
+    raise CurveValidationError(
+        "non_numeric_curve_value",
+        f"Brightness {field} must be numeric: {raw_value}",
+    )
+
+
+def _normalize_curve_payload(curves: dict) -> dict:
+    """Validate and normalize curve websocket payload data."""
+    normalized_curves = {}
+
+    for controlled_entity_id, entity_data in curves.items():
+        if not isinstance(entity_data, dict):
+            raise CurveValidationError(
+                "invalid_entity_payload",
+                f"Curve payload for {controlled_entity_id} must be an object",
+            )
+
+        brightness = entity_data.get("brightness")
+        if not isinstance(brightness, dict):
+            raise CurveValidationError(
+                "invalid_brightness_payload",
+                f"Brightness payload for {controlled_entity_id} must be an object",
+            )
+
+        normalized_brightness = {}
+        for raw_key, raw_value in brightness.items():
+            key = _parse_curve_percent(raw_key, "level")
+            value = _parse_curve_percent(raw_value, "value")
+
+            if key < 0 or key > 100:
+                raise CurveValidationError(
+                    "curve_level_out_of_range",
+                    f"Brightness level must be 0-100, got {key}",
+                )
+            if value < 0 or value > 100:
+                raise CurveValidationError(
+                    "curve_value_out_of_range",
+                    f"Brightness value must be 0-100, got {value}",
+                )
+
+            normalized_brightness[str(key)] = str(value)
+
+        normalized_curves[controlled_entity_id] = {"brightness": normalized_brightness}
+
+    return normalized_curves
+
+
 def _get_entity_list_cache(hass: HomeAssistant) -> list | None:
     """Return cached entity list if still fresh, else None."""
     cached = hass.data.get(_ENTITY_LIST_CACHE_KEY)
@@ -138,6 +240,17 @@ def ws_get_curves(
         )
         return
 
+    if not _connection_can_read_entity(connection, entity_id):
+        metric(
+            _LOGGER,
+            "lightener.ws.get_curves.unauthorized_total",
+            "counter",
+            1,
+        )
+        end_span(_LOGGER, span, status="error", error_code="unauthorized")
+        connection.send_error(msg["id"], "unauthorized", "Unauthorized")
+        return
+
     config_entry = hass.config_entries.async_get_entry(entry.config_entry_id)
     if config_entry is None:
         metric(
@@ -151,7 +264,13 @@ def ws_get_curves(
         connection.send_error(msg["id"], "not_found", "Config entry not found")
         return
 
-    entities = config_entry.data.get("entities", {})
+    entities = {
+        controlled_entity_id: entity_data
+        for controlled_entity_id, entity_data in config_entry.data.get(
+            "entities", {}
+        ).items()
+        if _connection_can_read_entity(connection, controlled_entity_id)
+    }
     duration_ms = (monotonic() - op_started) * 1000
 
     connection.send_result(msg["id"], {"entities": entities})
@@ -224,7 +343,13 @@ def ws_list_entities(
 
         entities.sort(key=lambda item: item["name"])
         _set_entity_list_cache(hass, entities)
-    connection.send_result(msg["id"], {"entities": entities})
+    visible_entities = [
+        entity
+        for entity in entities
+        if _connection_can_read_entity(connection, entity["entity_id"])
+    ]
+
+    connection.send_result(msg["id"], {"entities": visible_entities})
     duration_ms = (monotonic() - op_started) * 1000
     metric(
         _LOGGER,
@@ -236,13 +361,13 @@ def ws_list_entities(
         _LOGGER,
         "lightener.ws.list_entities.returned",
         "gauge",
-        len(entities),
+        len(visible_entities),
     )
     end_span(
         _LOGGER,
         span,
         status="ok",
-        returned_entities=len(entities),
+        returned_entities=len(visible_entities),
     )
 
 
@@ -306,116 +431,6 @@ async def ws_save_curves(
         connection.send_error(msg["id"], "not_found", "Config entry not found")
         return
 
-    # Validate curves
-    for controlled_entity_id, entity_data in curves.items():
-        if not isinstance(entity_data, dict):
-            metric(
-                _LOGGER,
-                "lightener.ws.save_curves.validation_errors_total",
-                "counter",
-                1,
-                error_code="invalid_entity_payload",
-            )
-            connection.send_error(
-                msg["id"],
-                "invalid_format",
-                f"Curve payload for {controlled_entity_id} must be an object",
-            )
-            end_span(
-                _LOGGER,
-                span,
-                status="error",
-                error_code="invalid_entity_payload",
-            )
-            return
-        brightness = entity_data.get("brightness", {})
-        if not isinstance(brightness, dict):
-            metric(
-                _LOGGER,
-                "lightener.ws.save_curves.validation_errors_total",
-                "counter",
-                1,
-                error_code="invalid_brightness_payload",
-            )
-            connection.send_error(
-                msg["id"],
-                "invalid_format",
-                f"Brightness payload for {controlled_entity_id} must be an object",
-            )
-            end_span(
-                _LOGGER,
-                span,
-                status="error",
-                error_code="invalid_brightness_payload",
-            )
-            return
-        for k, v in brightness.items():
-            try:
-                key = int(k)
-                value = int(v)
-            except (ValueError, TypeError):
-                metric(
-                    _LOGGER,
-                    "lightener.ws.save_curves.validation_errors_total",
-                    "counter",
-                    1,
-                    error_code="non_numeric_curve_value",
-                )
-                connection.send_error(
-                    msg["id"],
-                    "invalid_format",
-                    f"Brightness values must be numeric: {k}: {v}",
-                )
-                end_span(
-                    _LOGGER,
-                    span,
-                    status="error",
-                    error_code="non_numeric_curve_value",
-                )
-                return
-
-            if key < 0 or key > 100:
-                metric(
-                    _LOGGER,
-                    "lightener.ws.save_curves.validation_errors_total",
-                    "counter",
-                    1,
-                    error_code="curve_level_out_of_range",
-                )
-                connection.send_error(
-                    msg["id"],
-                    "invalid_format",
-                    f"Brightness level must be 0-100, got {key}",
-                )
-                end_span(
-                    _LOGGER,
-                    span,
-                    status="error",
-                    error_code="curve_level_out_of_range",
-                )
-                return
-            if value < 0 or value > 100:
-                metric(
-                    _LOGGER,
-                    "lightener.ws.save_curves.validation_errors_total",
-                    "counter",
-                    1,
-                    error_code="curve_value_out_of_range",
-                )
-                connection.send_error(
-                    msg["id"],
-                    "invalid_format",
-                    f"Brightness value must be 0-100, got {value}",
-                )
-                end_span(
-                    _LOGGER,
-                    span,
-                    status="error",
-                    error_code="curve_value_out_of_range",
-                )
-                return
-
-    # Update config entry data
     new_data = dict(config_entry.data)
     new_entities = dict(new_data.get("entities", {}))
 
@@ -443,13 +458,24 @@ async def ws_save_curves(
         end_span(_LOGGER, span, status="error", error_code="unknown_entities")
         return
 
-    for controlled_entity_id, entity_data in curves.items():
+    try:
+        normalized_curves = _normalize_curve_payload(curves)
+    except CurveValidationError as err:
+        metric(
+            _LOGGER,
+            "lightener.ws.save_curves.validation_errors_total",
+            "counter",
+            1,
+            error_code=err.metric_code,
+        )
+        connection.send_error(msg["id"], "invalid_format", err.message)
+        end_span(_LOGGER, span, status="error", error_code=err.metric_code)
+        return
+
+    for controlled_entity_id, entity_data in normalized_curves.items():
         if controlled_entity_id in new_entities:
             new_entity = dict(new_entities[controlled_entity_id])
-            # Ensure all keys and values are strings
-            new_entity["brightness"] = {
-                str(k): str(v) for k, v in entity_data.get("brightness", {}).items()
-            }
+            new_entity["brightness"] = entity_data["brightness"]
             new_entities[controlled_entity_id] = new_entity
 
     new_data["entities"] = new_entities
