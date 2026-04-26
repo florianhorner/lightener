@@ -83,6 +83,17 @@ describe('prepareBrightnessConfig', () => {
       { lightener: 100, target: 40 },
     ]);
   });
+
+  it('keeps exact 0% off while applying an explicit origin dim floor above 0%', () => {
+    const prepared = prepareBrightnessConfig([
+      { lightener: 0, target: 12 },
+      { lightener: 100, target: 80 },
+    ]);
+    expect(prepared.slice(0, 2)).toEqual([
+      { lightener: 0, target: 0 },
+      { lightener: 1, target: 12 },
+    ]);
+  });
 });
 
 describe('interpolateCurve', () => {
@@ -191,6 +202,16 @@ describe('sampleInterpolatedCurve', () => {
   it('clamps out-of-range input', () => {
     expect(sampleInterpolatedCurve(peakCurve, -10)).toBeCloseTo(0, 5);
     expect(sampleInterpolatedCurve(peakCurve, 110)).toBeCloseTo(0, 5);
+  });
+
+  it('keeps explicit origin dim floors off at exactly 0%', () => {
+    const dimFloorCurve: ControlPoint[] = [
+      { lightener: 0, target: 12 },
+      { lightener: 100, target: 80 },
+    ];
+
+    expect(sampleInterpolatedCurve(dimFloorCurve, 0)).toBeCloseTo(0, 5);
+    expect(sampleInterpolatedCurve(dimFloorCurve, 1)).toBeCloseTo(12, 5);
   });
 });
 

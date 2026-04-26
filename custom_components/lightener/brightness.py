@@ -17,16 +17,22 @@ from functools import lru_cache
 from homeassistant.util.color import value_to_brightness
 
 
+def _percent_to_brightness(value: int) -> int:
+    """Convert a 0..100 percentage to Home Assistant's 0..255 brightness scale."""
+
+    if value == 0:
+        return 0
+    return value_to_brightness((1, 100), value)
+
+
 def translate_config_to_brightness(config: dict) -> dict:
-    """Create a copy of config converting the 0-100 range to 1-255.
+    """Create a copy of config converting the 0-100 range to 0-255.
 
     Convert the values to integers since the original values are strings.
     """
 
     return {
-        value_to_brightness((1, 100), int(k)): 0
-        if int(v) == 0
-        else value_to_brightness((1, 100), int(v))
+        _percent_to_brightness(int(k)): _percent_to_brightness(int(v))
         for k, v in config.items()
     }
 
@@ -39,8 +45,10 @@ def prepare_brightness_config(config: dict) -> list[tuple[int, int]]:
 
     config = translate_config_to_brightness(config)
 
-    # Zero must always be zero.
-    config[0] = 0
+    # If no explicit origin is present, zero must be zero. An explicit 0 key
+    # is preserved as a supported dim floor for lights that should turn on
+    # above physical zero as soon as the Lightener group leaves 0%.
+    config.setdefault(0, 0)
 
     # If the maximum level is not present, add it.
     config.setdefault(255, 255)

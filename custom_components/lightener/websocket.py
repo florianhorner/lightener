@@ -374,7 +374,7 @@ async def ws_save_curves(
                 )
                 return
 
-            if key < 1 or key > 100:
+            if key < 0 or key > 100:
                 metric(
                     _LOGGER,
                     "lightener.ws.save_curves.validation_errors_total",
@@ -385,7 +385,7 @@ async def ws_save_curves(
                 connection.send_error(
                     msg["id"],
                     "invalid_format",
-                    f"Brightness level must be 1-100, got {key}",
+                    f"Brightness level must be 0-100, got {key}",
                 )
                 end_span(
                     _LOGGER,

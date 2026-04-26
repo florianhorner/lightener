@@ -2,7 +2,7 @@ import { ControlPoint, LightCurve } from './types.js';
 
 /**
  * Convert frontend LightCurve[] to the backend WebSocket payload format.
- * Filters the implicit 0->0 endpoint and converts numbers to strings.
+ * Filters the default 0->0 endpoint and converts numbers to strings.
  */
 export function curvesToWsPayload(
   curves: LightCurve[]
@@ -13,8 +13,8 @@ export function curvesToWsPayload(
     let lastLightener = -1;
     let lastTarget = 0;
     for (const cp of curve.controlPoints) {
-      // The implicit 0->0 point is not stored in config
-      if (cp.lightener === 0) continue;
+      // The default 0->0 point is not stored, but a non-zero origin dim floor is.
+      if (cp.lightener === 0 && cp.target === 0) continue;
       brightness[String(cp.lightener)] = String(cp.target);
       if (cp.lightener > lastLightener) {
         lastLightener = cp.lightener;
@@ -36,7 +36,9 @@ export function curvesToWsPayload(
 
 /**
  * Convert the backend WebSocket response into frontend LightCurve[].
- * Parses string keys/values to numbers and adds the implicit 0->0 endpoint.
+ * Parses string keys/values to numbers and adds the default 0->0 endpoint.
+ * An explicit non-zero 0 key is preserved as the dim-floor control; interpolation
+ * keeps exact 0% off and applies that floor immediately above 0%.
  */
 export function wsPayloadToCurves(
   entities: Record<string, { brightness: Record<string, string> }>,
@@ -46,16 +48,21 @@ export function wsPayloadToCurves(
   const entityIds = Object.keys(entities);
   return entityIds.map((entityId, index) => {
     const brightnessMap = entities[entityId]?.brightness ?? {};
-    const controlPoints: ControlPoint[] = [{ lightener: 0, target: 0 }];
+    const pointMap = new Map<number, number>([[0, 0]]);
 
     for (const [k, v] of Object.entries(brightnessMap)) {
       const lightener = Number(k);
       const target = Number(v);
       // Drop points with non-finite values (malformed config data)
       if (!Number.isFinite(lightener) || !Number.isFinite(target)) continue;
-      controlPoints.push({ lightener, target });
+      if (lightener < 0 || lightener > 100 || target < 0 || target > 100) continue;
+      pointMap.set(lightener, target);
     }
 
+    const controlPoints: ControlPoint[] = [...pointMap].map(([lightener, target]) => ({
+      lightener,
+      target,
+    }));
     controlPoints.sort((a, b) => a.lightener - b.lightener);
 
     const friendlyName =

@@ -71,7 +71,7 @@ _LOGGER = logging.getLogger(__name__)
 ENTITY_SCHEMA = vol.All(
     vol.DefaultTo({1: 1, 100: 100}),
     {
-        vol.All(vol.Coerce(int), vol.Range(min=1, max=100)): vol.All(
+        vol.All(vol.Coerce(int), vol.Range(min=0, max=100)): vol.All(
             vol.Coerce(int), vol.Range(min=0, max=100)
         )
     },

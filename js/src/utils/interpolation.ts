@@ -25,12 +25,21 @@ export function scaleRangedValue(
  */
 export function prepareBrightnessConfig(controlPoints: ControlPoint[]): ControlPoint[] {
   const map = new Map<number, number>();
+  let originDimFloor: number | null = null;
 
   // Implicit zero endpoint
   map.set(0, 0);
 
   for (const cp of controlPoints) {
+    if (cp.lightener === 0 && cp.target !== 0) {
+      originDimFloor = cp.target;
+      continue;
+    }
     map.set(cp.lightener, cp.target);
+  }
+
+  if (originDimFloor !== null && !map.has(1)) {
+    map.set(1, originDimFloor);
   }
 
   if (!map.has(100)) {
