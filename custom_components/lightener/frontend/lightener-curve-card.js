@@ -571,6 +571,9 @@ function e(e,t,i,r){var n,s=arguments.length,o=s<3?t:null===r?r=Object.getOwnPro
         font-size: 13px;
         padding: 5px 10px;
       }
+      button.badge.interactive {
+        min-height: 44px;
+      }
       .scrubber-label {
         font-size: 11px;
       }
