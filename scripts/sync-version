@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+"""Sync CARD_VERSION in lightener-panel.js to match manifest.json version.
+
+Run before any deploy or release so the panel always loads the correct card version.
+"""
+
+import json
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent
+MANIFEST = ROOT / "custom_components/lightener/manifest.json"
+PANEL_JS = ROOT / "custom_components/lightener/frontend/lightener-panel.js"
+
+try:
+    _manifest = json.loads(MANIFEST.read_text())
+except Exception as e:
+    print(f"[sync-version] ERROR: cannot read manifest.json: {e}", file=sys.stderr)
+    sys.exit(1)
+
+if "version" not in _manifest:
+    print(
+        '[sync-version] ERROR: "version" key missing from manifest.json',
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+version = _manifest["version"]
+
+content = PANEL_JS.read_text()
+updated = re.sub(
+    r'^const CARD_VERSION = ".*";',
+    f'const CARD_VERSION = "{version}";',
+    content,
+    flags=re.MULTILINE,
+)
+
+if content == updated:
+    print(f"[sync-version] CARD_VERSION already at {version!r}")
+else:
+    PANEL_JS.write_text(updated)
+    print(f"[sync-version] CARD_VERSION → {version!r}")

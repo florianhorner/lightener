@@ -29,6 +29,10 @@ jobs:
           yq -i -o json '.version = strenv(TAG_NAME)' \
             "${{ github.workspace }}/custom_components/lightener/manifest.json"
 
+      - name: "Sync CARD_VERSION in panel JS"
+        shell: "bash"
+        run: python3 "${{ github.workspace }}/scripts/sync-version"
+
       - name: "ZIP the integration directory"
         shell: "bash"
         run: |

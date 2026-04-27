@@ -81,6 +81,27 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  version-sync:
+    name: "Version sync"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v4"
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: "Check CARD_VERSION matches manifest.json"
+        run: |
+          python3 scripts/sync-version
+          if ! git diff --quiet; then
+            echo "::error::CARD_VERSION in lightener-panel.js is out of sync with manifest.json. Run scripts/sync-version and commit the change."
+            git diff
+            exit 1
+          fi
+
   frontend:
     name: "Frontend"
     runs-on: "ubuntu-latest"

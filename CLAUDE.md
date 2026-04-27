@@ -33,6 +33,21 @@ zip lightener.zip -r ./
 unzip -l lightener.zip | grep -c "custom_components/"  # must be 0
 ```
 
+### CARD_VERSION sync
+
+`const CARD_VERSION` in `custom_components/lightener/frontend/lightener-panel.js` must
+always match `manifest.json` `"version"`. This is how the panel forces a fresh
+card module fetch after a HACS upgrade.
+
+**Never edit `CARD_VERSION` by hand.** Run `scripts/sync-version` instead.
+
+**Enforcement:** Three-layer automation keeps these in sync:
+1. `scripts/ha-sync` calls `scripts/sync-version` automatically before every deploy
+2. `release.yml` calls `scripts/sync-version` after patching `manifest.json` with the tag
+3. `lint.yml` (`version-sync` job) runs `scripts/sync-version` and fails the PR if there is a diff
+
+If CI reports "CARD_VERSION out of sync", run `scripts/sync-version` locally, commit the change.
+
 ### Coverage gates
 
 CI enforces minimum coverage on both sides. Gates are floors (not strict

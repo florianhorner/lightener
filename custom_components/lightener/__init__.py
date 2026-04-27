@@ -1,5 +1,6 @@
 """Lightener Integration."""
 
+import json
 import logging
 from collections.abc import Mapping
 from pathlib import Path
@@ -24,6 +25,13 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     from . import websocket
 
     websocket.async_register_commands(hass)
+
+    try:
+        _manifest_path = Path(__file__).parent / "manifest.json"
+        _manifest_text = await hass.async_add_executor_job(_manifest_path.read_text)
+        _version = json.loads(_manifest_text).get("version", "")
+    except Exception:
+        _version = ""
 
     # Serve the frontend card and panel JS.
     # hass.http is unavailable during some tests. StaticPathConfig is preferred
@@ -87,9 +95,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     "name": "lightener-editor-panel",
                     "embed_iframe": False,
                     "trust_external": False,
-                    "module_url": "/lightener/lightener-panel.js",
+                    "module_url": f"/lightener/lightener-panel.js{f'?v={_version}' if _version else ''}",
                     # Backward-compatible key for older custom panel handling.
-                    "js_url": "/lightener/lightener-panel.js",
+                    "js_url": f"/lightener/lightener-panel.js{f'?v={_version}' if _version else ''}",
                 }
             },
             require_admin=False,

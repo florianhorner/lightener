@@ -82,6 +82,11 @@ COMMON_RSYNC_ARGS=(
     --exclude '.DS_Store'
 )
 
+if [[ "${MODE}" != "backend" ]]; then
+    echo "[ha-sync] Syncing CARD_VERSION..."
+    python3 scripts/sync-version
+fi
+
 if [[ "${BUILD_FRONTEND}" -eq 1 && "${MODE}" != "backend" ]]; then
     echo "[ha-sync] Building frontend bundle..."
     (

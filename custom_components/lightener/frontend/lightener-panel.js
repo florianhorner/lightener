@@ -1,3 +1,5 @@
+const CARD_VERSION = "2.15.0";
+
 class LightenerEditorPanel extends HTMLElement {
   constructor() {
     super();
@@ -128,7 +130,9 @@ class LightenerEditorPanel extends HTMLElement {
       return;
     }
     if (!this._cardScriptPromise) {
-      const moduleUrl = "/lightener/lightener-curve-card.js";
+      const moduleUrl = CARD_VERSION
+        ? `/lightener/lightener-curve-card.js?v=${CARD_VERSION}`
+        : "/lightener/lightener-curve-card.js";
       this._cardScriptPromise = import(/* @vite-ignore */ moduleUrl);
     }
     await this._cardScriptPromise;
