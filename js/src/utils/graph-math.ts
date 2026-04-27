@@ -149,7 +149,7 @@ export function sampleRenderedCurveAt(controlPoints: ControlPoint[], position: n
   return Math.max(0, Math.min(100, sampleSmoothCurveAt(pathPoints, position)));
 }
 
-/** Colorblind-safe curve palette — shared between card and tests. */
+/** Curve color palette — avoids red+green pairs; dot markers + labels provide non-color disambiguation. Shared between card and tests. */
 export const CURVE_COLORS = [
   '#42a5f5',
   '#ef5350',
