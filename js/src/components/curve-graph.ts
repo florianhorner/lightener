@@ -123,7 +123,7 @@ export class CurveGraph extends LitElement {
       font-weight: 500;
     }
     .editing-label {
-      font-size: 10px;
+      font-size: 11px;
       font-family: inherit;
       opacity: 0.7;
       font-weight: 500;
