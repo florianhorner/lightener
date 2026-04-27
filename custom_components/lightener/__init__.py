@@ -34,6 +34,12 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         _LOGGER.warning("Could not read manifest.json for version cache-busting: %s", e)
         _version = ""
 
+    _panel_url = (
+        f"/lightener/lightener-panel.js?v={_version}"
+        if _version
+        else "/lightener/lightener-panel.js"
+    )
+
     # Serve the frontend card and panel JS.
     # hass.http is unavailable during some tests. StaticPathConfig is preferred
     # when available, with a fallback for older HA versions.
@@ -96,9 +102,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     "name": "lightener-editor-panel",
                     "embed_iframe": False,
                     "trust_external": False,
-                    "module_url": f"/lightener/lightener-panel.js{f'?v={_version}' if _version else ''}",
+                    "module_url": _panel_url,
                     # Backward-compatible key for older custom panel handling.
-                    "js_url": f"/lightener/lightener-panel.js{f'?v={_version}' if _version else ''}",
+                    "js_url": _panel_url,
                 }
             },
             require_admin=False,

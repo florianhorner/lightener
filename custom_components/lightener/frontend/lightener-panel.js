@@ -161,7 +161,8 @@ class LightenerEditorPanel extends HTMLElement {
       }
       window.sessionStorage.setItem(CARD_STALE_RELOAD_KEY, CARD_VERSION);
     } catch {
-      // Reload anyway; sessionStorage can be unavailable in restricted browser modes.
+      // sessionStorage unavailable — skip reload to avoid an infinite reload loop.
+      return;
     }
     window.location.reload();
   }
