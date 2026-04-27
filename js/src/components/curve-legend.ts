@@ -25,6 +25,7 @@ export class CurveLegend extends LitElement {
   @property({ type: Array }) excludeEntityIds: string[] = [];
   @property({ type: Array }) presetOptions: LegendPresetOption[] = DEFAULT_PRESET_OPTIONS;
   @property({ type: Number }) closeAddSignal = 0;
+  @property({ type: Number }) closeRemoveSignal = 0;
   @property({ attribute: false }) hass: Hass | null = null;
 
   @state() private _addingLight = false;
@@ -545,6 +546,9 @@ export class CurveLegend extends LitElement {
     if (changed.has('closeAddSignal')) {
       this._cancelAdd();
     }
+    if (changed.has('closeRemoveSignal')) {
+      this._confirmingRemove = null;
+    }
   }
 
   private _startRemove(e: Event, entityId: string) {
@@ -553,6 +557,7 @@ export class CurveLegend extends LitElement {
     if (this.curves.length <= 1) return;
     this._cancelAdd();
     this._confirmingRemove = entityId;
+    this.dispatchEvent(new CustomEvent('remove-panel-open', { bubbles: true, composed: true }));
   }
 
   private _cancelRemove(e: Event) {
@@ -578,6 +583,7 @@ export class CurveLegend extends LitElement {
 
   private _onItemKeyDown(e: KeyboardEvent, entityId: string) {
     if (this._confirmingRemove === entityId) return;
+    if (e.target !== e.currentTarget) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       this._select(entityId);

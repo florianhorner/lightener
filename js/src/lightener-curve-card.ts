@@ -310,6 +310,7 @@ export class LightenerCurveCard extends LitElement {
   @state() private _previewActive = false;
   @state() private _showPresets = false;
   @state() private _legendCloseAddSignal = 0;
+  @state() private _legendCloseRemoveSignal = 0;
   private _previewRafPending = false;
   private _previewTrailingTimer: ReturnType<typeof setTimeout> | null = null;
   private _lastPreviewTime = 0;
@@ -904,10 +905,15 @@ export class LightenerCurveCard extends LitElement {
     this._showPresets = opening;
     if (opening) {
       this._legendCloseAddSignal++;
+      this._legendCloseRemoveSignal++;
     }
   }
 
   private _onLegendAddPanelOpen(): void {
+    this._showPresets = false;
+  }
+
+  private _onLegendRemovePanelOpen(): void {
     this._showPresets = false;
   }
 
@@ -1626,10 +1632,12 @@ export class LightenerCurveCard extends LitElement {
               .managing=${this._managingLights}
               .excludeEntityIds=${this._entityId ? [this._entityId] : []}
               .closeAddSignal=${this._legendCloseAddSignal}
+              .closeRemoveSignal=${this._legendCloseRemoveSignal}
               .hass=${this._hass}
               @select-curve=${this._onSelectCurve}
               @toggle-curve=${this._onToggleCurve}
               @add-panel-open=${this._onLegendAddPanelOpen}
+              @remove-panel-open=${this._onLegendRemovePanelOpen}
               @add-light=${this._onAddLight}
               @remove-light=${this._onRemoveLight}
             ></curve-legend>
