@@ -1,6 +1,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { LightCurve, Hass } from '../utils/types.js';
+import { EntityPickerLoader } from '../utils/entity-picker-loader.js';
 import { LEGEND_SHAPES, sampleCurveAt } from '../utils/graph-math.js';
 
 export interface LegendPresetOption {
@@ -32,8 +33,10 @@ export class CurveLegend extends LitElement {
   @state() private _pendingAddEntity = '';
   @state() private _pendingPreset: string = DEFAULT_PRESET_OPTIONS[0].value;
   @state() private _confirmingRemove: string | null = null;
-  @state() private _pickerReady = false;
-  private _pickerLoadStarted = false;
+  private _picker = new EntityPickerLoader(
+    () => this.isConnected,
+    () => this.requestUpdate()
+  );
 
   static styles = css`
     :host {
@@ -606,56 +609,11 @@ export class CurveLegend extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
-    this._ensurePickerLoaded();
+    this._picker.ensureLoaded();
   }
 
   protected updated(changed: Map<string, unknown>): void {
-    if (changed.has('hass') && this.hass) this._ensurePickerLoaded();
-  }
-
-  private _ensurePickerLoaded(): void {
-    if (this._pickerLoadStarted) return;
-    this._pickerLoadStarted = true;
-    if (customElements.get('ha-entity-picker')) {
-      this._pickerReady = true;
-      return;
-    }
-    const kickLoaders = async () => {
-      try {
-        const loadHelpers = (window as unknown as { loadCardHelpers?: () => Promise<unknown> })
-          .loadCardHelpers;
-        if (typeof loadHelpers === 'function') await loadHelpers();
-      } catch {
-        /* ignore */
-      }
-      try {
-        const entitiesCard = customElements.get('hui-entities-card') as
-          | (CustomElementConstructor & { getConfigElement?: () => Promise<HTMLElement> })
-          | undefined;
-        await entitiesCard?.getConfigElement?.();
-      } catch {
-        /* ignore */
-      }
-    };
-    kickLoaders();
-    const ready = customElements.whenDefined('ha-entity-picker');
-    const timeout = new Promise<void>((r) => setTimeout(r, 1500));
-    Promise.race([ready, timeout]).then(() => {
-      if (!this.isConnected) return;
-      this._pickerReady = !!customElements.get('ha-entity-picker');
-      if (!this._pickerReady) {
-        console.warn(
-          '[lightener-curve-card] <ha-entity-picker> not available in add-light form — falling back to plain input.'
-        );
-        // Picker may register after the 1500ms window; upgrade when it does.
-        customElements.whenDefined('ha-entity-picker').then(() => {
-          if (!this.isConnected) return;
-          this._pickerReady = true;
-          this.requestUpdate();
-        });
-      }
-      this.requestUpdate();
-    });
+    if (changed.has('hass') && this.hass) this._picker.ensureLoaded();
   }
 
   private _onFallbackAddEntityInput(e: Event): void {
@@ -711,7 +669,7 @@ export class CurveLegend extends LitElement {
     ];
     return html`
       <div class="add-form">
-        ${this._pickerReady
+        ${this._picker.ready
           ? html`<ha-entity-picker
               .hass=${this.hass}
               .value=${this._pendingAddEntity}
