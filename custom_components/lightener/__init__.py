@@ -30,7 +30,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         _manifest_path = Path(__file__).parent / "manifest.json"
         _manifest_text = await hass.async_add_executor_job(_manifest_path.read_text)
         _version = json.loads(_manifest_text).get("version", "")
-    except Exception:
+    except Exception as e:
+        _LOGGER.warning("Could not read manifest.json for version cache-busting: %s", e)
         _version = ""
 
     # Serve the frontend card and panel JS.

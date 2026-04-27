@@ -26,7 +26,8 @@ jobs:
             echo "::error::Invalid tag format: $TAG_NAME — must match vX.Y.Z[-prerelease][+build]"
             exit 1
           fi
-          yq -i -o json '.version = strenv(TAG_NAME)' \
+          VERSION="${TAG_NAME#v}"
+          yq -i -o json '.version = strenv(VERSION)' \
             "${{ github.workspace }}/custom_components/lightener/manifest.json"
 
       - name: "Sync CARD_VERSION in panel JS"

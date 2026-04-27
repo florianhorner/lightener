@@ -28,16 +28,36 @@ if "version" not in _manifest:
 
 version = _manifest["version"]
 
+if not re.match(r"^[0-9]+\.[0-9]+\.[0-9]+", version):
+    print(
+        f"[sync-version] ERROR: version {version!r} is not a valid semver string",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
 content = PANEL_JS.read_text()
-updated = re.sub(
+updated, count = re.subn(
     r'^const CARD_VERSION = ".*";',
     f'const CARD_VERSION = "{version}";',
     content,
     flags=re.MULTILINE,
 )
 
+if count == 0:
+    print(
+        "[sync-version] ERROR: CARD_VERSION constant not found in lightener-panel.js",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
 if content == updated:
     print(f"[sync-version] CARD_VERSION already at {version!r}")
 else:
-    PANEL_JS.write_text(updated)
+    tmp = PANEL_JS.with_suffix(".js.tmp")
+    try:
+        tmp.write_text(updated)
+        tmp.replace(PANEL_JS)
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        raise
     print(f"[sync-version] CARD_VERSION → {version!r}")
