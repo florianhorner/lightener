@@ -492,7 +492,7 @@ export class CurveLegend extends LitElement {
         height: 18px;
       }
       .editing-chip {
-        font-size: 10px;
+        display: none;
       }
       .clear-edit-icon {
         width: 20px;
