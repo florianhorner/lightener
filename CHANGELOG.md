@@ -13,6 +13,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The local dev preview now uses a fake Home Assistant WebSocket backend so the
   card can exercise save, preview, add-light, and remove-light flows on a local
   server.
+- Curve editing now shows an explicit "Editing" chip on the selected row so the
+  active edit state is visible at a glance. A "Stop editing" button (×) dismisses
+  it without navigating away.
+- Add-light and Presets panels are now mutually exclusive — opening one
+  automatically closes the other.
 
 ### Fixed
 
@@ -24,6 +29,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   fails.
 - Read-only curve endpoints now filter entities through Home Assistant read
   permissions before returning data.
+- After a HACS upgrade the browser no longer serves the old card from the ES
+  module cache. The panel JS URL now carries `?v=<version>` so the browser
+  fetches a fresh copy on every upgrade.
+- Remove-confirmation card now wraps long light names instead of truncating them
+  on narrow cards.
+- Touch targets for Add/Cancel, remove, and edit-clear icons are now 44 px
+  minimum on mobile, preventing accidental mis-taps on small screens.
 
 ## [2.15.0] - 2026-04-25
 
