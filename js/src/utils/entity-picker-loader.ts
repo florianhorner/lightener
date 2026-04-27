@@ -40,19 +40,30 @@ export class EntityPickerLoader {
     kickLoaders();
     const ready = customElements.whenDefined('ha-entity-picker');
     const timeout = new Promise<void>((r) => setTimeout(r, 1500));
-    Promise.race([ready, timeout]).then(() => {
-      if (!this.isConnected()) return;
-      this.ready = !!customElements.get('ha-entity-picker');
-      if (!this.ready) {
-        console.warn('[lightener] <ha-entity-picker> not available — falling back to plain input.');
-        // Picker may register after the 1500ms window; upgrade when it does.
-        customElements.whenDefined('ha-entity-picker').then(() => {
-          if (!this.isConnected()) return;
-          this.ready = true;
-          this.requestUpdate();
-        });
-      }
-      this.requestUpdate();
-    });
+    Promise.race([ready, timeout])
+      .then(() => {
+        if (!this.isConnected()) return;
+        this.ready = !!customElements.get('ha-entity-picker');
+        if (!this.ready) {
+          console.warn(
+            '[lightener] <ha-entity-picker> not available — falling back to plain input.'
+          );
+          // Picker may register after the 1500ms window; upgrade when it does.
+          customElements
+            .whenDefined('ha-entity-picker')
+            .then(() => {
+              if (!this.isConnected()) return;
+              this.ready = true;
+              this.requestUpdate();
+            })
+            .catch(() => {
+              /* picker registration failed — already using fallback input */
+            });
+        }
+        this.requestUpdate();
+      })
+      .catch(() => {
+        /* defensive: unexpected rejection from race — component stays in fallback state */
+      });
   }
 }
