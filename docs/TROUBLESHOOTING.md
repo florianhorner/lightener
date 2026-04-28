@@ -6,9 +6,10 @@ one compound symptom — not three independent bugs:
 - Card editor renders the "Entity" label but the `<ha-entity-picker>` is blank.
 - In-card light-management UI (Add light / per-row Remove) is missing even
   though the shipped version advertises it.
-- Preview-at-brightness scrubber shows a "+N more" or "Show less" button
-  whose label doesn't match the current source (e.g., source renders
-  `"Collapse"` but the user sees `"Show less"`), or the button click is dead.
+- Scrubber or legend shows behaviour from an older version (e.g., per-light
+  value badges appear even though the current release removed them from the
+  scrubber, or the Preview button appears in the card header instead of the
+  scrubber panel).
 
 These share one root cause: **the class currently registered under
 `<lightener-curve-card>` in the user's browser is not the class from the
@@ -52,8 +53,7 @@ Run in DevTools on the HA page:
     className: ctor?.name,            // minified, e.g. "He" vs "Be" — just needs to be stable per-version
     hasCanManageLights,               // must be true on any build that ships PR #52
     bytes: t.length,
-    hasCollapse: t.includes('Collapse'),
-    hasShowLess: t.includes('Show less'),
+    cardVersion: window.__LIGHTENER_CURVE_CARD_VERSION__,   // e.g. "2.15.0"
     sha256Prefix: hash,
     lastModified: r.headers.get('last-modified')
   });
@@ -61,7 +61,7 @@ Run in DevTools on the HA page:
 ```
 
 **Healthy state on current `master`:**
-`hasCanManageLights === true`, `hasCollapse === true`, `hasShowLess === false`.
+`hasCanManageLights === true`, `cardVersion` matches the installed release.
 
 Compare `bytes` to the server file:
 ```bash
@@ -96,9 +96,14 @@ Run these in order. Stop as soon as the diagnostic above is healthy.
    on this browser profile (bfcache / shared module graph across tabs can
    resurrect the old class) and reopen one tab. Re-run the diagnostic.
 
-## Permanent fix (tracked)
+## Automatic mitigation (shipped in v2.15.0)
 
-This will recur for every user upgrading across a bundle change until the
-served path is version-stamped. Track progress in the
-[GitHub issue tracker](https://github.com/florianhorner/lightener-curve-editor/issues)
-or search for "version-stamped bundle path".
+The panel JS URL now carries `?v=<version>` so browsers fetch a fresh copy on
+every upgrade. If the loaded card class reports a version mismatch via
+`window.__LIGHTENER_CURVE_CARD_VERSION__`, the panel triggers a one-time
+`location.reload()` (gated by `sessionStorage` to prevent reload loops) so
+the new bundle takes over without manual intervention.
+
+If you still see stale behaviour after an upgrade, run the recovery sequence
+above — the automatic mitigation covers the common case but cannot clear a
+fully-cached service worker or a shadow file on disk.
