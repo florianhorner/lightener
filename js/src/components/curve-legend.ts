@@ -41,6 +41,8 @@ export class CurveLegend extends LitElement {
   static styles = css`
     :host {
       display: block;
+      --accent: var(--primary-color, #2563eb);
+      --divider: var(--divider-color, rgba(127, 127, 127, 0.2));
     }
     .legend-panel {
       border-radius: 12px;
@@ -50,8 +52,7 @@ export class CurveLegend extends LitElement {
         var(--ha-card-background, var(--card-background-color, #fff)) 95%,
         var(--secondary-text-color, #616161) 5%
       );
-      border: 1px solid
-        color-mix(in srgb, var(--divider-color, rgba(127, 127, 127, 0.2)) 80%, transparent);
+      border: 1px solid color-mix(in srgb, var(--divider) 80%, transparent);
     }
     .legend-label {
       font-size: 11px;
@@ -141,7 +142,7 @@ export class CurveLegend extends LitElement {
       height: 6px;
       margin: 2px 0;
     }
-    .eye-icon {
+    .eye-btn {
       width: 16px;
       height: 16px;
       flex-shrink: 0;
@@ -149,18 +150,30 @@ export class CurveLegend extends LitElement {
       transition: opacity 0.15s ease;
       padding: 4px;
       box-sizing: content-box;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: inherit;
+      border-radius: 4px;
     }
-    .legend-item:hover .eye-icon,
-    .legend-item.hidden .eye-icon {
+    .eye-btn svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
+    .legend-item:hover .eye-btn,
+    .legend-item.hidden .eye-btn {
       opacity: 0.7;
     }
-    .eye-icon:focus {
+    .eye-btn:focus {
       outline: none;
     }
-    .eye-icon:focus-visible {
-      outline: 2px solid var(--primary-color, #2563eb);
+    .eye-btn:focus-visible {
+      outline: 2px solid var(--accent);
       outline-offset: 2px;
-      border-radius: 4px;
       opacity: 0.9;
     }
     .remove-icon {
@@ -290,7 +303,7 @@ export class CurveLegend extends LitElement {
       font-size: 11px;
       font-weight: 500;
       border-radius: 6px;
-      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+      border: 1px solid var(--divider);
       background: transparent;
       color: var(--secondary-text-color, #616161);
       cursor: pointer;
@@ -306,13 +319,13 @@ export class CurveLegend extends LitElement {
       opacity: 0.9;
     }
     .confirm-btn:focus-visible {
-      outline: 2px solid var(--primary-color, #2563eb);
+      outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
     .add-divider {
       height: 1px;
       margin: 6px 10px;
-      background: var(--divider-color, rgba(127, 127, 127, 0.2));
+      background: var(--divider);
     }
     .add-row {
       padding: 6px 10px 8px;
@@ -323,7 +336,7 @@ export class CurveLegend extends LitElement {
       gap: 6px;
       padding: 6px 10px;
       background: transparent;
-      border: 1px dashed var(--divider-color, rgba(127, 127, 127, 0.3));
+      border: 1px dashed var(--divider);
       border-radius: 8px;
       color: var(--secondary-text-color, #616161);
       font-family: inherit;
@@ -362,7 +375,7 @@ export class CurveLegend extends LitElement {
     }
     .add-form input[type='text'] {
       padding: 6px 10px;
-      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+      border: 1px solid var(--divider);
       border-radius: 8px;
       background: var(--card-background-color, #fff);
       color: var(--primary-text-color, #212121);
@@ -389,7 +402,7 @@ export class CurveLegend extends LitElement {
     }
     .preset-field select {
       padding: 6px 10px;
-      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+      border: 1px solid var(--divider);
       border-radius: 8px;
       background: var(--card-background-color, #fff);
       color: var(--primary-text-color, #212121);
@@ -412,7 +425,7 @@ export class CurveLegend extends LitElement {
       font-size: 12px;
       font-weight: 500;
       border-radius: 6px;
-      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+      border: 1px solid var(--divider);
       background: transparent;
       color: var(--secondary-text-color, #616161);
       cursor: pointer;
@@ -469,22 +482,26 @@ export class CurveLegend extends LitElement {
         min-height: 44px;
         box-sizing: border-box;
       }
-      .eye-icon {
+      .eye-btn {
         width: 20px;
         height: 20px;
-        min-width: 32px;
-        min-height: 32px;
-        padding: 6px;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 12px;
         margin-left: auto;
         box-sizing: content-box;
+      }
+      .eye-btn svg {
+        width: 20px;
+        height: 20px;
       }
       .remove-icon {
         opacity: 0.6;
         width: 20px;
         height: 20px;
-        min-width: 32px;
-        min-height: 32px;
-        padding: 6px;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 12px;
         box-sizing: content-box;
       }
       .remove-icon svg {
@@ -497,9 +514,9 @@ export class CurveLegend extends LitElement {
       .clear-edit-icon {
         width: 20px;
         height: 20px;
-        min-width: 32px;
-        min-height: 32px;
-        padding: 6px;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 12px;
         box-sizing: content-box;
       }
       .clear-edit-icon svg {
@@ -789,36 +806,38 @@ export class CurveLegend extends LitElement {
                             </button>
                           `
                         : nothing}
-                      <svg
-                        class="eye-icon"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        role="button"
-                        tabindex="0"
+                      <button
+                        type="button"
+                        class="eye-btn"
                         aria-label="${curve.visible ? 'Hide' : 'Show'} ${curve.friendlyName}"
                         aria-pressed=${!curve.visible}
                         @click=${(e: Event) => this._toggle(e, curve.entityId)}
                         @keydown=${(e: KeyboardEvent) => this._onToggleKeyDown(e, curve.entityId)}
                       >
-                        ${curve.visible
-                          ? html`
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                              <circle cx="12" cy="12" r="3" />
-                            `
-                          : html`
-                              <path
-                                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
-                              />
-                              <path
-                                d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
-                              />
-                              <line x1="1" y1="1" x2="23" y2="23" />
-                            `}
-                      </svg>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          ${curve.visible
+                            ? html`
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                              `
+                            : html`
+                                <path
+                                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
+                                />
+                                <path
+                                  d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
+                                />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                              `}
+                        </svg>
+                      </button>
                       ${this.canManage && this.curves.length > 1
                         ? html`<button
                             type="button"

@@ -101,6 +101,7 @@ export class LightenerCurveCardEditor extends LitElement {
   static styles = css`
     :host {
       display: block;
+      --accent: var(--primary-color, #2563eb);
     }
     .form {
       display: flex;
@@ -130,8 +131,8 @@ export class LightenerCurveCardEditor extends LitElement {
     }
     input:focus {
       outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 1px #2563eb;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
     }
     .hint {
       font-size: 11px;
@@ -290,6 +291,7 @@ export class LightenerCurveCard extends LitElement {
       --text-color: var(--primary-text-color, #212121);
       --secondary-text: var(--secondary-text-color, #616161);
       --divider: var(--divider-color, rgba(127, 127, 127, 0.2));
+      --accent: var(--primary-color, #2563eb);
       --graph-bg: var(--card-background-color, var(--ha-card-background, #fafafa));
       --panel-bg: color-mix(in srgb, var(--card-bg) 95%, var(--secondary-text, #616161) 5%);
       --text-xs: 9px;
@@ -399,7 +401,7 @@ export class LightenerCurveCard extends LitElement {
     }
     .success {
       font-size: var(--text-sm);
-      color: #2563eb;
+      color: var(--accent);
       padding: 0;
       display: flex;
       align-items: center;
@@ -476,9 +478,9 @@ export class LightenerCurveCard extends LitElement {
       border-radius: 999px;
       background: linear-gradient(
         120deg,
-        rgba(37, 99, 235, 0.08) 0%,
-        rgba(37, 99, 235, 0.3) 45%,
-        rgba(37, 99, 235, 0.08) 100%
+        color-mix(in srgb, var(--accent) 8%, transparent) 0%,
+        color-mix(in srgb, var(--accent) 30%, transparent) 45%,
+        color-mix(in srgb, var(--accent) 8%, transparent) 100%
       );
       clip-path: polygon(0% 78%, 18% 78%, 38% 45%, 62% 18%, 82% 22%, 100% 0, 100% 100%, 0 100%);
     }
@@ -574,17 +576,17 @@ export class LightenerCurveCard extends LitElement {
       flex-shrink: 0;
     }
     .presets-btn:hover {
-      border-color: #2563eb;
-      color: #2563eb;
-      background: rgba(37, 99, 235, 0.04);
+      border-color: var(--accent);
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 4%, transparent);
     }
     .presets-btn:focus-visible {
-      outline: 2px solid #2563eb;
+      outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
     .presets-btn.active {
-      border-color: #2563eb;
-      color: #2563eb;
+      border-color: var(--accent);
+      color: var(--accent);
     }
     .presets-panel {
       display: grid;
@@ -616,11 +618,11 @@ export class LightenerCurveCard extends LitElement {
       gap: 4px;
     }
     .preset-option:hover {
-      border-color: #2563eb;
-      background: rgba(37, 99, 235, 0.04);
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 4%, transparent);
     }
     .preset-option:focus-visible {
-      outline: 2px solid #2563eb;
+      outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
     .preset-name {
@@ -839,7 +841,7 @@ export class LightenerCurveCard extends LitElement {
                 <polyline
                   points="${presetPolylinePoints(preset)}"
                   fill="none"
-                  stroke="#2563eb"
+                  stroke="var(--accent, #2563eb)"
                   stroke-width="1.5"
                   stroke-linecap="round"
                   stroke-linejoin="round"

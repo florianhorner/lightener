@@ -78,11 +78,11 @@ describe('curve-footer — save button', () => {
     expect(btn.disabled).toBe(false);
   });
 
-  it('says "Saving..." and is disabled when saving=true', async () => {
+  it('says "Saving…" and is disabled when saving=true', async () => {
     const el = makeFooter({ dirty: true, saving: true });
     await el.updateComplete;
     const btn = el.renderRoot.querySelector<HTMLButtonElement>('.btn-save')!;
-    expect(btn.textContent?.trim()).toBe('Saving...');
+    expect(btn.textContent?.trim()).toBe('Saving…');
     expect(btn.disabled).toBe(true);
   });
 

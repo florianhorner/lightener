@@ -110,7 +110,7 @@ describe('curve-legend', () => {
     const cssText = CurveLegendClass.styles.cssText;
     expect(cssText).toContain('@media (max-width: 500px)');
     expect(cssText).toContain('.clear-edit-icon');
-    expect(cssText).toContain('min-width: 32px;');
+    expect(cssText).toContain('min-width: 44px;');
     expect(cssText).not.toContain('margin: -12px;');
   });
 
@@ -122,10 +122,10 @@ describe('curve-legend', () => {
     expect(items[1]!.getAttribute('aria-selected')).toBe('false');
   });
 
-  it('sets aria-pressed on eye-icon matching !curve.visible', async () => {
+  it('sets aria-pressed on eye-btn matching !curve.visible', async () => {
     const el = makeLegend();
     await el.updateComplete;
-    const eyes = el.renderRoot.querySelectorAll<SVGElement>('.eye-icon');
+    const eyes = el.renderRoot.querySelectorAll<HTMLButtonElement>('.eye-btn');
     expect(eyes[0]!.getAttribute('aria-pressed')).toBe('false');
     expect(eyes[1]!.getAttribute('aria-pressed')).toBe('true');
   });
@@ -157,12 +157,12 @@ describe('curve-legend', () => {
     expect(spy.mock.calls[0]![0].detail).toEqual({ entityId: 'light.a' });
   });
 
-  it('dispatches toggle-curve on eye-icon click', async () => {
+  it('dispatches toggle-curve on eye-btn click', async () => {
     const el = makeLegend();
     await el.updateComplete;
     const spy = vi.fn();
     el.addEventListener('toggle-curve', spy);
-    const eye = el.renderRoot.querySelector<SVGElement>('.eye-icon')!;
+    const eye = el.renderRoot.querySelector<HTMLButtonElement>('.eye-btn')!;
     eye.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy.mock.calls[0]![0].detail).toEqual({ entityId: 'light.a' });
@@ -175,7 +175,7 @@ describe('curve-legend', () => {
     const toggleSpy = vi.fn();
     el.addEventListener('select-curve', selectSpy);
     el.addEventListener('toggle-curve', toggleSpy);
-    const eye = el.renderRoot.querySelector<SVGElement>('.eye-icon')!;
+    const eye = el.renderRoot.querySelector<HTMLButtonElement>('.eye-btn')!;
     eye.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
     expect(toggleSpy).toHaveBeenCalledTimes(1);
     expect(selectSpy).not.toHaveBeenCalled();
@@ -241,7 +241,7 @@ describe('curve-legend', () => {
     await el.updateComplete;
     const spy = vi.fn();
     el.addEventListener('toggle-curve', spy);
-    const eye = el.renderRoot.querySelector<SVGElement>('.eye-icon')!;
+    const eye = el.renderRoot.querySelector<HTMLButtonElement>('.eye-btn')!;
     eye.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     eye.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
     expect(spy).toHaveBeenCalledTimes(2);
@@ -274,7 +274,7 @@ describe('curve-legend', () => {
     await el.updateComplete;
     const outerSpy = vi.fn();
     document.body.addEventListener('toggle-curve', outerSpy);
-    const eye = el.renderRoot.querySelector<SVGElement>('.eye-icon')!;
+    const eye = el.renderRoot.querySelector<HTMLButtonElement>('.eye-btn')!;
     eye.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
     expect(outerSpy).toHaveBeenCalledTimes(1);
     document.body.removeEventListener('toggle-curve', outerSpy);
