@@ -43,4 +43,4 @@ Run this in DevTools console on your HA page and paste the result:
 })();
 ```
 
-See [TROUBLESHOOTING.md](../docs/TROUBLESHOOTING.md) for the full stale-card recovery sequence.
+See [TROUBLESHOOTING.md](../../docs/TROUBLESHOOTING.md) for the full stale-card recovery sequence.

@@ -55,9 +55,9 @@ pytest() {
 echo "Lightener dev env active — tests: scripts/test-python or bare pytest, HA: scripts/develop"
 EOF
 
-if command -v pre-commit >/dev/null 2>&1; then
+if [[ -x ".venv/bin/pre-commit" ]]; then
     echo "[setup-python] Installing pre-commit hooks..."
-    pre-commit install --install-hooks
+    .venv/bin/pre-commit install --install-hooks || true
 fi
 
 echo ""
