@@ -76,64 +76,65 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
             filter="url(#scrubber-glow-${i.color.replace("#","")}-${this._uid})"
             pointer-events="none"
           />
-        `});return q`${i}${r}${n}`}_renderCurve(t,e){if(!t.visible||!t.controlPoints.length)return W;try{const i=null===this.selectedCurveId||t.entityId===this.selectedCurveId,r=this._isCurveInteractive(e)&&!this.readOnly,n=yt(t.controlPoints),s=function(t){if(t.length<2)return"";if(2===t.length)return`M${t[0].x},${t[0].y} L${t[1].x},${t[1].y}`;const{dx:e,tangents:i}=It(t);let r=`M${t[0].x},${t[0].y}`;for(let n=0;n<t.length-1;n++){const s=e[n]/3;r+=` C${t[n].x+s},${t[n].y+i[n]*s} ${t[n+1].x-s},${t[n+1].y-i[n+1]*s} ${t[n+1].x},${t[n+1].y}`}return r}(n.map(t=>({x:Ct(t.lightener),y:At(t.target)}))),o=s+` L${Ct(n[n.length-1].lightener)},${At(0)}`+` L${Ct(0)},${At(0)} Z`,a=`grad-${e}-${this._uid}`,l=Rt[e%Rt.length],d=this._dragCurveIdx===e,c=t.color+"33",h=i?1:.2;let p=null;if(d&&this._dragPointIdx>=0)p=t.controlPoints[this._dragPointIdx];else if((this._hoveredPoint?.curve===e||this._focusedPoint?.curve===e)&&r){const i=this._focusedPoint?.curve===e?this._focusedPoint.point:this._hoveredPoint?.point??-1;p=t.controlPoints[i]??null}return q`
-      <defs>
-        <linearGradient id="${a}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${t.color}" stop-opacity="${i?.45:.06}" />
-          <stop offset="100%" stop-color="${t.color}" stop-opacity="${i?.08:0}" />
-        </linearGradient>
-      </defs>
-      ${d?this._renderCrossHair(t):W}
-      <path
-        d="${o}"
-        fill="url(#${a})"
-        style="opacity: ${h}"
-        pointer-events="none"
-      />
-      <path
-        class="curve-line"
-        d="${s}"
-        stroke="${t.color}"
-        stroke-dasharray="${l}"
-        style="opacity: ${h}"
-        pointer-events="none"
-      />
-      ${r?t.controlPoints.map((i,r)=>{const n=0===r,s=d&&this._dragPointIdx===r,o=this._hoveredPoint?.curve===e&&this._hoveredPoint?.point===r;return q`
-              <circle
-                class="hit-circle ${n?"origin-hit":""}"
-                data-curve="${e}"
-                data-point="${r}"
-                cx="${Ct(i.lightener)}"
-                cy="${At(i.target)}"
-                r="${this._isMobile?28:22}"
-                fill="transparent"
-                pointer-events="all"
-                tabindex="0"
-                role="button"
-                aria-label="${t.friendlyName} point ${i.lightener}% group brightness to ${i.target}% light brightness. ${0===r?"Arrow Up/Down to adjust starting brightness. Cannot be moved horizontally.":"Arrow keys move, Enter adds a nearby point, Space removes."}"
-                style="touch-action: none; -webkit-touch-callout: none"
-                @pointerdown=${t=>this._onPointerDown(t,e,r)}
-                @contextmenu=${t=>this._onPointContextMenu(t,e,r)}
-                @pointerenter=${()=>this._hoveredPoint={curve:e,point:r}}
-                @pointerleave=${()=>this._hoveredPoint=null}
-                @focus=${()=>this._onPointFocus(e,r)}
-                @blur=${()=>this._onPointBlur(e,r)}
-                @keydown=${t=>this._onPointKeyDown(t,e,r)}
-              />
-              <circle
-                class="control-point ${n?"origin":""} ${s?"dragging":""} ${o?"hovered":""} ${this._focusedPoint?.curve===e&&this._focusedPoint?.point===r?"focused":""}"
-                cx="${Ct(i.lightener)}"
-                cy="${At(i.target)}"
-                r="6"
-                fill="${c}"
-                stroke="${t.color}"
-                stroke-width="2"
-                style="--glow-color: ${t.color}"
-                pointer-events="none"
-              />
-            `}):W}
-      ${null!==p?this._renderTooltip(t,p):W}
-    `}catch{return W}}connectedCallback(){super.connectedCallback(),this._mql=window.matchMedia("(max-width: 500px)"),this._isMobile=this._mql.matches,this._mql.addEventListener("change",this._onMqlChange)}disconnectedCallback(){super.disconnectedCallback(),this._clearLongPress(),this._mql?.removeEventListener("change",this._onMqlChange),this._mql=null}_getSvgDescription(){const t=this.curves.filter(t=>t.visible);if(!t.length)return"No curves displayed";const e=t.map(t=>{const e=t.controlPoints[t.controlPoints.length-1];return`${t.friendlyName} (${t.controlPoints.length} points, max ${e?.target??0}%)`});return`${t.length} curve${1===t.length?"":"s"}: ${e.join(", ")}`}render(){return V`
+        `});return q`${i}${r}${n}`}_orderedCurves(){const t=this.selectedCurveId?this.curves.findIndex(t=>t.entityId===this.selectedCurveId):-1;return t>=0?[...this.curves.slice(0,t).map((t,e)=>({curve:t,idx:e})),...this.curves.slice(t+1).map((e,i)=>({curve:e,idx:t+1+i})),{curve:this.curves[t],idx:t}]:this.curves.map((t,e)=>({curve:t,idx:e}))}_renderCurvePaths(t,e){if(!t.visible||!t.controlPoints.length)return W;try{const i=null===this.selectedCurveId||t.entityId===this.selectedCurveId,r=this._dragCurveIdx===e,n=i?1:.2,s=yt(t.controlPoints),o=function(t){if(t.length<2)return"";if(2===t.length)return`M${t[0].x},${t[0].y} L${t[1].x},${t[1].y}`;const{dx:e,tangents:i}=It(t);let r=`M${t[0].x},${t[0].y}`;for(let n=0;n<t.length-1;n++){const s=e[n]/3;r+=` C${t[n].x+s},${t[n].y+i[n]*s} ${t[n+1].x-s},${t[n+1].y-i[n+1]*s} ${t[n+1].x},${t[n+1].y}`}return r}(s.map(t=>({x:Ct(t.lightener),y:At(t.target)}))),a=o+` L${Ct(s[s.length-1].lightener)},${At(0)}`+` L${Ct(0)},${At(0)} Z`,l=`grad-${e}-${this._uid}`,d=Rt[e%Rt.length];return q`
+        <defs>
+          <linearGradient id="${l}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${t.color}" stop-opacity="${i?.45:.06}" />
+            <stop offset="100%" stop-color="${t.color}" stop-opacity="${i?.08:0}" />
+          </linearGradient>
+        </defs>
+        ${r?this._renderCrossHair(t):W}
+        <path
+          d="${a}"
+          fill="url(#${l})"
+          style="opacity: ${n}"
+          pointer-events="none"
+        />
+        <path
+          class="curve-line"
+          d="${o}"
+          stroke="${t.color}"
+          stroke-dasharray="${d}"
+          style="opacity: ${n}"
+          pointer-events="none"
+        />
+      `}catch{return W}}_renderCurvePoints(t,e){if(!t.visible||!t.controlPoints.length)return W;try{const i=this._isCurveInteractive(e);if(!(i&&!this.readOnly))return W;const r=this._dragCurveIdx===e,n=t.color+"33";let s=null;if(r&&this._dragPointIdx>=0)s=t.controlPoints[this._dragPointIdx];else if(this._hoveredPoint?.curve===e||this._focusedPoint?.curve===e){const i=this._focusedPoint?.curve===e?this._focusedPoint.point:this._hoveredPoint?.point??-1;s=t.controlPoints[i]??null}return q`
+        ${t.controlPoints.map((i,s)=>{const o=0===s,a=r&&this._dragPointIdx===s,l=this._hoveredPoint?.curve===e&&this._hoveredPoint?.point===s;return q`
+            <circle
+              class="hit-circle ${o?"origin-hit":""}"
+              data-curve="${e}"
+              data-point="${s}"
+              cx="${Ct(i.lightener)}"
+              cy="${At(i.target)}"
+              r="${this._isMobile?28:22}"
+              fill="transparent"
+              pointer-events="all"
+              tabindex="0"
+              role="button"
+              aria-label="${t.friendlyName} point ${i.lightener}% group brightness to ${i.target}% light brightness. ${0===s?"Arrow Up/Down to adjust starting brightness. Cannot be moved horizontally.":"Arrow keys move, Enter adds a nearby point, Space removes."}"
+              style="touch-action: none; -webkit-touch-callout: none"
+              @pointerdown=${t=>this._onPointerDown(t,e,s)}
+              @contextmenu=${t=>this._onPointContextMenu(t,e,s)}
+              @pointerenter=${()=>this._hoveredPoint={curve:e,point:s}}
+              @pointerleave=${()=>this._hoveredPoint=null}
+              @focus=${()=>this._onPointFocus(e,s)}
+              @blur=${()=>this._onPointBlur(e,s)}
+              @keydown=${t=>this._onPointKeyDown(t,e,s)}
+            />
+            <circle
+              class="control-point ${o?"origin":""} ${a?"dragging":""} ${l?"hovered":""} ${this._focusedPoint?.curve===e&&this._focusedPoint?.point===s?"focused":""}"
+              cx="${Ct(i.lightener)}"
+              cy="${At(i.target)}"
+              r="6"
+              fill="${n}"
+              stroke="${t.color}"
+              stroke-width="2"
+              style="--glow-color: ${t.color}"
+              pointer-events="none"
+            />
+          `})}
+        ${null!==s?this._renderTooltip(t,s):W}
+      `}catch{return W}}connectedCallback(){super.connectedCallback(),this._mql=window.matchMedia("(max-width: 500px)"),this._isMobile=this._mql.matches,this._mql.addEventListener("change",this._onMqlChange)}disconnectedCallback(){super.disconnectedCallback(),this._clearLongPress(),this._mql?.removeEventListener("change",this._onMqlChange),this._mql=null}_getSvgDescription(){const t=this.curves.filter(t=>t.visible);if(!t.length)return"No curves displayed";const e=t.map(t=>{const e=t.controlPoints[t.controlPoints.length-1];return`${t.friendlyName} (${t.controlPoints.length} points, max ${e?.target??0}%)`});return`${t.length} curve${1===t.length?"":"s"}: ${e.join(", ")}`}render(){return V`
       <svg
         viewBox="0 0 ${356} ${248}"
         preserveAspectRatio="xMidYMid meet"
@@ -158,7 +159,8 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
               pointer-events="all"
               fill="transparent"
             />`}
-        ${(()=>{const t=this.selectedCurveId?this.curves.findIndex(t=>t.entityId===this.selectedCurveId):-1,e=t>=0?[...this.curves.slice(0,t).map((t,e)=>({curve:t,idx:e})),...this.curves.slice(t+1).map((e,i)=>({curve:e,idx:t+1+i})),{curve:this.curves[t],idx:t}]:this.curves.map((t,e)=>({curve:t,idx:e}));return q`<g clip-path="url(#graph-area-${this._uid})">${e.map(({curve:t,idx:e})=>this._renderCurve(t,e))}</g>`})()}
+        <!-- Phase 1: curve fills and lines (rendered before scrubber overlay) -->
+        ${(()=>{const t=this._orderedCurves();return q`<g clip-path="url(#graph-area-${this._uid})">${t.map(({curve:t,idx:e})=>this._renderCurvePaths(t,e))}</g>`})()}
         <!-- Scrubber glow filters (only re-render when curves change, not on every position update) -->
         <defs>
           <clipPath id="editing-label-clip-${this._uid}">
@@ -176,6 +178,8 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
               </filter>`})}
         </defs>
         ${this._renderScrubberIndicator()}
+        <!-- Phase 3: control points rendered after scrubber overlay so they are always visible -->
+        ${(()=>{const t=this._orderedCurves();return q`<g clip-path="url(#graph-area-${this._uid})">${t.map(({curve:t,idx:e})=>this._renderCurvePoints(t,e))}</g>`})()}
         ${(()=>{if(this.readOnly)return W;if(0===this.curves.length)return q`<text class="hint hint-select" text-anchor="middle"
                 x="${194}" y="${112}"
                 >Add a light below to get started</text>`;if(null===this.selectedCurveId&&this._dragCurveIdx<0)return q`<text class="hint hint-select" text-anchor="middle"
@@ -331,17 +335,11 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       <div class="scrubber-panel">
         <div class="scrubber-header">
           <div class="scrubber-label">At brightness</div>
-          ${this.canPreview?this.previewActive?V`<button
-                  class="preview-toggle-btn active"
-                  @click=${this._onPreviewToggle}
-                >
+          ${this.canPreview?this.previewActive?V`<button class="preview-toggle-btn active" @click=${this._onPreviewToggle}>
                   <span class="preview-live-dot"></span>
                   Previewing &nbsp;·&nbsp;
                   <span class="preview-restore-text">Restore</span>
-                </button>`:V`<button
-                  class="preview-toggle-btn"
-                  @click=${this._onPreviewToggle}
-                >
+                </button>`:V`<button class="preview-toggle-btn" @click=${this._onPreviewToggle}>
                   Preview on lights
                 </button>`:W}
         </div>
