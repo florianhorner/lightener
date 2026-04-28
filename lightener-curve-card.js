@@ -372,6 +372,8 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
     `}};var zt;Ot.styles=o`
     :host {
       display: block;
+      --accent: var(--primary-color, #2563eb);
+      --divider: var(--divider-color, rgba(127, 127, 127, 0.2));
     }
     .scrubber-panel {
       border-radius: 12px;
@@ -395,7 +397,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       color: var(--secondary-text-color, #616161);
     }
     .preview-toggle-btn {
-      border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+      border: 1px solid var(--divider);
       border-radius: 999px;
       padding: 4px 11px;
       font-size: 10px;
@@ -415,24 +417,24 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       flex-shrink: 0;
     }
     .preview-toggle-btn:hover {
-      border-color: #2563eb;
-      color: #2563eb;
-      background: rgba(37, 99, 235, 0.04);
+      border-color: var(--accent);
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 4%, transparent);
     }
     .preview-toggle-btn:focus-visible {
-      outline: 2px solid #2563eb;
+      outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
     .preview-toggle-btn.active {
-      border-color: #2563eb;
-      color: #2563eb;
-      background: rgba(37, 99, 235, 0.06);
+      border-color: var(--accent);
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 6%, transparent);
     }
     .preview-live-dot {
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: #2563eb;
+      background: var(--accent);
       animation: pulse-dot 1.4s ease-in-out infinite;
       flex-shrink: 0;
     }
@@ -473,7 +475,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       right: 0;
       height: 4px;
       border-radius: 2px;
-      background: rgba(37, 99, 235, 0.25);
+      background: color-mix(in srgb, var(--accent) 25%, transparent);
     }
     .track-fill {
       position: absolute;
@@ -481,7 +483,11 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       left: 0;
       height: 4px;
       border-radius: 2px;
-      background: linear-gradient(90deg, rgba(37, 99, 235, 0.25), #2563eb);
+      background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--accent) 25%, transparent),
+        var(--accent)
+      );
       transition: width 0.05s linear;
     }
     .thumb {
@@ -489,12 +495,12 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       top: 6px;
       width: 16px;
       height: 16px;
-      background: #2563eb;
+      background: var(--accent);
       border-radius: 50%;
       transform: translateX(-50%);
       cursor: grab;
       border: 2px solid var(--ha-card-background, var(--card-background-color, #fff));
-      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+      box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 30%, transparent);
       transition: box-shadow 0.15s ease;
       z-index: 2;
     }
@@ -507,18 +513,18 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       bottom: -14px;
     }
     .thumb:hover {
-      box-shadow: 0 2px 10px rgba(37, 99, 235, 0.45);
+      box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 45%, transparent);
     }
     .thumb.dragging {
       cursor: grabbing;
-      box-shadow: 0 2px 14px rgba(37, 99, 235, 0.5);
+      box-shadow: 0 2px 14px color-mix(in srgb, var(--accent) 50%, transparent);
     }
     .position-label {
       position: absolute;
       top: -10px;
       font-size: 10px;
       font-weight: 600;
-      color: #2563eb;
+      color: var(--accent);
       transform: translateX(-50%);
       user-select: none;
       font-variant-numeric: tabular-nums;
@@ -547,7 +553,8 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       }
       .preview-toggle-btn {
         font-size: 11px;
-        padding: 5px 12px;
+        padding: 0 12px;
+        min-height: 44px;
       }
     }
   `,t([ut({type:Array})],Ot.prototype,"curves",void 0),t([ut({type:Boolean})],Ot.prototype,"readOnly",void 0),t([ut({type:Boolean})],Ot.prototype,"previewActive",void 0),t([ut({type:Boolean})],Ot.prototype,"canPreview",void 0),t([vt()],Ot.prototype,"_dragging",void 0),t([vt()],Ot.prototype,"_position",void 0),Ot=t([ht("curve-scrubber")],Ot);const Nt=[{value:"linear",label:"Linear"},{value:"dim_accent",label:"Dim accent"},{value:"late_starter",label:"Late starter"},{value:"night_mode",label:"Night mode"}];let Bt=zt=class extends dt{constructor(){super(...arguments),this.curves=[],this.selectedCurveId=null,this.scrubberPosition=null,this.canManage=!1,this.managing=!1,this.excludeEntityIds=[],this.presetOptions=Nt,this.closeAddSignal=0,this.closeRemoveSignal=0,this.hass=null,this._addingLight=!1,this._pendingAddEntity="",this._pendingPreset=Nt[0].value,this._confirmingRemove=null,this._picker=new _t(()=>this.isConnected,()=>this.requestUpdate())}_select(t){this._confirmingRemove!==t&&this.dispatchEvent(new CustomEvent("select-curve",{detail:{entityId:t},bubbles:!0,composed:!0}))}_toggle(t,e){t.stopPropagation(),this.dispatchEvent(new CustomEvent("toggle-curve",{detail:{entityId:e},bubbles:!0,composed:!0}))}_clearSelection(t,e){t.stopPropagation(),this._select(e)}willUpdate(t){super.willUpdate(t),!t.has("canManage")&&!t.has("managing")||this.canManage&&!this.managing||(this._confirmingRemove=null),t.has("closeAddSignal")&&this._cancelAdd(),t.has("closeRemoveSignal")&&(this._confirmingRemove=null)}_startRemove(t,e){t.stopPropagation(),this.canManage&&!this.managing&&(this.curves.length<=1||(this._cancelAdd(),this._confirmingRemove=e,this.dispatchEvent(new CustomEvent("remove-panel-open",{bubbles:!0,composed:!0}))))}_cancelRemove(t){t.stopPropagation(),this._confirmingRemove=null}_confirmRemove(t,e){t.stopPropagation(),this.canManage&&!this.managing?(this._confirmingRemove=null,this.dispatchEvent(new CustomEvent("remove-light",{detail:{entityId:e},bubbles:!0,composed:!0}))):this._confirmingRemove=null}_onItemKeyDown(t,e){if(this._confirmingRemove!==e&&t.target===t.currentTarget&&("Enter"!==t.key&&" "!==t.key||(t.preventDefault(),this._select(e)),"ArrowDown"===t.key||"ArrowUp"===t.key)){t.preventDefault();const e=[...this.renderRoot.querySelectorAll(".legend-item")],i=e.indexOf(t.currentTarget),r="ArrowDown"===t.key?i+1:i-1;e[r]?.focus()}}_onToggleKeyDown(t,e){"Enter"!==t.key&&" "!==t.key||(t.preventDefault(),this._toggle(t,e))}connectedCallback(){super.connectedCallback(),this._picker.ensureLoaded()}updated(t){t.has("hass")&&this.hass&&this._picker.ensureLoaded()}_onFallbackAddEntityInput(t){this._pendingAddEntity=t.target.value.trim()}_startAdd(){this._confirmingRemove=null,this._addingLight=!0,this._pendingAddEntity="",this._pendingPreset=this.presetOptions[0]?.value??"linear",this.dispatchEvent(new CustomEvent("add-panel-open",{bubbles:!0,composed:!0}))}_cancelAdd(){this._addingLight=!1,this._pendingAddEntity=""}_onAddEntityChange(t){this._pendingAddEntity=t.detail?.value??""}_onPresetChange(t){this._pendingPreset=t.target.value}_confirmAdd(){const t=this._pendingAddEntity.trim();t&&(this.dispatchEvent(new CustomEvent("add-light",{detail:{entityId:t,preset:this._pendingPreset},bubbles:!0,composed:!0})),this._addingLight=!1,this._pendingAddEntity="")}_renderAddForm(){const t=[...this.curves.map(t=>t.entityId),...this.excludeEntityIds.filter(Boolean)];return V`
@@ -646,34 +653,36 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
                               </svg>
                             </button>
                           `:W}
-                      <svg
-                        class="eye-icon"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        role="button"
-                        tabindex="0"
+                      <button
+                        type="button"
+                        class="eye-btn"
                         aria-label="${t.visible?"Hide":"Show"} ${t.friendlyName}"
                         aria-pressed=${!t.visible}
                         @click=${e=>this._toggle(e,t.entityId)}
                         @keydown=${e=>this._onToggleKeyDown(e,t.entityId)}
                       >
-                        ${t.visible?V`
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                              <circle cx="12" cy="12" r="3" />
-                            `:V`
-                              <path
-                                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
-                              />
-                              <path
-                                d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
-                              />
-                              <line x1="1" y1="1" x2="23" y2="23" />
-                            `}
-                      </svg>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          ${t.visible?V`
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                              `:V`
+                                <path
+                                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
+                                />
+                                <path
+                                  d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
+                                />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                              `}
+                        </svg>
+                      </button>
                       ${this.canManage&&this.curves.length>1?V`<button
                             type="button"
                             class="remove-icon"
@@ -731,6 +740,8 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
     `}};Bt.styles=o`
     :host {
       display: block;
+      --accent: var(--primary-color, #2563eb);
+      --divider: var(--divider-color, rgba(127, 127, 127, 0.2));
     }
     .legend-panel {
       border-radius: 12px;
@@ -740,8 +751,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
         var(--ha-card-background, var(--card-background-color, #fff)) 95%,
         var(--secondary-text-color, #616161) 5%
       );
-      border: 1px solid
-        color-mix(in srgb, var(--divider-color, rgba(127, 127, 127, 0.2)) 80%, transparent);
+      border: 1px solid color-mix(in srgb, var(--divider) 80%, transparent);
     }
     .legend-label {
       font-size: 11px;
@@ -831,7 +841,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       height: 6px;
       margin: 2px 0;
     }
-    .eye-icon {
+    .eye-btn {
       width: 16px;
       height: 16px;
       flex-shrink: 0;
@@ -839,18 +849,30 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       transition: opacity 0.15s ease;
       padding: 4px;
       box-sizing: content-box;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: inherit;
+      border-radius: 4px;
     }
-    .legend-item:hover .eye-icon,
-    .legend-item.hidden .eye-icon {
+    .eye-btn svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
+    .legend-item:hover .eye-btn,
+    .legend-item.hidden .eye-btn {
       opacity: 0.7;
     }
-    .eye-icon:focus {
+    .eye-btn:focus {
       outline: none;
     }
-    .eye-icon:focus-visible {
-      outline: 2px solid var(--primary-color, #2563eb);
+    .eye-btn:focus-visible {
+      outline: 2px solid var(--accent);
       outline-offset: 2px;
-      border-radius: 4px;
       opacity: 0.9;
     }
     .remove-icon {
@@ -980,7 +1002,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       font-size: 11px;
       font-weight: 500;
       border-radius: 6px;
-      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+      border: 1px solid var(--divider);
       background: transparent;
       color: var(--secondary-text-color, #616161);
       cursor: pointer;
@@ -996,13 +1018,13 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       opacity: 0.9;
     }
     .confirm-btn:focus-visible {
-      outline: 2px solid var(--primary-color, #2563eb);
+      outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
     .add-divider {
       height: 1px;
       margin: 6px 10px;
-      background: var(--divider-color, rgba(127, 127, 127, 0.2));
+      background: var(--divider);
     }
     .add-row {
       padding: 6px 10px 8px;
@@ -1013,7 +1035,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       gap: 6px;
       padding: 6px 10px;
       background: transparent;
-      border: 1px dashed var(--divider-color, rgba(127, 127, 127, 0.3));
+      border: 1px dashed var(--divider);
       border-radius: 8px;
       color: var(--secondary-text-color, #616161);
       font-family: inherit;
@@ -1052,7 +1074,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
     }
     .add-form input[type='text'] {
       padding: 6px 10px;
-      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+      border: 1px solid var(--divider);
       border-radius: 8px;
       background: var(--card-background-color, #fff);
       color: var(--primary-text-color, #212121);
@@ -1079,7 +1101,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
     }
     .preset-field select {
       padding: 6px 10px;
-      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+      border: 1px solid var(--divider);
       border-radius: 8px;
       background: var(--card-background-color, #fff);
       color: var(--primary-text-color, #212121);
@@ -1102,7 +1124,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       font-size: 12px;
       font-weight: 500;
       border-radius: 6px;
-      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+      border: 1px solid var(--divider);
       background: transparent;
       color: var(--secondary-text-color, #616161);
       cursor: pointer;
@@ -1159,22 +1181,26 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
         min-height: 44px;
         box-sizing: border-box;
       }
-      .eye-icon {
+      .eye-btn {
         width: 20px;
         height: 20px;
-        min-width: 32px;
-        min-height: 32px;
-        padding: 6px;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 12px;
         margin-left: auto;
         box-sizing: content-box;
+      }
+      .eye-btn svg {
+        width: 20px;
+        height: 20px;
       }
       .remove-icon {
         opacity: 0.6;
         width: 20px;
         height: 20px;
-        min-width: 32px;
-        min-height: 32px;
-        padding: 6px;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 12px;
         box-sizing: content-box;
       }
       .remove-icon svg {
@@ -1187,9 +1213,9 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       .clear-edit-icon {
         width: 20px;
         height: 20px;
-        min-width: 32px;
-        min-height: 32px;
-        padding: 6px;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 12px;
         box-sizing: content-box;
       }
       .clear-edit-icon svg {
@@ -1253,12 +1279,14 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
           ?disabled=${this.saving}
           aria-label="Save changes (Ctrl+S)"
         >
-          ${this.saving?"Saving...":"Save"}
+          ${this.saving?"Saving…":"Save"}
         </button>
       </div>
     `:V``}};Ht.styles=o`
     :host {
       display: block;
+      --accent: var(--primary-color, #2563eb);
+      --divider: var(--divider-color, rgba(127, 127, 127, 0.2));
     }
     .footer {
       display: flex;
@@ -1284,7 +1312,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
     .unsaved-label {
       font-size: 11px;
       font-weight: 500;
-      color: var(--warning-color, #f59e0b);
+      color: var(--warning-color, #b45309);
       margin-right: auto;
     }
     button {
@@ -1304,16 +1332,16 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       cursor: default;
     }
     .btn-save {
-      background: #2563eb;
+      background: var(--accent);
       color: #fff;
     }
     .btn-save:hover:not(:disabled) {
-      background: #1d4fd8;
+      background: color-mix(in srgb, var(--accent) 85%, #000);
     }
     .btn-ghost {
       background: transparent;
       color: var(--secondary-text, #616161);
-      border: 1px solid var(--divider, rgba(127, 127, 127, 0.2));
+      border: 1px solid var(--divider);
     }
     .btn-ghost:hover:not(:disabled) {
       background: rgba(128, 128, 128, 0.08);
@@ -1339,7 +1367,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
         min-height: 44px;
       }
     }
-  `,t([ut({type:Boolean})],Ht.prototype,"dirty",void 0),t([ut({type:Boolean})],Ht.prototype,"readOnly",void 0),t([ut({type:Boolean})],Ht.prototype,"saving",void 0),t([ut({type:Boolean})],Ht.prototype,"canUndo",void 0),Ht=t([ht("curve-footer")],Ht);"undefined"!=typeof window&&(window.__LIGHTENER_CURVE_CARD_VERSION__="2.15.0");const jt=V`<svg
+  `,t([ut({type:Boolean})],Ht.prototype,"dirty",void 0),t([ut({type:Boolean})],Ht.prototype,"readOnly",void 0),t([ut({type:Boolean})],Ht.prototype,"saving",void 0),t([ut({type:Boolean})],Ht.prototype,"canUndo",void 0),Ht=t([ht("curve-footer")],Ht);"undefined"!=typeof window&&(window.__LIGHTENER_CURVE_CARD_VERSION__="2.15.0-dev.5");const jt=V`<svg
   class="status-icon"
   viewBox="0 0 24 24"
   fill="none"
@@ -1392,6 +1420,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
     `}};Vt.styles=o`
     :host {
       display: block;
+      --accent: var(--primary-color, #2563eb);
     }
     .form {
       display: flex;
@@ -1421,8 +1450,8 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
     }
     input:focus {
       outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 1px #2563eb;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
     }
     .hint {
       font-size: 11px;
@@ -1444,7 +1473,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
                 <polyline
                   points="${function(t){return t.controlPoints.map(t=>{const e=4+t.lightener/100*56,i=36-t.target/100*32;return`${e.toFixed(1)},${i.toFixed(1)}`}).join(" ")}(t)}"
                   fill="none"
-                  stroke="#2563eb"
+                  stroke="var(--accent, #2563eb)"
                   stroke-width="1.5"
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -1583,6 +1612,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       --text-color: var(--primary-text-color, #212121);
       --secondary-text: var(--secondary-text-color, #616161);
       --divider: var(--divider-color, rgba(127, 127, 127, 0.2));
+      --accent: var(--primary-color, #2563eb);
       --graph-bg: var(--card-background-color, var(--ha-card-background, #fafafa));
       --panel-bg: color-mix(in srgb, var(--card-bg) 95%, var(--secondary-text, #616161) 5%);
       --text-xs: 9px;
@@ -1692,7 +1722,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
     }
     .success {
       font-size: var(--text-sm);
-      color: #2563eb;
+      color: var(--accent);
       padding: 0;
       display: flex;
       align-items: center;
@@ -1769,9 +1799,9 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       border-radius: 999px;
       background: linear-gradient(
         120deg,
-        rgba(37, 99, 235, 0.08) 0%,
-        rgba(37, 99, 235, 0.3) 45%,
-        rgba(37, 99, 235, 0.08) 100%
+        color-mix(in srgb, var(--accent) 8%, transparent) 0%,
+        color-mix(in srgb, var(--accent) 30%, transparent) 45%,
+        color-mix(in srgb, var(--accent) 8%, transparent) 100%
       );
       clip-path: polygon(0% 78%, 18% 78%, 38% 45%, 62% 18%, 82% 22%, 100% 0, 100% 100%, 0 100%);
     }
@@ -1867,17 +1897,17 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       flex-shrink: 0;
     }
     .presets-btn:hover {
-      border-color: #2563eb;
-      color: #2563eb;
-      background: rgba(37, 99, 235, 0.04);
+      border-color: var(--accent);
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 4%, transparent);
     }
     .presets-btn:focus-visible {
-      outline: 2px solid #2563eb;
+      outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
     .presets-btn.active {
-      border-color: #2563eb;
-      color: #2563eb;
+      border-color: var(--accent);
+      color: var(--accent);
     }
     .presets-panel {
       display: grid;
@@ -1909,11 +1939,11 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
       gap: 4px;
     }
     .preset-option:hover {
-      border-color: #2563eb;
-      background: rgba(37, 99, 235, 0.04);
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 4%, transparent);
     }
     .preset-option:focus-visible {
-      outline: 2px solid #2563eb;
+      outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
     .preset-name {

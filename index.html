@@ -11,6 +11,10 @@
       rel="stylesheet"
     />
     <style>
+      :root {
+        color-scheme: dark;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      }
       * {
         box-sizing: border-box;
       }
@@ -18,7 +22,6 @@
         margin: 0;
         padding: 0;
         background: #0a0a0f;
-        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
         color: #ccc;
         min-height: 100vh;
         overflow-x: hidden;
@@ -50,7 +53,7 @@
         transform: translateX(-50%);
         width: 1200px;
         height: 500px;
-        background: radial-gradient(ellipse, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+        background: radial-gradient(ellipse, rgba(3, 169, 244, 0.05) 0%, transparent 70%);
       }
 
       /* Subtle dot grid */
@@ -138,11 +141,8 @@
         padding: 8px 12px;
         border-radius: 20px;
         white-space: nowrap;
-        transition: background 0.2s, color 0.2s;
-      }
-      .hint-pill:hover {
-        background: rgba(255, 255, 255, 0.08);
-        color: #bbb;
+        cursor: default;
+        user-select: none;
       }
       .hint-pill kbd {
         font-family: inherit;
@@ -181,15 +181,15 @@
         background: radial-gradient(ellipse at center, rgba(66, 165, 245, 0.12) 0%, transparent 70%);
       }
       .preview-container.dark-theme::before {
-        background: radial-gradient(ellipse at center, rgba(124, 77, 255, 0.10) 0%, transparent 70%);
+        background: radial-gradient(ellipse at center, rgba(3, 169, 244, 0.10) 0%, transparent 70%);
       }
       .preview-container:hover::before {
         opacity: 1;
       }
 
       .label {
-        color: #666;
-        font-size: 10px;
+        color: #888;
+        font-size: 11px;
         font-weight: 500;
         margin-bottom: 8px;
         text-transform: uppercase;
@@ -211,8 +211,8 @@
         box-shadow: 0 0 6px rgba(66, 165, 245, 0.5);
       }
       .dark-theme .label::before {
-        background: #7c4dff;
-        box-shadow: 0 0 6px rgba(124, 77, 255, 0.5);
+        background: #0288d1;
+        box-shadow: 0 0 6px rgba(2, 136, 209, 0.5);
       }
 
       /* Theme variables */
@@ -255,7 +255,7 @@
         gap: 8px;
         min-height: 44px;
         font-size: 14px;
-        color: #555;
+        color: #888;
         text-decoration: none;
         padding: 10px 16px;
         border-radius: 8px;
@@ -275,6 +275,12 @@
         width: 16px;
         height: 16px;
         fill: currentColor;
+      }
+
+      .touch-hints { display: none; }
+      @media (pointer: coarse) {
+        .pointer-hints { display: none; }
+        .touch-hints { display: flex; }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -307,24 +313,27 @@
     <div class="bg-glow"></div>
     <div class="bg-grid"></div>
 
-    <div class="page-content">
-      <div class="demo-header">
+    <main class="page-content">
+      <header class="demo-header">
         <h1>Lightener <span>Curve Editor</span></h1>
         <p>
           Interactive brightness curve editor for
           <a href="https://www.home-assistant.io/">Home Assistant</a>.
           Map group brightness to individual light levels with draggable control points.
         </p>
-        <div class="demo-hints">
+        <div class="demo-hints pointer-hints">
           <span class="hint-pill">Click a light to edit</span>
           <span class="hint-pill">Drag points to shape the curve</span>
           <span class="hint-pill">Double-click to add</span>
           <span class="hint-pill">Right-click to remove</span>
-          <span class="hint-pill"><kbd>Ctrl+S</kbd> Save</span>
-          <span class="hint-pill"><kbd>Ctrl+Z</kbd> Undo</span>
-          <span class="hint-pill"><kbd>Esc</kbd> Cancel</span>
         </div>
-      </div>
+        <div class="demo-hints touch-hints">
+          <span class="hint-pill">Tap a light to edit</span>
+          <span class="hint-pill">Drag points to shape the curve</span>
+          <span class="hint-pill">Double-tap to add</span>
+          <span class="hint-pill">Hold to remove</span>
+        </div>
+      </header>
 
       <div class="cards-container">
         <div class="preview-container light-theme">
@@ -337,7 +346,7 @@
         </div>
       </div>
 
-      <div class="demo-footer">
+      <footer class="demo-footer">
         <a href="https://github.com/florianhorner/lightener-curve-editor">
           <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
           View on GitHub
@@ -346,8 +355,8 @@
           <svg viewBox="0 0 16 16"><path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Z"/></svg>
           Issues
         </a>
-      </div>
-    </div>
+      </footer>
+    </main>
 
     <script type="module">
       import "./lightener-curve-card.js";
