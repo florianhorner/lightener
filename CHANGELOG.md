@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Card module writes a `window.LIGHTENER_CARD_VERSION` marker at load time so
+  the panel can detect stale-card-class mismatches without a server round-trip.
+
 ### Changed
 
 - Restored the release-native curve editor model: the smooth curve graph and
@@ -18,6 +23,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   it without navigating away.
 - Add-light and Presets panels are now mutually exclusive — opening one
   automatically closes the other.
+- The per-light brightness badges in the "At brightness" scrubber have been
+  removed. The scrubber now shows a clean track and position label only.
+- The "Preview on lights" button has moved into the scrubber panel header,
+  inline with the "At brightness" label, saving vertical space and keeping
+  the preview control contextually next to the scrubber it controls.
+- Control points in the curve graph now render above the scrubber's dim overlay
+  so they remain fully visible and clickable regardless of scrubber position.
+  Control points at 100% brightness no longer show a clipped arc at the top edge.
+- Editing label increased from 10 px to 11 px on desktop; hidden on mobile to
+  prevent truncation against narrow graph widths.
+- `scripts/sync-version` now validates the new TypeScript source constant
+  (`CARD_VERSION` in `js/src/lightener-curve-card.ts`) and the built bundle
+  alongside the existing manifest/panel-JS check, ensuring all four sources
+  stay in sync.
 
 ### Fixed
 
@@ -40,6 +59,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   on narrow cards.
 - Touch targets for Add/Cancel, remove, and edit-clear icons are now 44 px
   minimum on mobile, preventing accidental mis-taps on small screens.
+- Badge text color now uses the actual rendered surface color to compute
+  contrast, correcting an incorrect white-on-white appearance in dark mode.
+- Entity-picker `Promise.race` chain now has a `.catch()` guard so a rejected
+  `loadCardHelpers` promise no longer produces an unhandled rejection warning.
+- Animated elements now respect `prefers-reduced-motion`: the live-preview dot
+  pulse and scrubber animations are disabled when the OS requests reduced motion.
+- `scripts/sync-version` now exits with a clear error message when the manifest
+  is missing, the version key is absent, or the CARD_VERSION constant count is
+  not exactly 1 in the bundle.
 
 ## [2.15.0] - 2026-04-25
 
