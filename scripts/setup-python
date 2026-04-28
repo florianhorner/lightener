@@ -2,6 +2,18 @@
 
 set -euo pipefail
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
+    cat <<'EOF'
+Usage: scripts/setup-python
+
+Create the local Python 3.13 virtualenv at .venv, install backend
+dependencies, write .env.workspace, and install pre-commit hooks.
+
+Run once after cloning, or whenever requirements.txt changes.
+EOF
+    exit 0
+fi
+
 cd "$(dirname "$0")/.."
 
 PY_VERSION=${PY_VERSION:-3.13.2}
