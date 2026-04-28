@@ -84,6 +84,15 @@ function fireLegend(card: LightenerCurveCard, event: string, detail: Record<stri
   legend.dispatchEvent(new CustomEvent(event, { detail, bubbles: true, composed: true }));
 }
 
+describe('lightener-curve-card module', () => {
+  it('publishes its version marker for the panel stale-bundle check', () => {
+    expect(
+      (window as unknown as { __LIGHTENER_CURVE_CARD_VERSION__?: string })
+        .__LIGHTENER_CURVE_CARD_VERSION__
+    ).toBe('2.15.0');
+  });
+});
+
 describe('lightener-curve-card — light management', () => {
   it('_onAddLight calls lightener/add_light with entity + preset', async () => {
     const { card, hass } = await mountCard({

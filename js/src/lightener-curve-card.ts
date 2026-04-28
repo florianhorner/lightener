@@ -18,8 +18,15 @@ import './components/curve-scrubber.js';
 import './components/curve-legend.js';
 import './components/curve-footer.js';
 
+const CARD_VERSION = '2.15.0';
 const SAVE_SUCCESS_DISPLAY_MS = 2000;
 const CANCEL_ANIM_DURATION_MS = 300;
+
+if (typeof window !== 'undefined') {
+  (
+    window as typeof window & { __LIGHTENER_CURVE_CARD_VERSION__?: string }
+  ).__LIGHTENER_CURVE_CARD_VERSION__ = CARD_VERSION;
+}
 
 const WARNING_ICON = html`<svg
   class="status-icon"
