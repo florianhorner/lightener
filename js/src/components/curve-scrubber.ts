@@ -221,12 +221,54 @@ export class CurveScrubber extends LitElement {
    *  - Light backgrounds: darken to meet WCAG AA 4.5:1 ratio
    *  - Dark backgrounds: use a lighter, more saturated variant for visibility
    */
+  private _parseColorChannels(color: string): { r: number; g: number; b: number } | null {
+    const value = color.trim();
+    const hex = value.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (hex) {
+      const normalized =
+        hex[1].length === 3
+          ? hex[1]
+              .split('')
+              .map((channel) => channel + channel)
+              .join('')
+          : hex[1];
+      return {
+        r: parseInt(normalized.slice(0, 2), 16),
+        g: parseInt(normalized.slice(2, 4), 16),
+        b: parseInt(normalized.slice(4, 6), 16),
+      };
+    }
+
+    const rgb = value.match(
+      /^rgba?\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)/i
+    );
+    if (!rgb) return null;
+    return {
+      r: Number(rgb[1]),
+      g: Number(rgb[2]),
+      b: Number(rgb[3]),
+    };
+  }
+
+  private _isDarkSurface(): boolean {
+    if (typeof window === 'undefined') return false;
+    const styles = getComputedStyle(this);
+    const baseSurface =
+      styles.getPropertyValue('--ha-card-background').trim() ||
+      styles.getPropertyValue('--card-background-color').trim() ||
+      styles.backgroundColor.trim();
+    const channels = this._parseColorChannels(baseSurface);
+    if (!channels) return false;
+    const [r, g, b] = [channels.r, channels.g, channels.b].map((value) => value / 255);
+    const toLinear = (channel: number) =>
+      channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    const luminance = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    return luminance < 0.5;
+  }
+
   private _badgeTextColor(hex: string): string {
     const low = hex.toLowerCase();
-    const isDark =
-      typeof window !== 'undefined' &&
-      window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = this._isDarkSurface();
     if (low === '#ffca28') return isDark ? '#ffd740' : '#9e7c00'; // light gold / dark gold
     if (low === '#ffa726') return isDark ? '#ffb74d' : '#b36b00'; // light orange / dark orange
     return hex;

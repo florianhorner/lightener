@@ -152,6 +152,7 @@ describe('curve-scrubber — badges', () => {
 
   it('darkens low-contrast #ffca28 to #9e7c00 for badge text', async () => {
     const el = makeScrubber();
+    el.style.setProperty('--ha-card-background', '#ffffff');
     await el.updateComplete;
     const badges = el.renderRoot.querySelectorAll<HTMLElement>('.badge');
     const valueSpan = badges[1]!.querySelector<HTMLElement>('span[style*="color"]')!;
@@ -173,9 +174,19 @@ describe('curve-scrubber — badges', () => {
         },
       ],
     });
+    el.style.setProperty('--ha-card-background', '#ffffff');
     await el.updateComplete;
     const valueSpan = el.renderRoot.querySelector<HTMLElement>('.badge span[style*="color"]')!;
     expect(valueSpan.style.color).toContain('rgb(179, 107, 0)');
+  });
+
+  it('uses the dark-surface variant when the rendered HA panel background is dark', async () => {
+    const el = makeScrubber();
+    el.style.setProperty('--ha-card-background', '#1c1c1c');
+    await el.updateComplete;
+    const badges = el.renderRoot.querySelectorAll<HTMLElement>('.badge');
+    const valueSpan = badges[1]!.querySelector<HTMLElement>('span[style*="color"]')!;
+    expect(valueSpan.style.color).toContain('rgb(255, 215, 64)');
   });
 
   it('renders the backend-linear badge value for a peak curve', async () => {
