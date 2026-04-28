@@ -63,7 +63,7 @@ To switch back to upstream: remove this repo from HACS custom repositories and r
 
 ```sh
 scripts/setup-python   # Python venv + deps
-scripts/test-fast      # backend pytest + frontend vitest
+scripts/test-python    # backend pytest
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow including `scripts/ha-sync` for direct deployment to a test HA instance.
