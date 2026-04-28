@@ -26,3 +26,4 @@ js/coverage/
 .gstack/
 .context/
 .env.workspace
+**/.gstack-qa/
