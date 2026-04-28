@@ -81,3 +81,17 @@ jobs:
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: ${{ github.workspace }}/custom_components/lightener/lightener.zip
+
+      - name: "Copy built bundle into demo directory"
+        shell: "bash"
+        run: |
+          cp "${{ github.workspace }}/custom_components/lightener/frontend/lightener-curve-card.js" \
+             "${{ github.workspace }}/docs/lightener-curve-card.js"
+
+      - name: "Deploy demo to GitHub Pages"
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d231e62369c1b5dc4 # v4.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages
+          commit_message: "deploy: update demo to ${{ github.event.release.tag_name }}"

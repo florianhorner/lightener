@@ -72,9 +72,19 @@ regressions without flagging small refactors.
 
 1. Bump version in `manifest.json` (the release workflow also patches it from the tag, but keep them in sync)
 2. Create a GitHub release with tag `vX.Y.Z`
-3. Let the Release workflow run — it builds the zip, validates structure, uploads
+3. Let the Release workflow run — it builds the zip, validates structure, uploads, **and deploys the demo to GitHub Pages**
 4. **Do not** manually re-upload or replace the release zip asset
 5. After HACS picks up the new version, test on HA: verify the integration loads (`manifest/get` via websocket must succeed)
+
+### Demo page (GitHub Pages)
+
+`https://florianhorner.github.io/lightener-curve-editor/` is served from the `gh-pages`
+branch (not `docs/` on master). The Release workflow automatically deploys `docs/` →
+`gh-pages` after every version cut, so the live demo always matches the shipped bundle.
+
+**If you need to push a demo update outside a release** (e.g. HTML-only fix), push
+directly to the `gh-pages` branch — the two files it needs are `index.html` and
+`lightener-curve-card.js` at root level (same content as `docs/`).
 
 ## Development
 
