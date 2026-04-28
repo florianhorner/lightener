@@ -155,3 +155,78 @@ Source: /challenge mode adversarial review
   Fix: Ignore entity-change events when `_pendingEntity` is already set.
   Priority: P2 (UX/reliability)
   **Completed:** v2.13.1 (2026-04-13)
+
+## Design Review Findings (2026-04-28)
+
+Source: /design-review on master branch — cross-model (Claude + Codex GPT-5.4 + subagent)
+
+### P1 — Accessibility (card component)
+
+- [ ] **Warning orange `#f59e0b` fails WCAG AA on white**
+  `js/src/components/curve-footer.ts:36-40` — the warning/dirty state uses orange that
+  reads at ~2.15:1 on white. Replace with `--warning-color` token (already `#ffa726`)
+  and verify it reaches 3:1 for UI components.
+  Priority: P1 (WCAG AA violation on save confirmation flow)
+
+- [ ] **Legend SVG with `role="button"` — replace with real `<button>`**
+  `js/src/components/curve-legend.ts:792-806` — an `<svg>` uses `role="button"` instead
+  of wrapping in a `<button>`. Real button: free keyboard focus, Enter/Space fire events,
+  `tabindex` managed correctly, pointer semantics correct.
+  Priority: P1 (a11y — synthetic buttons break screen reader and keyboard patterns)
+
+### P2 — Accessibility (card component)
+
+- [ ] **Scrubber "Preview on lights" button has no 44px touch minimum**
+  `js/src/components/curve-scrubber.ts:43-61` — preview button falls below 44×44px.
+  Add `min-width: 44px; min-height: 44px` or equivalent padding.
+  Priority: P2 (touch accessibility)
+
+- [ ] **Legend eye/trash affordances only 32×32 on mobile**
+  `js/src/components/curve-legend.ts:472-489` — mobile touch targets should be ≥44px.
+  Priority: P2 (touch accessibility)
+
+### P2 — Design System Consistency
+
+- [ ] **`--divider` and `--divider-color` used interchangeably across components**
+  `curve-legend.ts` reads `--divider-color` directly (7 uses), bypassing the `--divider`
+  alias defined in `lightener-curve-card.ts:293`. Fallback values also diverge:
+  `rgba(0,0,0,0.12)` (light-biased) vs `rgba(127,127,127,0.2)` (neutral). Normalize to
+  `--divider` everywhere so single-theme theming works correctly.
+  Affects: `js/src/components/curve-legend.ts`, `js/src/components/curve-scrubber.ts`
+  Priority: P2 (token consistency)
+
+- [ ] **`--graph-bg` token defined but never consumed by `curve-graph.ts`**
+  `lightener-curve-card.ts:293` defines `--graph-bg` but `curve-graph.ts` has zero
+  references to it. The graph background cannot be themed. Either bridge the token into
+  the canvas/SVG render pass or remove the dead token from the spec.
+  Affects: `js/src/components/curve-graph.ts`, DESIGN.md
+  Priority: P2 (dead token — theming gap)
+
+- [ ] **Hardcoded `#2563eb` accent color scattered instead of tokenized**
+  `curve-footer.ts:59-64`, `curve-scrubber.ts:64-82,130-167`, `lightener-curve-card.ts:402,577-587,619-623`
+  all hardcode `#2563eb`. Extract to a `--accent-color` or `--product-color` CSS variable
+  in `:host` so all interactive affordances share one changeable source.
+  Priority: P2 (token consistency / theming)
+
+- [ ] **Breakpoint fragmentation: 5 different values across files with no shared constants**
+  Demo: 860px · Card: 1100px / 700px · Sub-components: 500px.
+  None are shared. DESIGN.md has no breakpoint section.
+  Add a breakpoint inventory to DESIGN.md and consider CSS custom media queries or
+  a JS constant shared across components.
+  Affects: `docs/index.html:291`, `js/src/lightener-curve-card.ts:511-556`,
+  `js/src/components/curve-graph.ts:141`, `js/src/components/curve-legend.ts:465`,
+  `js/src/components/curve-footer.ts:84`
+  Priority: P2 (consistency — responsive pivots don't align)
+
+- [ ] **DESIGN.md does not document `--secondary-text` token or breakpoints**
+  The card defines `--secondary-text` in `:host` but it's absent from DESIGN.md.
+  Breakpoints section missing entirely. Update DESIGN.md so it reflects all live tokens.
+  Priority: P2 (docs lag implementation)
+
+### P3 — Demo Page Polish
+
+- [ ] **"Centered everything" on demo page — consider left-aligning secondary content**
+  `docs/index.html:71-80,127-128` — the full page including hint pills and footer links
+  are center-aligned. Centering every element including hint pills creates a monotone
+  composition without hierarchy. Consider left-aligning pills or staggering card labels.
+  Priority: P3 (subtle visual hierarchy)
