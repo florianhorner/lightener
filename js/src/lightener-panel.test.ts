@@ -185,6 +185,33 @@ describe('lightener-editor-panel', () => {
     expect(panel._cardModuleUrl).not.toContain('?v=');
   });
 
+  it('reloads after fallback import when the fallback-loaded card version is stale', async () => {
+    const Panel = customElements.get('lightener-editor-panel');
+    if (!Panel) {
+      throw new Error('lightener-editor-panel was not defined');
+    }
+    const panel = new Panel() as HTMLElement & {
+      _ensureCardScriptLoaded: () => Promise<void>;
+      _reloadForStaleCard: () => void;
+      _cardUsedFallback: boolean;
+      _cardScriptPromise?: Promise<unknown>;
+    };
+    let reloadRequested = false;
+    panel._reloadForStaleCard = () => {
+      reloadRequested = true;
+    };
+    // Simulate: fallback was used and the fallback-loaded card reported an old version.
+    panel._cardUsedFallback = true;
+    panel._cardScriptPromise = Promise.resolve();
+    (
+      window as unknown as { __LIGHTENER_CURVE_CARD_VERSION__?: string }
+    ).__LIGHTENER_CURVE_CARD_VERSION__ = '2.14.0';
+
+    await panel._ensureCardScriptLoaded();
+
+    expect(reloadRequested).toBe(true);
+  });
+
   it('shows an inline save or discard guard before switching entities with unsaved changes', async () => {
     const Panel = customElements.get('lightener-editor-panel');
     if (!Panel) {

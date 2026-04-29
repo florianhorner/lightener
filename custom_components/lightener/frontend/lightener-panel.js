@@ -177,6 +177,13 @@ class LightenerEditorPanel extends HTMLElement {
         });
     }
     await this._cardScriptPromise;
+    // When the fallback (unversioned) URL was used, the card bundle sets
+    // window[CARD_VERSION_GLOBAL] at eval time. If it reports a different version
+    // than what this panel was compiled for, trigger the stale-card reload so the
+    // correct bundle takes over — the same guard that runs for pre-registered classes.
+    if (this._cardUsedFallback && CARD_VERSION && window[CARD_VERSION_GLOBAL] !== CARD_VERSION) {
+      this._reloadForStaleCard();
+    }
   }
 
   _reloadForStaleCard() {
