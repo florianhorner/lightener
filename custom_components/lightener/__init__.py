@@ -33,6 +33,11 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         _raw_version = json.loads(_manifest_text).get("version", "")
         # Strip SemVer build metadata (e.g. +build.4) before URL use — '+' is
         # reserved in URL paths. The pre-release label after '-' is kept.
+        # Limitation: two manifests that differ only in build metadata
+        # (e.g. 2.15.0+build.1 vs 2.15.0+build.2) collapse to the same versioned
+        # URL and won't bust the SW cache between them. Accepted because the
+        # project's release flow always bumps SemVer — pure build-metadata-only
+        # releases are not a supported upgrade path.
         _url_version = _raw_version.split("+")[0] if _raw_version else ""
         _version = (
             _url_version

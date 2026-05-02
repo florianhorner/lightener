@@ -128,9 +128,14 @@ async def test_async_setup_versioned_path_omitted_without_version(
         assert await async_setup(hass, {}) is True
 
     paths = hass.http.async_register_static_paths.await_args.args[0]
-    assert len(paths) == 2
-    assert paths[0].url_path == "/lightener/lightener-curve-card.js"
-    assert paths[1].url_path == "/lightener/lightener-panel.js"
+    by_url = {p.url_path: p for p in paths}
+    assert "/lightener/lightener-curve-card.js" in by_url
+    assert "/lightener/lightener-panel.js" in by_url
+    assert not any(
+        re.fullmatch(r"/lightener/lightener-curve-card\.[^/]+\.js", k)
+        for k in by_url
+        if k != "/lightener/lightener-curve-card.js"
+    )
 
 
 async def test_async_setup_skips_versioned_path_for_unsafe_version(
@@ -151,10 +156,46 @@ async def test_async_setup_skips_versioned_path_for_unsafe_version(
         assert await async_setup(hass, {}) is True
 
     paths = hass.http.async_register_static_paths.await_args.args[0]
-    assert len(paths) == 2
-    assert paths[0].url_path == "/lightener/lightener-curve-card.js"
-    assert paths[1].url_path == "/lightener/lightener-panel.js"
+    by_url = {p.url_path: p for p in paths}
+    assert "/lightener/lightener-curve-card.js" in by_url
+    assert "/lightener/lightener-panel.js" in by_url
+    assert not any(
+        re.fullmatch(r"/lightener/lightener-curve-card\.[^/]+\.js", k)
+        for k in by_url
+        if k != "/lightener/lightener-curve-card.js"
+    )
     assert "unsafe characters" in caplog.text
+
+
+async def test_async_setup_strips_build_metadata_from_versioned_path(
+    hass: HomeAssistant,
+) -> None:
+    """A SemVer build-metadata segment (+build.N) must be stripped from the URL.
+
+    Documents the chosen behavior: two builds that share a SemVer core but differ
+    only in build metadata (e.g. 2.15.0+build.1 vs 2.15.0+build.2) collapse to the
+    same versioned URL. This is acceptable because the project's release flow always
+    bumps SemVer; pure build-metadata-only releases would not invalidate the SW
+    cache and are therefore not a supported upgrade vector.
+    """
+
+    hass.http = MagicMock()
+    hass.http.async_register_static_paths = AsyncMock()
+    hass.async_add_executor_job = AsyncMock(
+        return_value='{"version": "2.15.0+build.4"}'
+    )
+
+    with (
+        patch("custom_components.lightener.websocket.async_register_commands"),
+        patch("homeassistant.components.frontend.async_register_built_in_panel"),
+    ):
+        assert await async_setup(hass, {}) is True
+
+    paths = hass.http.async_register_static_paths.await_args.args[0]
+    by_url = {p.url_path: p for p in paths}
+    assert "/lightener/lightener-curve-card.2.15.0.js" in by_url
+    # The "+" must not leak into any registered URL — '+' is reserved in URL paths.
+    assert not any("+" in k for k in by_url)
 
 
 async def test_async_setup_continues_when_static_path_registration_fails(
