@@ -46,22 +46,32 @@ async def test_async_setup_registers_websocket_and_static_path(
     register_panel.assert_called_once()
 
     paths = hass.http.async_register_static_paths.await_args.args[0]
-    assert len(paths) == 3
-    assert paths[0].url_path == "/lightener/lightener-curve-card.js"
-    assert paths[0].path.endswith(
+    by_url = {p.url_path: p for p in paths}
+
+    unversioned = by_url["/lightener/lightener-curve-card.js"]
+    assert unversioned.path.endswith(
         "/custom_components/lightener/frontend/lightener-curve-card.js"
     )
-    assert paths[0].cache_headers is False
-    assert re.match(r"/lightener/lightener-curve-card\.[^/]+\.js", paths[1].url_path)
-    assert paths[1].path.endswith(
+    assert unversioned.cache_headers is False
+
+    versioned_keys = [
+        k
+        for k in by_url
+        if k != "/lightener/lightener-curve-card.js"
+        and re.fullmatch(r"/lightener/lightener-curve-card\.[^/]+\.js", k)
+    ]
+    assert len(versioned_keys) == 1
+    versioned = by_url[versioned_keys[0]]
+    assert versioned.path.endswith(
         "/custom_components/lightener/frontend/lightener-curve-card.js"
     )
-    assert paths[1].cache_headers is False
-    assert paths[2].url_path == "/lightener/lightener-panel.js"
-    assert paths[2].path.endswith(
+    assert versioned.cache_headers is False
+
+    panel = by_url["/lightener/lightener-panel.js"]
+    assert panel.path.endswith(
         "/custom_components/lightener/frontend/lightener-panel.js"
     )
-    assert paths[2].cache_headers is False
+    assert panel.cache_headers is False
 
     assert register_panel.call_args.args[1] == "custom"
     assert register_panel.call_args.kwargs["frontend_url_path"] == "lightener-editor"

@@ -202,6 +202,13 @@ class LightenerEditorPanel extends HTMLElement {
       // sessionStorage unavailable — skip reload to avoid an infinite reload loop.
       return;
     }
+    console.debug(
+      "[lightener] stale card detected (loaded:",
+      window[CARD_VERSION_GLOBAL],
+      "expected:",
+      CARD_VERSION,
+      "). Reloading once."
+    );
     window.location.reload();
   }
 
