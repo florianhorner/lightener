@@ -206,10 +206,20 @@ describe('lightener-editor-panel', () => {
     (
       window as unknown as { __LIGHTENER_CURVE_CARD_VERSION__?: string }
     ).__LIGHTENER_CURVE_CARD_VERSION__ = '2.14.0';
+    // Mask the already-registered FakeCurveCard so _ensureCardScriptLoaded skips
+    // the pre-registered-class branch and reaches the post-fallback stale check.
+    const savedGet = customElements.get.bind(customElements);
+    const getSpy = vi.spyOn(customElements, 'get').mockImplementation((name) => {
+      if (name === 'lightener-curve-card') return undefined;
+      return savedGet(name);
+    });
 
-    await panel._ensureCardScriptLoaded();
-
-    expect(reloadRequested).toBe(true);
+    try {
+      await panel._ensureCardScriptLoaded();
+      expect(reloadRequested).toBe(true);
+    } finally {
+      getSpy.mockRestore();
+    }
   });
 
   it('shows an inline save or discard guard before switching entities with unsaved changes', async () => {

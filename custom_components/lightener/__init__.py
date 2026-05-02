@@ -31,10 +31,13 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         _manifest_path = Path(__file__).parent / "manifest.json"
         _manifest_text = await hass.async_add_executor_job(_manifest_path.read_text)
         _raw_version = json.loads(_manifest_text).get("version", "")
+        # Strip SemVer build metadata (e.g. +build.4) before URL use — '+' is
+        # reserved in URL paths. The pre-release label after '-' is kept.
+        _url_version = _raw_version.split("+")[0] if _raw_version else ""
         _version = (
-            _raw_version
+            _url_version
             if re.fullmatch(
-                r"[0-9]+\.[0-9]+\.[0-9]+(?:[.\-][A-Za-z0-9]+)*", _raw_version
+                r"[0-9]+\.[0-9]+\.[0-9]+(?:[.\-][A-Za-z0-9]+)*", _url_version
             )
             else ""
         )
