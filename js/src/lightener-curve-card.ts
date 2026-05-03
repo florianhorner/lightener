@@ -272,6 +272,7 @@ export class LightenerCurveCard extends LitElement {
   @state() private _showPresets = false;
   @state() private _legendCloseAddSignal = 0;
   @state() private _legendCloseRemoveSignal = 0;
+  @state() private _manageMode = false;
   private _previewRafPending = false;
   private _previewTrailingTimer: ReturnType<typeof setTimeout> | null = null;
   private _lastPreviewTime = 0;
@@ -1301,9 +1302,56 @@ export class LightenerCurveCard extends LitElement {
       this._undoStack = [];
       this._loaded = false;
       await this._tryLoadCurves();
+      this._manageMode = false;
+      this._legendCloseAddSignal++;
     } catch (err) {
       console.error('[Lightener] Failed to add light:', err);
       this._manageError = this._formatManageError(err, 'Could not add light.');
+    } finally {
+      this._managingLights = false;
+    }
+  }
+
+  private _onManageToggle(e: CustomEvent): void {
+    const detail = e.detail as { manageMode?: boolean } | null;
+    const next =
+      detail && typeof detail.manageMode === 'boolean' ? detail.manageMode : !this._manageMode;
+    this._manageMode = next;
+    if (!next) {
+      this._legendCloseAddSignal++;
+      this._legendCloseRemoveSignal++;
+    }
+  }
+
+  private async _onDeleteGroup(): Promise<void> {
+    if (!this._hass || !this._entityId || this._managingLights) return;
+    if (this._previewActive) this._stopPreview();
+    const entityId = this._entityId;
+    this._manageError = null;
+    this._managingLights = true;
+    try {
+      const reg = (await this._hass.callWS({
+        type: 'config/entity_registry/get',
+        entity_id: entityId,
+      })) as { config_entry_id?: string | null } | null;
+      const configEntryId = reg?.config_entry_id;
+      if (!configEntryId) {
+        throw new Error('Group is not backed by a config entry — cannot delete from the card.');
+      }
+      await this._hass.callWS({
+        type: 'config_entries/remove',
+        entry_id: configEntryId,
+      });
+      this.dispatchEvent(
+        new CustomEvent('lightener-group-deleted', {
+          detail: { entityId, configEntryId },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    } catch (err) {
+      console.error('[Lightener] Failed to delete group:', err);
+      this._manageError = this._formatManageError(err, 'Could not delete group.');
     } finally {
       this._managingLights = false;
     }
@@ -1464,6 +1512,7 @@ export class LightenerCurveCard extends LitElement {
                   <curve-graph
                     .curves=${this._curves}
                     .selectedCurveId=${this._selectedCurveId}
+                    .entityId=${this._entityId ?? null}
                     .readOnly=${!this._isAdmin || this._cancelAnimating || this._managingLights}
                     .scrubberPosition=${this._scrubberPosition}
                     @point-move=${this._onPointMove}
@@ -1494,6 +1543,7 @@ export class LightenerCurveCard extends LitElement {
               .scrubberPosition=${this._scrubberPosition}
               .canManage=${this._canManageLights}
               .managing=${this._managingLights}
+              .manageMode=${this._manageMode}
               .excludeEntityIds=${this._entityId ? [this._entityId] : []}
               .closeAddSignal=${this._legendCloseAddSignal}
               .closeRemoveSignal=${this._legendCloseRemoveSignal}
@@ -1504,6 +1554,8 @@ export class LightenerCurveCard extends LitElement {
               @remove-panel-open=${this._onLegendPanelOpen}
               @add-light=${this._onAddLight}
               @remove-light=${this._onRemoveLight}
+              @manage-toggle=${this._onManageToggle}
+              @delete-group=${this._onDeleteGroup}
             ></curve-legend>
             ${this._manageError
               ? html`<div class="error" role="alert">${WARNING_ICON} ${this._manageError}</div>`
