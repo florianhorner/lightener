@@ -286,16 +286,16 @@ export class CurveScrubber extends LitElement {
     return html`
       <div class="scrubber-panel">
         <div class="scrubber-header">
-          <div class="scrubber-label">At brightness</div>
+          <div class="scrubber-label">Group brightness</div>
           ${this.canPreview
             ? this.previewActive
               ? html`<button class="preview-toggle-btn active" @click=${this._onPreviewToggle}>
                   <span class="preview-live-dot"></span>
-                  Previewing &nbsp;·&nbsp;
+                  Previewing all lights &nbsp;·&nbsp;
                   <span class="preview-restore-text">Restore</span>
                 </button>`
               : html`<button class="preview-toggle-btn" @click=${this._onPreviewToggle}>
-                  Preview on lights
+                  Preview all lights
                 </button>`
             : nothing}
         </div>
