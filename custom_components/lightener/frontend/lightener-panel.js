@@ -363,13 +363,27 @@ class LightenerEditorPanel extends HTMLElement {
     body.textContent =
       "Lightener lets one virtual light control a group of real lights with per-light brightness curves. Pick the lights, set a starting curve, and you're ready to shape how each one responds.";
 
-    const cta = document.createElement("button");
-    cta.type = "button";
-    cta.className = "empty-state-cta";
-    cta.textContent = "Create Lightener group";
-    cta.addEventListener("click", () => this._openCreateGroupModal());
+    section.append(illustration, title, body);
 
-    section.append(illustration, title, body, cta);
+    // In scoped-config-entry mode, the create flow makes a different config entry that
+    // would be filtered out — leaving the panel empty after "success." Match the
+    // header button gating and link out to HA Integrations instead.
+    if (this._requestedConfigEntryId) {
+      const link = document.createElement("a");
+      link.className = "empty-state-cta";
+      const baseUrl = (this._hass?.config?.frontend_url || "").replace(/\/$/, "");
+      link.href = baseUrl + "/config/integrations";
+      link.textContent = "Open Integrations";
+      section.append(link);
+    } else {
+      const cta = document.createElement("button");
+      cta.type = "button";
+      cta.className = "empty-state-cta";
+      cta.textContent = "Create Lightener group";
+      cta.addEventListener("click", () => this._openCreateGroupModal());
+      section.append(cta);
+    }
+
     return section;
   }
 
