@@ -739,9 +739,13 @@ export class LightenerCurveCard extends LitElement {
       this._loaded = false;
       this._loadedEntityId = undefined;
     }
-    // If the card was previously deleted from inside this instance, reset on
-    // re-mount so a re-added or different entity loads cleanly.
-    if (this._groupDeleted) {
+    // If the card was previously deleted from inside this instance and the
+    // dashboard has since been re-pointed at a different entity, clear the
+    // sentinel so the new entity loads. If the entity is unchanged across
+    // remount (navigate away and back, conditional re-render), keep the
+    // deleted state — re-fetching curves for a removed config entry would
+    // either 404 or render an empty grid that looks like a fresh group.
+    if (this._groupDeleted && this._loadedEntityId !== this._entityId) {
       this._groupDeleted = false;
       this._loaded = false;
       this._loadedEntityId = undefined;

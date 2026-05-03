@@ -634,13 +634,11 @@ export class CurveLegend extends LitElement {
         box-sizing: border-box;
       }
       .eye-btn {
-        width: 20px;
-        height: 20px;
-        min-width: 44px;
-        min-height: 44px;
+        width: 44px;
+        height: 44px;
         padding: 12px;
         margin-left: auto;
-        box-sizing: content-box;
+        box-sizing: border-box;
       }
       .eye-btn svg {
         width: 20px;
@@ -648,12 +646,10 @@ export class CurveLegend extends LitElement {
       }
       .remove-icon {
         opacity: 0.6;
-        width: 20px;
-        height: 20px;
-        min-width: 44px;
-        min-height: 44px;
+        width: 44px;
+        height: 44px;
         padding: 12px;
-        box-sizing: content-box;
+        box-sizing: border-box;
       }
       .remove-icon svg {
         width: 18px;
@@ -663,12 +659,10 @@ export class CurveLegend extends LitElement {
         display: none;
       }
       .clear-edit-icon {
-        width: 20px;
-        height: 20px;
-        min-width: 44px;
-        min-height: 44px;
+        width: 44px;
+        height: 44px;
         padding: 12px;
-        box-sizing: content-box;
+        box-sizing: border-box;
       }
       .clear-edit-icon svg {
         width: 18px;

@@ -110,7 +110,11 @@ describe('curve-legend', () => {
     const cssText = CurveLegendClass.styles.cssText;
     expect(cssText).toContain('@media (max-width: 500px)');
     expect(cssText).toContain('.clear-edit-icon');
-    expect(cssText).toContain('min-width: 44px;');
+    // Mobile action buttons render at exactly 44x44 with border-box sizing so
+    // padding does not balloon the row height beyond the tap-target minimum.
+    expect(cssText).toContain('width: 44px;');
+    expect(cssText).toContain('height: 44px;');
+    expect(cssText).toContain('box-sizing: border-box;');
     expect(cssText).not.toContain('margin: -12px;');
   });
 
