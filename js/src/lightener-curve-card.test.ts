@@ -244,7 +244,7 @@ describe('lightener-curve-card — light management', () => {
       button.textContent?.trim()
     );
     expect(buttons).not.toContain('Presets');
-    expect(buttons).not.toContain('Preview on lights');
+    expect(buttons).not.toContain('Preview all lights');
     expect(card.renderRoot.querySelector('curve-scrubber')).toBeNull();
 
     const graph = card.renderRoot.querySelector('curve-graph')!;

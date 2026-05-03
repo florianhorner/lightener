@@ -302,10 +302,10 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
         font-size: 12px;
       }
       .hint {
-        font-size: 12px;
+        font-size: 14px;
       }
       .editing-label {
-        font-size: 12px;
+        font-size: 14px;
       }
       .tooltip-text {
         font-size: 11px;
@@ -334,13 +334,13 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
   `,t([ut({type:Array})],Ut.prototype,"curves",void 0),t([ut({type:String})],Ut.prototype,"selectedCurveId",void 0),t([ut({type:Boolean})],Ut.prototype,"readOnly",void 0),t([ut({type:Number})],Ut.prototype,"scrubberPosition",void 0),t([vt()],Ut.prototype,"_dragCurveIdx",void 0),t([vt()],Ut.prototype,"_dragPointIdx",void 0),t([vt()],Ut.prototype,"_hoveredPoint",void 0),t([vt()],Ut.prototype,"_focusedPoint",void 0),t([vt()],Ut.prototype,"_isMobile",void 0),t([function(t){return(e,i,r)=>((t,e,i)=>(i.configurable=!0,i.enumerable=!0,Reflect.decorate&&"object"!=typeof e&&Object.defineProperty(t,e,i),i))(e,i,{get(){return(e=>e.renderRoot?.querySelector(t)??null)(this)}})}("svg")],Ut.prototype,"_svgRef",void 0),Ut=t([ht("curve-graph")],Ut);let Ot=class extends dt{constructor(){super(...arguments),this.curves=[],this.readOnly=!1,this.previewActive=!1,this.canPreview=!1,this._dragging=!1,this._position=50,this._trackRef=null}_onPointerDown(t){this.readOnly||(t.preventDefault(),this._dragging=!0,t.target.setPointerCapture(t.pointerId),this._updatePositionFromClient(t.clientX),this.dispatchEvent(new CustomEvent("scrubber-start",{bubbles:!0,composed:!0})))}_onPointerMove(t){this._dragging&&(t.preventDefault(),this._updatePositionFromClient(t.clientX))}_onPointerUp(){this._dragging&&(this._dragging=!1,this.dispatchEvent(new CustomEvent("scrubber-end",{bubbles:!0,composed:!0})))}_onTrackClick(t){this.readOnly||this._updatePositionFromClient(t.clientX)}_onKeyDown(t){if(this.readOnly)return;const e=t.shiftKey?10:1;if("ArrowRight"===t.key||"ArrowUp"===t.key)t.preventDefault(),this._position=Math.min(100,this._position+e);else if("ArrowLeft"===t.key||"ArrowDown"===t.key)t.preventDefault(),this._position=Math.max(0,this._position-e);else if("Home"===t.key)t.preventDefault(),this._position=0;else{if("End"!==t.key)return;t.preventDefault(),this._position=100}this._emitPosition()}_updatePositionFromClient(t){const e=this._trackRef;if(!e)return;const i=e.getBoundingClientRect(),r=(t-i.left)/i.width*100;this._position=Math.max(0,Math.min(100,r)),this._emitPosition()}_emitPosition(){this.dispatchEvent(new CustomEvent("scrubber-move",{detail:{position:this._position},bubbles:!0,composed:!0}))}_onPreviewToggle(){this.dispatchEvent(new CustomEvent("preview-toggle",{bubbles:!0,composed:!0}))}firstUpdated(){this._trackRef=this.renderRoot.querySelector(".track-area")}render(){const t=Math.round(this._position);return V`
       <div class="scrubber-panel">
         <div class="scrubber-header">
-          <div class="scrubber-label">At brightness</div>
+          <div class="scrubber-label">Group brightness</div>
           ${this.canPreview?this.previewActive?V`<button class="preview-toggle-btn active" @click=${this._onPreviewToggle}>
                   <span class="preview-live-dot"></span>
-                  Previewing &nbsp;·&nbsp;
+                  Previewing all lights &nbsp;·&nbsp;
                   <span class="preview-restore-text">Restore</span>
                 </button>`:V`<button class="preview-toggle-btn" @click=${this._onPreviewToggle}>
-                  Preview on lights
+                  Preview all lights
                 </button>`:W}
         </div>
         <div
@@ -549,7 +549,7 @@ function t(t,e,i,r){var n,s=arguments.length,o=s<3?e:null===r?r=Object.getOwnPro
         font-size: 12px;
       }
       .scrubber-label {
-        font-size: 11px;
+        font-size: 13px;
       }
       .preview-toggle-btn {
         font-size: 11px;

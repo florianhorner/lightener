@@ -147,10 +147,10 @@ export class CurveGraph extends LitElement {
         font-size: 12px;
       }
       .hint {
-        font-size: 12px;
+        font-size: 14px;
       }
       .editing-label {
-        font-size: 12px;
+        font-size: 14px;
       }
       .tooltip-text {
         font-size: 11px;

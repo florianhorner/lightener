@@ -47,11 +47,11 @@ function makeScrubber(opts?: {
 }
 
 describe('curve-scrubber — render + ARIA', () => {
-  it('renders the "At brightness" label', async () => {
+  it('renders the "Group brightness" label', async () => {
     const el = makeScrubber();
     await el.updateComplete;
     const label = el.renderRoot.querySelector('.scrubber-label');
-    expect(label?.textContent?.trim()).toBe('At brightness');
+    expect(label?.textContent?.trim()).toBe('Group brightness');
   });
 
   it('exposes ARIA slider role with valid min/max/now/text', async () => {
@@ -87,12 +87,12 @@ describe('curve-scrubber — preview toggle', () => {
     expect(el.renderRoot.querySelector('.preview-toggle-btn')).toBeNull();
   });
 
-  it('shows "Preview on lights" button when canPreview=true and not active', async () => {
+  it('shows "Preview all lights" button when canPreview=true and not active', async () => {
     const el = makeScrubber({ canPreview: true, previewActive: false });
     await el.updateComplete;
     const btn = el.renderRoot.querySelector('.preview-toggle-btn');
     expect(btn).not.toBeNull();
-    expect(btn?.textContent).toContain('Preview on lights');
+    expect(btn?.textContent).toContain('Preview all lights');
     expect(btn?.classList.contains('active')).toBe(false);
   });
 
@@ -102,7 +102,7 @@ describe('curve-scrubber — preview toggle', () => {
     const btn = el.renderRoot.querySelector('.preview-toggle-btn');
     expect(btn?.classList.contains('active')).toBe(true);
     expect(el.renderRoot.querySelector('.preview-live-dot')).not.toBeNull();
-    expect(btn?.textContent).toContain('Previewing');
+    expect(btn?.textContent).toContain('Previewing all lights');
     expect(btn?.textContent).toContain('Restore');
   });
 

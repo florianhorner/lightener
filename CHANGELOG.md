@@ -23,11 +23,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   it without navigating away.
 - Add-light and Presets panels are now mutually exclusive — opening one
   automatically closes the other.
-- The per-light brightness badges in the "At brightness" scrubber have been
+- The per-light brightness badges in the "Group brightness" scrubber have been
   removed. The scrubber now shows a clean track and position label only.
-- The "Preview on lights" button has moved into the scrubber panel header,
-  inline with the "At brightness" label, saving vertical space and keeping
+- The "Preview all lights" button has moved into the scrubber panel header,
+  inline with the "Group brightness" label, saving vertical space and keeping
   the preview control contextually next to the scrubber it controls.
+- The scrubber label is now "Group brightness" (was "At brightness") and the
+  preview button now reads "Preview all lights" / "Previewing all lights" to
+  make it unambiguous that the preview controls the entire group — not just a
+  selected individual light.
 - Control points in the curve graph now render above the scrubber's dim overlay
   so they remain fully visible and clickable regardless of scrubber position.
   Control points at 100% brightness no longer show a clipped arc at the top edge.
