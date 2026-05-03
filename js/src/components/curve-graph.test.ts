@@ -272,3 +272,64 @@ describe('curve-graph line rendering', () => {
     expect(path.getAttribute('d')).toContain(' C');
   });
 });
+
+describe('curve-graph first-time hint', () => {
+  beforeEach(() => {
+    document.body.replaceChildren();
+  });
+
+  function makeGraph(): CurveGraph {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.alpha',
+        friendlyName: 'Alpha',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 100, target: 100 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+    graph.entityId = 'light.lightener_a';
+    document.body.appendChild(graph);
+    return graph;
+  }
+
+  it('shows the richer first-time hint when no curve is selected and not yet dismissed', async () => {
+    const graph = makeGraph();
+    await graph.updateComplete;
+    const hint = graph.shadowRoot!.querySelector<SVGTextElement>('.hint-select')!;
+    expect(hint).not.toBeNull();
+    expect(hint.textContent).toBe('Select a light, then click its curve to add a control point');
+  });
+
+  it('falls back to the short hint after the user has interacted in the current entity session', async () => {
+    const graph = makeGraph();
+    await graph.updateComplete;
+    // Simulate dismiss (private state — this is the same flag the dblclick / pointerdown handlers set).
+    (graph as unknown as { _graphHintDismissed: boolean })._graphHintDismissed = true;
+    graph.requestUpdate();
+    await graph.updateComplete;
+    const hint = graph.shadowRoot!.querySelector<SVGTextElement>('.hint-select')!;
+    expect(hint.textContent).toBe('Select a light to edit its curve');
+  });
+
+  it('resets the hint when entityId changes (new lightener group selected)', async () => {
+    const graph = makeGraph();
+    await graph.updateComplete;
+    (graph as unknown as { _graphHintDismissed: boolean })._graphHintDismissed = true;
+    graph.requestUpdate();
+    await graph.updateComplete;
+    expect(graph.shadowRoot!.querySelector<SVGTextElement>('.hint-select')!.textContent).toBe(
+      'Select a light to edit its curve'
+    );
+
+    graph.entityId = 'light.lightener_b';
+    await graph.updateComplete;
+    expect(graph.shadowRoot!.querySelector<SVGTextElement>('.hint-select')!.textContent).toBe(
+      'Select a light, then click its curve to add a control point'
+    );
+  });
+});

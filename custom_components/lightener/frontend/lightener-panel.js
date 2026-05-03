@@ -1108,25 +1108,32 @@ class LightenerEditorPanel extends HTMLElement {
 
   async _submitCreateGroup() {
     if (!this._hass || !this._hass.callWS || this._createGroupSubmitting) return;
+    // Set submitting flag synchronously before any awaits to prevent double-click
+    // races (TOCTOU between the check above and the WS calls below).
+    this._createGroupSubmitting = true;
+
     const nameInput = this.shadowRoot.querySelector("#cgf-name");
     const errorEl = this.shadowRoot.querySelector("#create-group-error");
     const submitBtn = this.shadowRoot.querySelector("#cgf-submit");
     const name = (nameInput?.value || "").trim();
-    if (!name || this._createGroupSelectedLights.length === 0) return;
+    if (!name || this._createGroupSelectedLights.length === 0) {
+      this._createGroupSubmitting = false;
+      return;
+    }
 
-    this._createGroupSubmitting = true;
     errorEl.hidden = true;
     errorEl.textContent = "";
     submitBtn.disabled = true;
     submitBtn.textContent = "Creating…";
 
+    let flowId = null;
     try {
       const init = await this._hass.callWS({
         type: "config_entries/flow/init",
         handler: "lightener",
         show_advanced_options: false,
       });
-      let flowId = init?.flow_id;
+      flowId = init?.flow_id;
       let step = init;
       if (!flowId || step?.type === "abort") {
         throw new Error(step?.reason || "Could not start config flow");
@@ -1159,6 +1166,8 @@ class LightenerEditorPanel extends HTMLElement {
         this._raiseFlowError(step, "Couldn't create group");
         throw new Error("Unexpected flow result");
       }
+      // Flow consumed by create_entry — no abort needed.
+      flowId = null;
 
       this._closeCreateGroupModal();
       await this._loadLightenerEntities();
@@ -1174,6 +1183,17 @@ class LightenerEditorPanel extends HTMLElement {
       console.error("[Lightener] Create group failed:", err);
       errorEl.textContent = err?.message || "Couldn't create group — try again.";
       errorEl.hidden = false;
+      // Abort the orphaned flow so HA doesn't accumulate stale flow_ids.
+      if (flowId) {
+        try {
+          await this._hass.callWS({
+            type: "config_entries/flow/abort",
+            flow_id: flowId,
+          });
+        } catch (abortErr) {
+          // Best-effort cleanup; ignore.
+        }
+      }
     } finally {
       this._createGroupSubmitting = false;
       submitBtn.disabled = false;
