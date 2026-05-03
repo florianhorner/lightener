@@ -241,6 +241,7 @@ export class LightenerCurveCard extends LitElement {
   @state() private _loading = false;
   @state() private _manageError: string | null = null;
   @state() private _managingLights = false;
+  @state() private _groupDeleted = false;
 
   private get _saving(): boolean {
     return isSaving(this._saveState);
@@ -667,6 +668,7 @@ export class LightenerCurveCard extends LitElement {
       this._loaded = false;
       this._loadedEntityId = undefined;
       this._loadErrorEntityId = undefined;
+      this._groupDeleted = false;
       this._showPresets = false;
       this._tryLoadCurves();
     }
@@ -718,7 +720,8 @@ export class LightenerCurveCard extends LitElement {
       !this._cancelAnimating &&
       !this._loading &&
       !this._managingLights &&
-      !this._loadError
+      !this._loadError &&
+      !this._groupDeleted
     );
   }
 
@@ -733,6 +736,13 @@ export class LightenerCurveCard extends LitElement {
     // re-spamming the backend (and the HA log) every time the card re-mounts on a
     // misconfigured entity ID.
     if (this._loadErrorEntityId !== this._entityId) {
+      this._loaded = false;
+      this._loadedEntityId = undefined;
+    }
+    // If the card was previously deleted from inside this instance, reset on
+    // re-mount so a re-added or different entity loads cleanly.
+    if (this._groupDeleted) {
+      this._groupDeleted = false;
       this._loaded = false;
       this._loadedEntityId = undefined;
     }
@@ -1352,14 +1362,13 @@ export class LightenerCurveCard extends LitElement {
       this._legendCloseAddSignal++;
       this._legendCloseRemoveSignal++;
       // Standalone Lovelace card: no parent panel listens for the event, so
-      // clear our own state immediately. The panel handles its own teardown
-      // via _handleGroupDeleted, which navigates away — these resets are
-      // harmless there.
-      // Do NOT set _loadError here: the existing render path treats any
-      // truthy _loadError as a "Failed to load curves" alert with a Retry
-      // button, which would misrepresent a successful delete as a failure.
-      // Clearing _curves and marking the card loaded yields the empty
-      // curve-grid render, which is the correct post-delete view.
+      // clear our own state immediately and surface a deleted-group view.
+      // The panel handles its own teardown via _handleGroupDeleted (which
+      // navigates away), so the deleted-group view is only seen when this
+      // card is mounted directly in a Lovelace dashboard.
+      // _groupDeleted gates _canManageLights and the render path, preventing
+      // affordances (add light, manage mode) against a config entry that no
+      // longer exists.
       this._curves = [];
       this._originalCurves = [];
       this._undoStack = [];
@@ -1368,6 +1377,7 @@ export class LightenerCurveCard extends LitElement {
       this._selectedCurveId = null;
       this._loadError = null;
       this._loadErrorEntityId = undefined;
+      this._groupDeleted = true;
       this.dispatchEvent(
         new CustomEvent('lightener-group-deleted', {
           detail: { entityId, configEntryId },
@@ -1624,6 +1634,12 @@ export class LightenerCurveCard extends LitElement {
             ? html`<div class="error" role="alert">
                 ${WARNING_ICON} Failed to load curves
                 <button type="button" class="retry-link" @click=${this._retryLoad}>Retry</button>
+              </div>`
+            : nothing}
+          ${this._groupDeleted
+            ? html`<div class="error" role="status">
+                ${WARNING_ICON} This Lightener group was deleted. Remove this card or point it at a
+                different group.
               </div>`
             : nothing}
           ${this._saveError
