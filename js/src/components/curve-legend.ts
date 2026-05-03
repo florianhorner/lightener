@@ -3,6 +3,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { LightCurve, Hass } from '../utils/types.js';
 import { EntityPickerLoader } from '../utils/entity-picker-loader.js';
 import { LEGEND_SHAPES, sampleCurveAt } from '../utils/graph-math.js';
+import { CURVE_PRESETS, presetPolylinePoints } from '../utils/presets.js';
 
 export interface LegendPresetOption {
   value: string;
@@ -23,6 +24,7 @@ export class CurveLegend extends LitElement {
   @property({ type: Number }) scrubberPosition: number | null = null;
   @property({ type: Boolean }) canManage = false;
   @property({ type: Boolean }) managing = false;
+  @property({ type: Boolean }) manageMode = false;
   @property({ type: Array }) excludeEntityIds: string[] = [];
   @property({ type: Array }) presetOptions: LegendPresetOption[] = DEFAULT_PRESET_OPTIONS;
   @property({ type: Number }) closeAddSignal = 0;
@@ -33,6 +35,7 @@ export class CurveLegend extends LitElement {
   @state() private _pendingAddEntity = '';
   @state() private _pendingPreset: string = DEFAULT_PRESET_OPTIONS[0].value;
   @state() private _confirmingRemove: string | null = null;
+  @state() private _confirmingDeleteGroup = false;
   private _picker = new EntityPickerLoader(
     () => this.isConnected,
     () => this.requestUpdate()
@@ -180,7 +183,7 @@ export class CurveLegend extends LitElement {
       width: 16px;
       height: 16px;
       flex-shrink: 0;
-      opacity: 0;
+      opacity: 0.7;
       transition:
         opacity 0.15s ease,
         color 0.15s ease;
@@ -194,13 +197,15 @@ export class CurveLegend extends LitElement {
       align-items: center;
       justify-content: center;
     }
-    .legend-item:hover .remove-icon,
-    .legend-item:focus-within .remove-icon {
-      opacity: 0.7;
-    }
     .remove-icon:hover {
-      opacity: 1 !important;
+      opacity: 1;
       color: var(--error-color, #db4437);
+    }
+    /* Selected row is the active editing target — hide the trash to keep the
+       row readable on mobile and avoid mis-tapping while editing. Deselect
+       first (click the X), then delete. */
+    .legend-item.selected .remove-icon {
+      display: none;
     }
     .remove-icon:focus {
       outline: none;
@@ -330,6 +335,106 @@ export class CurveLegend extends LitElement {
     .add-row {
       padding: 6px 10px 8px;
     }
+    .manage-toggle-row {
+      padding: 4px 10px 8px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .manage-toggle-btn {
+      min-height: 32px;
+      padding: 4px 12px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--secondary-text-color, #616161);
+      background: transparent;
+      border: 1px solid var(--divider);
+      border-radius: 6px;
+      cursor: pointer;
+      transition:
+        border-color 0.15s ease,
+        color 0.15s ease,
+        background 0.15s ease;
+    }
+    .manage-toggle-btn:hover:not(:disabled) {
+      border-color: var(--primary-color, #2563eb);
+      color: var(--primary-color, #2563eb);
+    }
+    .manage-toggle-btn:focus-visible {
+      outline: 2px solid var(--primary-color, #2563eb);
+      outline-offset: 2px;
+    }
+    .manage-toggle-btn.active {
+      border-color: var(--primary-color, #2563eb);
+      color: var(--primary-color, #2563eb);
+      background: color-mix(in srgb, var(--primary-color, #2563eb) 10%, transparent);
+    }
+    .manage-toggle-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .delete-group-row {
+      padding: 4px 10px 10px;
+      border-top: 1px dashed var(--divider);
+      margin-top: 2px;
+    }
+    .delete-group-btn {
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 6px 12px;
+      border-radius: 6px;
+    }
+    .delete-group-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .delete-group-btn.link {
+      background: transparent;
+      border: none;
+      color: var(--error-color, #db4437);
+      min-height: 44px;
+      padding: 10px 0;
+      text-align: left;
+      width: 100%;
+    }
+    .delete-group-btn.link:hover:not(:disabled) {
+      text-decoration: underline;
+    }
+    .delete-group-confirm {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .delete-group-text {
+      font-size: 12px;
+      color: var(--primary-text-color, #212121);
+      font-weight: 500;
+    }
+    .delete-group-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .delete-group-btn.cancel {
+      background: transparent;
+      border: 1px solid var(--divider);
+      color: var(--secondary-text-color, #616161);
+    }
+    .delete-group-btn.cancel:hover:not(:disabled) {
+      border-color: var(--primary-color, #2563eb);
+      color: var(--primary-color, #2563eb);
+    }
+    .delete-group-btn.danger {
+      background: var(--error-color, #db4437);
+      border: 1px solid var(--error-color, #db4437);
+      color: #fff;
+      font-weight: 600;
+    }
+    .delete-group-btn.danger:hover:not(:disabled) {
+      opacity: 0.9;
+    }
     .add-light-btn {
       display: flex;
       align-items: center;
@@ -398,21 +503,67 @@ export class CurveLegend extends LitElement {
     .preset-field {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 6px;
     }
-    .preset-field select {
-      padding: 6px 10px;
+    .preset-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    @media (max-width: 499px) {
+      .preset-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .preset-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 6px 8px;
       border: 1px solid var(--divider);
       border-radius: 8px;
       background: var(--card-background-color, #fff);
       color: var(--primary-text-color, #212121);
       font-family: inherit;
-      font-size: 13px;
+      font-size: 12px;
+      font-weight: 500;
+      text-align: left;
+      cursor: pointer;
+      transition:
+        border-color 0.15s ease,
+        background 0.15s ease;
     }
-    .preset-field select:focus {
+    .preset-option:hover {
+      border-color: var(--primary-color, #2563eb);
+    }
+    .preset-option:focus-visible {
       outline: none;
       border-color: var(--primary-color, #2563eb);
-      box-shadow: 0 0 0 1px var(--primary-color, #2563eb);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color, #2563eb) 40%, transparent);
+    }
+    .preset-option.active {
+      border-color: var(--primary-color, #2563eb);
+      background: color-mix(in srgb, var(--primary-color, #2563eb) 12%, transparent);
+    }
+    .preset-option svg {
+      flex-shrink: 0;
+      width: 64px;
+      height: 40px;
+    }
+    .preset-option polyline {
+      fill: none;
+      stroke: var(--primary-color, #2563eb);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .preset-option .preset-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .add-form-actions {
       display: flex;
@@ -483,13 +634,11 @@ export class CurveLegend extends LitElement {
         box-sizing: border-box;
       }
       .eye-btn {
-        width: 20px;
-        height: 20px;
-        min-width: 44px;
-        min-height: 44px;
+        width: 44px;
+        height: 44px;
         padding: 12px;
         margin-left: auto;
-        box-sizing: content-box;
+        box-sizing: border-box;
       }
       .eye-btn svg {
         width: 20px;
@@ -497,12 +646,10 @@ export class CurveLegend extends LitElement {
       }
       .remove-icon {
         opacity: 0.6;
-        width: 20px;
-        height: 20px;
-        min-width: 44px;
-        min-height: 44px;
+        width: 44px;
+        height: 44px;
         padding: 12px;
-        box-sizing: content-box;
+        box-sizing: border-box;
       }
       .remove-icon svg {
         width: 18px;
@@ -512,12 +659,10 @@ export class CurveLegend extends LitElement {
         display: none;
       }
       .clear-edit-icon {
-        width: 20px;
-        height: 20px;
-        min-width: 44px;
-        min-height: 44px;
+        width: 44px;
+        height: 44px;
         padding: 12px;
-        box-sizing: content-box;
+        box-sizing: border-box;
       }
       .clear-edit-icon svg {
         width: 18px;
@@ -562,6 +707,10 @@ export class CurveLegend extends LitElement {
       (!this.canManage || this.managing)
     ) {
       this._confirmingRemove = null;
+      this._confirmingDeleteGroup = false;
+    }
+    if (changed.has('manageMode') && !this.manageMode) {
+      this._confirmingDeleteGroup = false;
     }
     if (changed.has('closeAddSignal')) {
       this._cancelAdd();
@@ -639,6 +788,7 @@ export class CurveLegend extends LitElement {
 
   private _startAdd() {
     this._confirmingRemove = null;
+    this._confirmingDeleteGroup = false;
     this._addingLight = true;
     this._pendingAddEntity = '';
     this._pendingPreset = this.presetOptions[0]?.value ?? 'linear';
@@ -659,8 +809,8 @@ export class CurveLegend extends LitElement {
     this._pendingAddEntity = (e.detail?.value as string) ?? '';
   }
 
-  private _onPresetChange(e: Event) {
-    this._pendingPreset = (e.target as HTMLSelectElement).value;
+  private _onPresetSelect(presetId: string) {
+    this._pendingPreset = presetId;
   }
 
   private _confirmAdd() {
@@ -702,16 +852,30 @@ export class CurveLegend extends LitElement {
               @input=${this._onFallbackAddEntityInput}
             />`}
         <div class="preset-field">
-          <label for="preset-select">Starting curve</label>
-          <select id="preset-select" .value=${this._pendingPreset} @change=${this._onPresetChange}>
-            ${this.presetOptions.map(
-              (opt) => html`
-                <option value=${opt.value} ?selected=${opt.value === this._pendingPreset}>
-                  ${opt.label}
-                </option>
-              `
-            )}
-          </select>
+          <label id="preset-grid-label">Starting curve</label>
+          <div class="preset-grid" role="radiogroup" aria-labelledby="preset-grid-label">
+            ${this.presetOptions.map((opt) => {
+              const presetDef = CURVE_PRESETS.find((p) => p.id === opt.value);
+              const isActive = opt.value === this._pendingPreset;
+              return html`
+                <button
+                  type="button"
+                  class="preset-option ${isActive ? 'active' : ''}"
+                  data-preset=${opt.value}
+                  role="radio"
+                  aria-checked=${isActive ? 'true' : 'false'}
+                  @click=${() => this._onPresetSelect(opt.value)}
+                >
+                  ${presetDef
+                    ? html`<svg viewBox="0 0 64 40" aria-hidden="true">
+                        <polyline points=${presetPolylinePoints(presetDef)}></polyline>
+                      </svg>`
+                    : nothing}
+                  <span class="preset-name">${opt.label}</span>
+                </button>
+              `;
+            })}
+          </div>
         </div>
         <div class="add-form-actions">
           <button type="button" @click=${this._cancelAdd}>Cancel</button>
@@ -838,7 +1002,7 @@ export class CurveLegend extends LitElement {
                               `}
                         </svg>
                       </button>
-                      ${this.canManage && this.curves.length > 1
+                      ${this.canManage && this.manageMode && this.curves.length > 1
                         ? html`<button
                             type="button"
                             class="remove-icon"
@@ -870,38 +1034,131 @@ export class CurveLegend extends LitElement {
         ${this.canManage || this.managing
           ? html`
               <div class="add-divider"></div>
-              <div class="add-row">
-                ${this.managing
-                  ? html`<div class="managing-row" role="status" aria-live="polite">
+              ${this.managing
+                ? html`<div class="add-row">
+                    <div class="managing-row" role="status" aria-live="polite">
                       <span class="spinner" aria-hidden="true"></span>
                       Updating lights…
-                    </div>`
-                  : this._addingLight
-                    ? this._renderAddForm()
-                    : html`<button
+                    </div>
+                  </div>`
+                : this.manageMode
+                  ? html`
+                      <div class="add-row">
+                        ${this._addingLight
+                          ? this._renderAddForm()
+                          : html`<button
+                              type="button"
+                              class="add-light-btn"
+                              ?disabled=${this.managing}
+                              @click=${this._startAdd}
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              >
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                              </svg>
+                              Add light
+                            </button>`}
+                      </div>
+                    `
+                  : nothing}
+              ${this.canManage
+                ? html`
+                    <div class="manage-toggle-row">
+                      <button
                         type="button"
-                        class="add-light-btn"
+                        class="manage-toggle-btn ${this.manageMode ? 'active' : ''}"
+                        aria-pressed=${this.manageMode ? 'true' : 'false'}
                         ?disabled=${this.managing}
-                        @click=${this._startAdd}
+                        @click=${this._onManageToggleClick}
                       >
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <line x1="12" y1="5" x2="12" y2="19"></line>
-                          <line x1="5" y1="12" x2="19" y2="12"></line>
-                        </svg>
-                        Add light
-                      </button>`}
-              </div>
+                        ${this.manageMode ? 'Done' : 'Manage lights'}
+                      </button>
+                    </div>
+                    ${this.manageMode
+                      ? html`
+                          <div class="delete-group-row">
+                            ${this._confirmingDeleteGroup
+                              ? html`
+                                  <div class="delete-group-confirm">
+                                    <span class="delete-group-text">Delete this group?</span>
+                                    <div class="delete-group-actions">
+                                      <button
+                                        type="button"
+                                        class="delete-group-btn cancel"
+                                        ?disabled=${this.managing}
+                                        @click=${this._cancelDeleteGroup}
+                                      >
+                                        Cancel
+                                      </button>
+                                      <button
+                                        type="button"
+                                        class="delete-group-btn danger"
+                                        ?disabled=${this.managing}
+                                        @click=${this._confirmDeleteGroup}
+                                      >
+                                        Delete group
+                                      </button>
+                                    </div>
+                                  </div>
+                                `
+                              : html`
+                                  <button
+                                    type="button"
+                                    class="delete-group-btn link"
+                                    ?disabled=${this.managing}
+                                    @click=${this._startDeleteGroup}
+                                  >
+                                    Delete this group
+                                  </button>
+                                `}
+                          </div>
+                        `
+                      : nothing}
+                  `
+                : nothing}
             `
           : nothing}
       </div>
     `;
+  }
+
+  private _onManageToggleClick() {
+    this.dispatchEvent(
+      new CustomEvent('manage-toggle', {
+        detail: { manageMode: !this.manageMode },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  private _startDeleteGroup() {
+    if (!this.canManage || this.managing) return;
+    this._cancelAdd();
+    this._confirmingRemove = null;
+    this._confirmingDeleteGroup = true;
+  }
+
+  private _cancelDeleteGroup() {
+    this._confirmingDeleteGroup = false;
+  }
+
+  private _confirmDeleteGroup() {
+    if (!this.canManage || this.managing) return;
+    this._confirmingDeleteGroup = false;
+    this.dispatchEvent(
+      new CustomEvent('delete-group', {
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 }
 

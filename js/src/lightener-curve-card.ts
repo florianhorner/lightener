@@ -241,6 +241,7 @@ export class LightenerCurveCard extends LitElement {
   @state() private _loading = false;
   @state() private _manageError: string | null = null;
   @state() private _managingLights = false;
+  @state() private _groupDeleted = false;
 
   private get _saving(): boolean {
     return isSaving(this._saveState);
@@ -272,6 +273,7 @@ export class LightenerCurveCard extends LitElement {
   @state() private _showPresets = false;
   @state() private _legendCloseAddSignal = 0;
   @state() private _legendCloseRemoveSignal = 0;
+  @state() private _manageMode = false;
   private _previewRafPending = false;
   private _previewTrailingTimer: ReturnType<typeof setTimeout> | null = null;
   private _lastPreviewTime = 0;
@@ -666,6 +668,7 @@ export class LightenerCurveCard extends LitElement {
       this._loaded = false;
       this._loadedEntityId = undefined;
       this._loadErrorEntityId = undefined;
+      this._groupDeleted = false;
       this._showPresets = false;
       this._tryLoadCurves();
     }
@@ -717,7 +720,8 @@ export class LightenerCurveCard extends LitElement {
       !this._cancelAnimating &&
       !this._loading &&
       !this._managingLights &&
-      !this._loadError
+      !this._loadError &&
+      !this._groupDeleted
     );
   }
 
@@ -732,6 +736,17 @@ export class LightenerCurveCard extends LitElement {
     // re-spamming the backend (and the HA log) every time the card re-mounts on a
     // misconfigured entity ID.
     if (this._loadErrorEntityId !== this._entityId) {
+      this._loaded = false;
+      this._loadedEntityId = undefined;
+    }
+    // If the card was previously deleted from inside this instance and the
+    // dashboard has since been re-pointed at a different entity, clear the
+    // sentinel so the new entity loads. If the entity is unchanged across
+    // remount (navigate away and back, conditional re-render), keep the
+    // deleted state — re-fetching curves for a removed config entry would
+    // either 404 or render an empty grid that looks like a fresh group.
+    if (this._groupDeleted && this._loadedEntityId !== this._entityId) {
+      this._groupDeleted = false;
       this._loaded = false;
       this._loadedEntityId = undefined;
     }
@@ -1301,9 +1316,82 @@ export class LightenerCurveCard extends LitElement {
       this._undoStack = [];
       this._loaded = false;
       await this._tryLoadCurves();
+      this._manageMode = false;
+      this._legendCloseAddSignal++;
     } catch (err) {
       console.error('[Lightener] Failed to add light:', err);
       this._manageError = this._formatManageError(err, 'Could not add light.');
+    } finally {
+      this._managingLights = false;
+    }
+  }
+
+  private _onManageToggle(e: CustomEvent): void {
+    const detail = e.detail as { manageMode?: boolean } | null;
+    const next =
+      detail && typeof detail.manageMode === 'boolean' ? detail.manageMode : !this._manageMode;
+    this._manageMode = next;
+    if (!next) {
+      this._legendCloseAddSignal++;
+      this._legendCloseRemoveSignal++;
+    }
+  }
+
+  private async _onDeleteGroup(): Promise<void> {
+    if (!this._hass || !this._entityId || this._managingLights) return;
+    if (this._previewActive) this._stopPreview();
+    const entityId = this._entityId;
+    this._manageError = null;
+    this._managingLights = true;
+    try {
+      const reg = (await this._hass.callWS({
+        type: 'config/entity_registry/get',
+        entity_id: entityId,
+      })) as { config_entry_id?: string | null; platform?: string } | null;
+      if (reg?.platform !== 'lightener') {
+        throw new Error('Entity is not a Lightener group — cannot delete from this card.');
+      }
+      const configEntryId = reg?.config_entry_id;
+      if (!configEntryId) {
+        throw new Error('Group is not backed by a config entry — cannot delete from the card.');
+      }
+      await this._hass.callWS({
+        type: 'config_entries/remove',
+        entry_id: configEntryId,
+      });
+      // Reset manage mode locally before the handoff. The panel auto-selects
+      // another group on this event — if _manageMode survives the switch, the
+      // next group opens already showing remove/delete affordances.
+      this._manageMode = false;
+      this._legendCloseAddSignal++;
+      this._legendCloseRemoveSignal++;
+      // Standalone Lovelace card: no parent panel listens for the event, so
+      // clear our own state immediately and surface a deleted-group view.
+      // The panel handles its own teardown via _handleGroupDeleted (which
+      // navigates away), so the deleted-group view is only seen when this
+      // card is mounted directly in a Lovelace dashboard.
+      // _groupDeleted gates _canManageLights and the render path, preventing
+      // affordances (add light, manage mode) against a config entry that no
+      // longer exists.
+      this._curves = [];
+      this._originalCurves = [];
+      this._undoStack = [];
+      this._loaded = true;
+      this._loadedEntityId = entityId;
+      this._selectedCurveId = null;
+      this._loadError = null;
+      this._loadErrorEntityId = undefined;
+      this._groupDeleted = true;
+      this.dispatchEvent(
+        new CustomEvent('lightener-group-deleted', {
+          detail: { entityId, configEntryId },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    } catch (err) {
+      console.error('[Lightener] Failed to delete group:', err);
+      this._manageError = this._formatManageError(err, 'Could not delete group.');
     } finally {
       this._managingLights = false;
     }
@@ -1464,6 +1552,7 @@ export class LightenerCurveCard extends LitElement {
                   <curve-graph
                     .curves=${this._curves}
                     .selectedCurveId=${this._selectedCurveId}
+                    .entityId=${this._entityId ?? null}
                     .readOnly=${!this._isAdmin || this._cancelAnimating || this._managingLights}
                     .scrubberPosition=${this._scrubberPosition}
                     @point-move=${this._onPointMove}
@@ -1494,6 +1583,7 @@ export class LightenerCurveCard extends LitElement {
               .scrubberPosition=${this._scrubberPosition}
               .canManage=${this._canManageLights}
               .managing=${this._managingLights}
+              .manageMode=${this._manageMode}
               .excludeEntityIds=${this._entityId ? [this._entityId] : []}
               .closeAddSignal=${this._legendCloseAddSignal}
               .closeRemoveSignal=${this._legendCloseRemoveSignal}
@@ -1504,6 +1594,8 @@ export class LightenerCurveCard extends LitElement {
               @remove-panel-open=${this._onLegendPanelOpen}
               @add-light=${this._onAddLight}
               @remove-light=${this._onRemoveLight}
+              @manage-toggle=${this._onManageToggle}
+              @delete-group=${this._onDeleteGroup}
             ></curve-legend>
             ${this._manageError
               ? html`<div class="error" role="alert">${WARNING_ICON} ${this._manageError}</div>`
@@ -1546,6 +1638,12 @@ export class LightenerCurveCard extends LitElement {
             ? html`<div class="error" role="alert">
                 ${WARNING_ICON} Failed to load curves
                 <button type="button" class="retry-link" @click=${this._retryLoad}>Retry</button>
+              </div>`
+            : nothing}
+          ${this._groupDeleted
+            ? html`<div class="error" role="status">
+                ${WARNING_ICON} This Lightener group was deleted. Remove this card or point it at a
+                different group.
               </div>`
             : nothing}
           ${this._saveError

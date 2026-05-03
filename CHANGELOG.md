@@ -8,8 +8,99 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Curve editor golden path: full lifecycle ownership.** The card is now the
+  single coherent surface for everything Lightener except the integration
+  install itself. New affordances:
+  - **Inline "Create group" form** opened from the panel's empty state and
+    a "+ New group" button next to the entity selector (admins only). One
+    screen for name + lights + optional area + starting curve preset, no
+    more leaving the card to walk through HA's 3-step config flow. Drives
+    the existing `config_flow.py` over WS, so backend validation is
+    unchanged.
+  - **Delete this group** in manage mode — two-step confirm that resolves
+    the entity's `config_entry_id` and calls `config_entries/remove`. The
+    panel auto-selects the next available group or returns to the empty
+    state.
+  - **Empty state visual** — SVG illustration of a curve graph above the
+    "Create your first Lightener group" CTA so new users see what they're
+    building toward.
+- **Manage lights toggle** in the legend separates editing from setup. By
+  default the legend shows just the curves and a quiet "Manage lights"
+  button; clicking it reveals trash icons on each row and the "Add light"
+  form. Auto-exits after a successful add so returning to the editor is
+  one step. Admin-only.
+- **Preset button grid in Add light** — replaces the `<select>` with a
+  64×40 SVG thumbnail + label per preset. Same `presetPolylinePoints()`
+  function used in the Presets panel, so visuals are guaranteed to match.
+  2-column on desktop, 1-column on mobile, 44px touch targets.
+- **First-time graph hint** — when no curve is selected, the hint reads
+  "Select a light, then double-click its curve to add a control point" instead
+  of the previous bare "Select a light to edit its curve". Dismisses on
+  first interaction and resets per entity so each new group gets the
+  guidance once.
 - Card module writes a `window.LIGHTENER_CARD_VERSION` marker at load time so
   the panel can detect stale-card-class mismatches without a server round-trip.
+
+### Fixed
+
+- **Cache invalidation on group create/delete.** `lightener/list_entities`
+  has a 5-second TTL cache that previously only invalidated on
+  add_light / remove_light. Group create (config-entry import) and group
+  delete left stale data in the cache, so the panel showed a missing or
+  extra group until the TTL expired. `__init__.py` now invalidates the
+  cache in both `async_setup_entry` and `async_unload_entry`.
+- **Scoped-mode empty state CTA.** When the panel is opened with
+  `?config_entry=...`, the empty-state CTA used to open the create-group
+  modal — but a newly created entry has a different `config_entry_id`
+  and gets filtered out, leaving the panel empty after "success." The
+  scoped-mode empty state now links to HA Integrations instead, matching
+  the gating already in place on the header `+ New group` button.
+- **Stale config-entry flow on submit error.** If any `flow/configure`
+  call failed mid-sequence, the orphaned flow_id was left dangling in
+  HA. Submit now calls `config_entries/flow/abort` on the cleanup path
+  so flows don't accumulate.
+- **TOCTOU on Create group submit.** The `_createGroupSubmitting` flag
+  was set after `await`, leaving a window where rapid double-clicks
+  could fire two parallel `flow/init` calls. Flag is now set
+  synchronously before any awaits.
+- **Manage-mode trash icons hidden until hover.** Holdover from before
+  manage mode existed — defeated the point of an explicit mode where
+  affordances should be visible. Trash icons are now visible on
+  non-selected rows in manage mode, hidden on the actively-edited row
+  to avoid mis-tap on mobile and reduce clutter.
+- **"Delete this group" tap target was 26px tall.** Below the 44px
+  touch target floor for a destructive action. Bumped to `min-height: 44px`.
+- **Selected light name truncated to "C.." on mobile** in manage mode
+  because the editing chip + clear-X + trash icon all fit in one row.
+  Trash icon hidden on selected row at all viewports.
+- Non-zero origin points now save and reload end-to-end, preserving dim-floor
+  curves created by dragging the 0% control point vertically.
+- WebSocket curve saves now reject booleans, floats, missing brightness payloads,
+  and out-of-range points before mutating config entry data.
+- Options-flow updates now roll back config entry data when the follow-up reload
+  fails.
+- Read-only curve endpoints now filter entities through Home Assistant read
+  permissions before returning data.
+- After a HACS upgrade the browser no longer serves the old card from the ES
+  module cache. The panel JS URL now carries `?v=<version>` so the browser
+  fetches a fresh copy on every upgrade.
+- If a stale card class was already registered in the browser's custom element
+  registry before the fresh module loaded, the panel now detects the version
+  mismatch and reloads the page once (gated via `sessionStorage`) to flush the
+  old class and let the new bundle take over.
+- Remove-confirmation card now wraps long light names instead of truncating them
+  on narrow cards.
+- Touch targets for Add/Cancel, remove, and edit-clear icons are now 44 px
+  minimum on mobile, preventing accidental mis-taps on small screens.
+- Badge text color now uses the actual rendered surface color to compute
+  contrast, correcting an incorrect white-on-white appearance in dark mode.
+- Entity-picker `Promise.race` chain now has a `.catch()` guard so a rejected
+  `loadCardHelpers` promise no longer produces an unhandled rejection warning.
+- Animated elements now respect `prefers-reduced-motion`: the live-preview dot
+  pulse and scrubber animations are disabled when the OS requests reduced motion.
+- `scripts/sync-version` now exits with a clear error message when the manifest
+  is missing, the version key is absent, or the CARD_VERSION constant count is
+  not exactly 1 in the bundle.
 
 ### Changed
 
@@ -41,37 +132,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (`CARD_VERSION` in `js/src/lightener-curve-card.ts`) and the built bundle
   alongside the existing manifest/panel-JS check, ensuring all four sources
   stay in sync.
-
-### Fixed
-
-- Non-zero origin points now save and reload end-to-end, preserving dim-floor
-  curves created by dragging the 0% control point vertically.
-- WebSocket curve saves now reject booleans, floats, missing brightness payloads,
-  and out-of-range points before mutating config entry data.
-- Options-flow updates now roll back config entry data when the follow-up reload
-  fails.
-- Read-only curve endpoints now filter entities through Home Assistant read
-  permissions before returning data.
-- After a HACS upgrade the browser no longer serves the old card from the ES
-  module cache. The panel JS URL now carries `?v=<version>` so the browser
-  fetches a fresh copy on every upgrade.
-- If a stale card class was already registered in the browser's custom element
-  registry before the fresh module loaded, the panel now detects the version
-  mismatch and reloads the page once (gated via `sessionStorage`) to flush the
-  old class and let the new bundle take over.
-- Remove-confirmation card now wraps long light names instead of truncating them
-  on narrow cards.
-- Touch targets for Add/Cancel, remove, and edit-clear icons are now 44 px
-  minimum on mobile, preventing accidental mis-taps on small screens.
-- Badge text color now uses the actual rendered surface color to compute
-  contrast, correcting an incorrect white-on-white appearance in dark mode.
-- Entity-picker `Promise.race` chain now has a `.catch()` guard so a rejected
-  `loadCardHelpers` promise no longer produces an unhandled rejection warning.
-- Animated elements now respect `prefers-reduced-motion`: the live-preview dot
-  pulse and scrubber animations are disabled when the OS requests reduced motion.
-- `scripts/sync-version` now exits with a clear error message when the manifest
-  is missing, the version key is absent, or the CARD_VERSION constant count is
-  not exactly 1 in the bundle.
 
 ## [2.15.0] - 2026-04-25
 

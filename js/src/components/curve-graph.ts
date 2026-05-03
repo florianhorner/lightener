@@ -24,6 +24,7 @@ import {
 export class CurveGraph extends LitElement {
   @property({ type: Array }) curves: LightCurve[] = [];
   @property({ type: String }) selectedCurveId: string | null = null;
+  @property({ type: String }) entityId: string | null = null;
   @property({ type: Boolean }) readOnly = false;
   @property({ type: Number }) scrubberPosition: number | null = null;
 
@@ -32,6 +33,17 @@ export class CurveGraph extends LitElement {
   @state() private _hoveredPoint: { curve: number; point: number } | null = null;
   @state() private _focusedPoint: { curve: number; point: number } | null = null;
   @state() private _isMobile = false;
+  @state() private _graphHintDismissed = false;
+
+  protected willUpdate(changed: Map<PropertyKey, unknown>): void {
+    super.willUpdate(changed);
+    if (changed.has('entityId')) {
+      this._graphHintDismissed = false;
+    }
+    if (changed.has('selectedCurveId') && this.selectedCurveId !== null) {
+      this._graphHintDismissed = true;
+    }
+  }
 
   private readonly _uid = Math.random().toString(36).slice(2, 7);
   private _mql: MediaQueryList | null = null;
@@ -391,6 +403,7 @@ export class CurveGraph extends LitElement {
     if (!this._isCurveInteractive(curveIdx)) return;
 
     e.preventDefault();
+    this._graphHintDismissed = true;
     this._longPressFired = false;
 
     // Start long-press timer for touch removal (500ms)
@@ -514,6 +527,7 @@ export class CurveGraph extends LitElement {
     const x = Math.round(clamp(coords.x, 1, 100));
     const y = Math.round(clamp(coords.y, 0, 100));
 
+    this._graphHintDismissed = true;
     this.dispatchEvent(
       new CustomEvent('point-add', {
         detail: {
@@ -904,9 +918,13 @@ export class CurveGraph extends LitElement {
                 >Add a light below to get started</text>`;
           }
           if (this.selectedCurveId === null && this._dragCurveIdx < 0) {
+            const gestureWord = this._isMobile ? 'double-tap' : 'double-click';
+            const hintText = this._graphHintDismissed
+              ? 'Select a light to edit its curve'
+              : `Select a light, then ${gestureWord} its curve to add a control point`;
             return svg`<text class="hint hint-select" text-anchor="middle"
                 x="${PAD_LEFT + GRAPH_W / 2}" y="${PAD_TOP + GRAPH_H / 2}"
-                >Select a light to edit its curve</text>`;
+                >${hintText}</text>`;
           }
           const selected = this.curves.find((c) => c.entityId === this.selectedCurveId);
           const interactionHint = this._isMobile
