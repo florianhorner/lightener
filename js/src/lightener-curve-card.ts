@@ -1345,6 +1345,18 @@ export class LightenerCurveCard extends LitElement {
         type: 'config_entries/remove',
         entry_id: configEntryId,
       });
+      // Standalone Lovelace card: no parent panel listens for the event, so
+      // clear our own state immediately. The panel handles its own teardown
+      // via _handleGroupDeleted, which navigates away — these resets are
+      // harmless there.
+      this._curves = [];
+      this._originalCurves = [];
+      this._undoStack = [];
+      this._loaded = false;
+      this._loadedEntityId = undefined;
+      this._selectedCurveId = null;
+      this._loadError = 'This Lightener group was deleted.';
+      this._loadErrorEntityId = entityId;
       this.dispatchEvent(
         new CustomEvent('lightener-group-deleted', {
           detail: { entityId, configEntryId },

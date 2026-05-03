@@ -376,12 +376,20 @@ class LightenerEditorPanel extends HTMLElement {
       link.textContent = "Open Integrations";
       section.append(link);
     } else {
-      const cta = document.createElement("button");
-      cta.type = "button";
-      cta.className = "empty-state-cta";
-      cta.textContent = "Create Lightener group";
-      cta.addEventListener("click", () => this._openCreateGroupModal());
-      section.append(cta);
+      const isAdmin = !!this._hass?.user?.is_admin;
+      if (isAdmin) {
+        const cta = document.createElement("button");
+        cta.type = "button";
+        cta.className = "empty-state-cta";
+        cta.textContent = "Create Lightener group";
+        cta.addEventListener("click", () => this._openCreateGroupModal());
+        section.append(cta);
+      } else {
+        const note = document.createElement("p");
+        note.className = "empty-state-note";
+        note.textContent = "Ask an admin to create a Lightener group.";
+        section.append(note);
+      }
     }
 
     return section;
@@ -662,6 +670,11 @@ class LightenerEditorPanel extends HTMLElement {
           }
           .empty-state-cta:hover {
             opacity: 0.9;
+          }
+          .empty-state-note {
+            margin: 0;
+            color: var(--secondary-text-color);
+            font-size: 14px;
           }
           .empty-state-illustration {
             color: var(--secondary-text-color);
@@ -977,6 +990,23 @@ class LightenerEditorPanel extends HTMLElement {
     this._renderPendingSwitch();
   }
 
+  async _ensureEntityPickerLoaded() {
+    if (customElements.get("ha-entity-picker")) return;
+    try {
+      if (typeof window.loadCardHelpers === "function") {
+        await window.loadCardHelpers();
+      }
+    } catch (_) {}
+    try {
+      const cls = customElements.get("hui-entities-card");
+      await cls?.getConfigElement?.();
+    } catch (_) {}
+    await Promise.race([
+      customElements.whenDefined("ha-entity-picker"),
+      new Promise((r) => setTimeout(r, 1500)),
+    ]);
+  }
+
   _openCreateGroupModal() {
     if (this._createGroupSubmitting) return;
     const modal = this.shadowRoot.querySelector("#create-group-modal");
@@ -1031,25 +1061,71 @@ class LightenerEditorPanel extends HTMLElement {
     });
   }
 
-  _renderCreateGroupLightsPicker() {
+  async _renderCreateGroupLightsPicker() {
     const mount = this.shadowRoot.querySelector("#cgf-lights-mount");
+    if (!mount) return;
     mount.innerHTML = "";
-    const picker = document.createElement("ha-entity-picker");
-    picker.hass = this._hass;
-    picker.includeDomains = ["light"];
-    picker.allowCustomEntity = true;
-    picker.value = "";
-    picker.addEventListener("value-changed", (event) => {
-      const id = (event.detail?.value || "").trim();
-      if (!id) return;
-      if (!this._createGroupSelectedLights.includes(id)) {
-        this._createGroupSelectedLights.push(id);
-        this._renderSelectedLights();
-        this._setCreateGroupSubmitDisabled();
-      }
-      // Reset the picker so users can keep adding lights
+    await this._ensureEntityPickerLoaded();
+    // If the modal was closed during the warm-up, bail out.
+    if (!this.shadowRoot.querySelector("#cgf-lights-mount")) return;
+    let picker;
+    if (customElements.get("ha-entity-picker")) {
+      picker = document.createElement("ha-entity-picker");
+      picker.hass = this._hass;
+      picker.includeDomains = ["light"];
+      picker.allowCustomEntity = true;
       picker.value = "";
-    });
+      picker.addEventListener("value-changed", (event) => {
+        const id = (event.detail?.value || "").trim();
+        if (!id) return;
+        if (!this._createGroupSelectedLights.includes(id)) {
+          this._createGroupSelectedLights.push(id);
+          this._renderSelectedLights();
+          this._setCreateGroupSubmitDisabled();
+        }
+        // Reset the picker so users can keep adding lights
+        picker.value = "";
+      });
+    } else {
+      // Fallback: HA never registered ha-entity-picker. Use a plain input so
+      // the user can still proceed by typing entity IDs by hand.
+      console.warn(
+        "[lightener] <ha-entity-picker> not available — falling back to plain input.",
+      );
+      const wrap = document.createElement("div");
+      wrap.style.display = "flex";
+      wrap.style.gap = "8px";
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "light.entity_id";
+      input.style.flex = "1";
+      input.style.padding = "8px";
+      input.style.borderRadius = "4px";
+      input.style.border = "1px solid var(--divider-color, #ccc)";
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.textContent = "Add";
+      const commit = () => {
+        const id = input.value.trim();
+        if (!id) return;
+        if (!this._createGroupSelectedLights.includes(id)) {
+          this._createGroupSelectedLights.push(id);
+          this._renderSelectedLights();
+          this._setCreateGroupSubmitDisabled();
+        }
+        input.value = "";
+        input.focus();
+      };
+      addBtn.addEventListener("click", commit);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        }
+      });
+      wrap.append(input, addBtn);
+      picker = wrap;
+    }
     mount.appendChild(picker);
     const list = document.createElement("div");
     list.id = "cgf-selected-lights";
