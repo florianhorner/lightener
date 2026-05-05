@@ -59,7 +59,7 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
       <rect
         x="${t}" y="${Ae(100)}"
         width="${Ce(100)-t}" height="${Pe}"
-        fill="var(--ha-card-background, var(--card-background-color, #fff))"
+        fill="var(--graph-bg, var(--ha-card-background, var(--card-background-color, #fff)))"
         fill-opacity="0.93"
         pointer-events="none"
       />
