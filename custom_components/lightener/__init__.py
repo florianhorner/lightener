@@ -150,6 +150,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up platform from a config entry."""
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # Group create/import: panel's list_entities cache must drop stale results
+    # so the new group appears immediately.
+    from . import websocket
+
+    websocket._invalidate_entity_list_cache(hass)
     return True
 
 
@@ -161,6 +166,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if unload_ok:
         hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
+        # Group delete: drop the cache so the panel doesn't show the removed group.
+        from . import websocket
+
+        websocket._invalidate_entity_list_cache(hass)
 
     return unload_ok
 
