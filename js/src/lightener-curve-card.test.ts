@@ -2,7 +2,23 @@
 
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { LightenerCurveCard } from './lightener-curve-card.js';
-import type { Hass } from './utils/types.js';
+import type { Hass, LightCurve } from './utils/types.js';
+
+// Tests reach private @state fields directly (instead of exposing a test-only
+// setter on the card) because every production caller would have to ignore it.
+// Read-only on the post-#70 source: _saving and _saveError are getters from _saveState.
+type CardInternals = {
+  _curves: LightCurve[];
+  _onSave: () => Promise<void>;
+};
+
+function forceDirty(card: LightenerCurveCard): void {
+  const internal = card as unknown as CardInternals;
+  internal._curves = internal._curves.map((c) => ({
+    ...c,
+    controlPoints: [...c.controlPoints, { lightener: 75, target: 90 }],
+  }));
+}
 
 // LightenerCurveCard.connectedCallback adds global keydown + beforeunload listeners
 // on `window`. Without cleanup they accumulate across tests and can make this suite
@@ -271,5 +287,57 @@ describe('lightener-curve-card — light management', () => {
       closeAddSignal: number;
     };
     expect(legend.closeAddSignal).toBeGreaterThan(0);
+  });
+});
+
+describe('lightener-curve-card — save flow', () => {
+  it('_onSave dispatches lightener/save_curves with the current curves payload', async () => {
+    const { card, hass } = await mountCard({
+      'light.a': { brightness: { '100': '100' } },
+    });
+    hass.callWS.mockReset();
+    hass.callWS.mockImplementation((msg: { type: string }) =>
+      msg.type === 'lightener/save_curves'
+        ? Promise.resolve(undefined)
+        : Promise.resolve({ entities: { 'light.a': { brightness: { '100': '100' } } } })
+    );
+
+    forceDirty(card);
+    await (card as unknown as CardInternals)._onSave();
+
+    const saveCall = hass.callWS.mock.calls.find(
+      (c) => (c[0] as Record<string, unknown>)?.type === 'lightener/save_curves'
+    );
+    expect(saveCall).toBeDefined();
+    const msg = saveCall![0] as {
+      entity_id: string;
+      curves: Record<string, { brightness: Record<string, string> }>;
+    };
+    expect(msg.entity_id).toBe('light.lightener');
+    // forceDirty appended {lightener:75, target:90}; assert the round-trip into
+    // the WS payload so a regression that drops the mutation (or breaks
+    // curvesToWsPayload's serialization) fails this test, not just one that
+    // forgets to populate `curves` at all.
+    expect(msg.curves['light.a'].brightness['75']).toBe('90');
+  });
+
+  it('_onSave clears _saving and surfaces _saveError when the WS save rejects', async () => {
+    const { card, hass } = await mountCard({
+      'light.a': { brightness: { '100': '100' } },
+    });
+    hass.callWS.mockReset();
+    hass.callWS.mockRejectedValueOnce(new Error('ws transport failed'));
+
+    forceDirty(card);
+    await (card as unknown as CardInternals)._onSave();
+    await card.updateComplete;
+
+    // The card MUST recover: a stuck _saving=true freezes the save button
+    // until the user reloads the panel. The error string is the user-visible
+    // contract — leaking the raw exception ("ws transport failed") would
+    // satisfy a `not.toBeNull()` assertion but expose internals to users.
+    const view = card as unknown as { _saving: boolean; _saveError: string | null };
+    expect(view._saving).toBe(false);
+    expect(view._saveError).toBe('Save failed. Check connection.');
   });
 });
