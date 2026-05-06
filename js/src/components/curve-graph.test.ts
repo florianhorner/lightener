@@ -334,4 +334,16 @@ describe('curve-graph first-time hint', () => {
       'Select a light, then double-click its curve to add a control point'
     );
   });
+
+  it('renders the scrubber dim overlay using the --graph-bg token (themeable)', async () => {
+    const graph = makeGraph();
+    graph.scrubberPosition = 50;
+    await graph.updateComplete;
+
+    const overlay = graph.shadowRoot!.querySelector<SVGRectElement>('rect[fill-opacity="0.93"]');
+    expect(overlay).not.toBeNull();
+    const fill = overlay!.getAttribute('fill') ?? '';
+    expect(fill.startsWith('var(--graph-bg')).toBe(true);
+    expect(fill).toContain('--ha-card-background');
+  });
 });

@@ -15,7 +15,7 @@ This document captures the current visual system for the Lightener curve editor 
 
 - `--card-bg`: primary card surface
 - `--panel-bg`: mixed workspace panel surface
-- `--graph-bg`: reserved graph background token
+- `--graph-bg`: graph background color; used by `curve-graph` for the scrubber dim overlay
 - `--divider`: low-contrast structural borders
 - `--lightener-panel-surface`: panel shell surface
 - `--lightener-panel-border`: panel shell border

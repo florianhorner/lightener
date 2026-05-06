@@ -641,7 +641,7 @@ export class CurveGraph extends LitElement {
       <rect
         x="${x}" y="${toSvgY(100)}"
         width="${toSvgX(100) - x}" height="${GRAPH_H}"
-        fill="var(--ha-card-background, var(--card-background-color, #fff))"
+        fill="var(--graph-bg, var(--ha-card-background, var(--card-background-color, #fff)))"
         fill-opacity="0.93"
         pointer-events="none"
       />

@@ -195,12 +195,13 @@ Source: /design-review on master branch — cross-model (Claude + Codex GPT-5.4 
   Affects: `js/src/components/curve-legend.ts`, `js/src/components/curve-scrubber.ts`
   Priority: P2 (token consistency)
 
-- [ ] **`--graph-bg` token defined but never consumed by `curve-graph.ts`**
+- [x] **`--graph-bg` token defined but never consumed by `curve-graph.ts`**
   `lightener-curve-card.ts:293` defines `--graph-bg` but `curve-graph.ts` has zero
   references to it. The graph background cannot be themed. Either bridge the token into
   the canvas/SVG render pass or remove the dead token from the spec.
   Affects: `js/src/components/curve-graph.ts`, DESIGN.md
   Priority: P2 (dead token — theming gap)
+  **Completed:** branch claude/implement-todo-item-WtjwJ (2026-05-05)
 
 - [ ] **Hardcoded `#2563eb` accent color scattered instead of tokenized**
   `curve-footer.ts:59-64`, `curve-scrubber.ts:64-82,130-167`, `lightener-curve-card.ts:402,577-587,619-623`
