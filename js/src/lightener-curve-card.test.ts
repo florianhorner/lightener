@@ -309,10 +309,16 @@ describe('lightener-curve-card — save flow', () => {
       (c) => (c[0] as Record<string, unknown>)?.type === 'lightener/save_curves'
     );
     expect(saveCall).toBeDefined();
-    const msg = saveCall![0] as { entity_id: string; curves: Record<string, unknown> };
+    const msg = saveCall![0] as {
+      entity_id: string;
+      curves: Record<string, { brightness: Record<string, string> }>;
+    };
     expect(msg.entity_id).toBe('light.lightener');
-    expect(msg.curves).toBeDefined();
-    expect(Object.keys(msg.curves)).toContain('light.a');
+    // forceDirty appended {lightener:75, target:90}; assert the round-trip into
+    // the WS payload so a regression that drops the mutation (or breaks
+    // curvesToWsPayload's serialization) fails this test, not just one that
+    // forgets to populate `curves` at all.
+    expect(msg.curves['light.a'].brightness['75']).toBe('90');
   });
 
   it('_onSave clears _saving and surfaces _saveError when the WS save rejects', async () => {
@@ -327,9 +333,11 @@ describe('lightener-curve-card — save flow', () => {
     await card.updateComplete;
 
     // The card MUST recover: a stuck _saving=true freezes the save button
-    // until the user reloads the panel.
+    // until the user reloads the panel. The error string is the user-visible
+    // contract — leaking the raw exception ("ws transport failed") would
+    // satisfy a `not.toBeNull()` assertion but expose internals to users.
     const view = card as unknown as { _saving: boolean; _saveError: string | null };
     expect(view._saving).toBe(false);
-    expect(view._saveError).not.toBeNull();
+    expect(view._saveError).toBe('Save failed. Check connection.');
   });
 });
