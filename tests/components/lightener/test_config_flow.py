@@ -322,3 +322,147 @@ def get_required(form: FlowResult, key: str) -> Any:
             return isinstance(schema_key, vol.Required)
 
     raise KeyError(f"Key '{key}' not found")
+
+
+def get_entity_selector_config(form: FlowResult, key: str) -> dict[str, Any]:
+    """Return the EntitySelector config dict for the given key in the form schema."""
+
+    from homeassistant.helpers.selector import EntitySelector
+
+    for schema_key, validator in form["data_schema"].schema.items():
+        if schema_key == key:
+            assert isinstance(validator, EntitySelector), (
+                f"Expected EntitySelector for '{key}', got {type(validator).__name__}"
+            )
+            return dict(validator.config)
+
+    raise KeyError(f"Key '{key}' not found")
+
+
+async def test_area_step_narrows_lights_via_include_entities(
+    hass: HomeAssistant,
+) -> None:
+    """When an area is selected, the lights step picker is scoped to that area.
+
+    Regression: previously the area was passed via filter['area'], which is
+    rejected by HA's entity selector schema and surfaced as 'Unknown error'.
+    """
+
+    from homeassistant.helpers.area_registry import async_get as async_get_areas
+    from homeassistant.helpers.device_registry import async_get as async_get_devices
+
+    area_registry = async_get_areas(hass)
+    living_room = area_registry.async_create("Living Room")
+    kitchen = area_registry.async_create("Kitchen")
+
+    entity_registry = async_get_entity_registry(hass)
+
+    # Direct area assignment.
+    direct_in_living = entity_registry.async_get_or_create(
+        domain="light", platform="test", unique_id="direct_living"
+    )
+    entity_registry.async_update_entity(
+        direct_in_living.entity_id, area_id=living_room.id
+    )
+
+    # Inherited via device area.
+    fake_entry = MockConfigEntry(domain="test", unique_id="device_owner", data={})
+    fake_entry.add_to_hass(hass)
+    device_registry = async_get_devices(hass)
+    living_device = device_registry.async_get_or_create(
+        config_entry_id=fake_entry.entry_id,
+        identifiers={("test", "living_device")},
+        manufacturer="ACME",
+    )
+    device_registry.async_update_device(living_device.id, area_id=living_room.id)
+    via_device_in_living = entity_registry.async_get_or_create(
+        domain="light",
+        platform="test",
+        unique_id="via_device_living",
+        device_id=living_device.id,
+    )
+
+    # A light in a different area should be excluded.
+    direct_in_kitchen = entity_registry.async_get_or_create(
+        domain="light", platform="test", unique_id="direct_kitchen"
+    )
+    entity_registry.async_update_entity(direct_in_kitchen.entity_id, area_id=kitchen.id)
+
+    # Walk the flow: name → area (with id) → lights.
+    result = await hass.config_entries.flow.async_init(
+        const.DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"name": "Living"}
+    )
+    assert result["step_id"] == "area"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"area_id": living_room.id}
+    )
+    assert result["type"] == "form"
+    assert result["step_id"] == "lights"
+
+    selector_config = get_entity_selector_config(result, "controlled_entities")
+
+    # The entity selector must NOT carry an area key in its filter (HA rejects it).
+    assert "filter" in selector_config
+    for f in selector_config["filter"]:
+        assert "area" not in f
+        assert "area_id" not in f
+
+    # Lights from the selected area are present; lights from other areas are not.
+    include_entities = selector_config.get("include_entities", [])
+    assert direct_in_living.entity_id in include_entities
+    assert via_device_in_living.entity_id in include_entities
+    assert direct_in_kitchen.entity_id not in include_entities
+
+
+async def test_area_step_skipped_does_not_set_include_entities(
+    hass: HomeAssistant,
+) -> None:
+    """Skipping the area step leaves the entity selector unconstrained by area."""
+
+    result = await hass.config_entries.flow.async_init(
+        const.DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"name": "All"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={}
+    )
+
+    selector_config = get_entity_selector_config(result, "controlled_entities")
+
+    assert "include_entities" not in selector_config
+    # Domain filter remains so only lights show up.
+    assert selector_config["filter"] == [{"domain": ["light"]}]
+
+
+async def test_area_with_no_lights_does_not_set_include_entities(
+    hass: HomeAssistant,
+) -> None:
+    """An area that resolves to zero lights falls back to no narrowing.
+
+    Better UX than rendering an empty selector — user can still pick lights
+    if the area has none assigned yet.
+    """
+
+    from homeassistant.helpers.area_registry import async_get as async_get_areas
+
+    area_registry = async_get_areas(hass)
+    empty_area = area_registry.async_create("Empty")
+
+    result = await hass.config_entries.flow.async_init(
+        const.DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"name": "Empty test"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"area_id": empty_area.id}
+    )
+
+    selector_config = get_entity_selector_config(result, "controlled_entities")
+    assert "include_entities" not in selector_config

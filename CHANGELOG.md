@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Config flow area step no longer fails with "Unknown error".** The HA entity
+  selector's `filter` schema rejects any area key (`PREVENT_EXTRA` allows only
+  `integration`/`domain`/`device_class`/`supported_features`). Selecting an area
+  in the flow caused a schema validation error that surfaced as a generic
+  "Unknown error" toast. Fix resolves the area to a list of light entity_ids
+  (entities directly in the area + entities of devices in the area) and passes
+  them via `include_entities` instead. Falls back to no narrowing if the area
+  resolves to zero lights.
+
 ### Added
 
 - **Curve editor golden path: full lifecycle ownership.** The card is now the

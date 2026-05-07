@@ -6,10 +6,18 @@ from typing import Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_BRIGHTNESS, CONF_ENTITIES, CONF_FRIENDLY_NAME
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowHandler, FlowResult
+from homeassistant.helpers.device_registry import (
+    async_entries_for_area as devices_in_area,
+)
+from homeassistant.helpers.device_registry import async_get as async_get_device_registry
+from homeassistant.helpers.entity_registry import (
+    async_entries_for_area as entities_in_area,
+)
 from homeassistant.helpers.entity_registry import (
     async_entries_for_config_entry,
+    async_entries_for_device,
     async_get,
 )
 from homeassistant.helpers.selector import selector
@@ -17,6 +25,34 @@ from homeassistant.helpers.selector import selector
 from .const import CURVE_PRESETS, DEFAULT_BRIGHTNESS, DEFAULT_CURVE_PRESET, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _light_entity_ids_in_area(hass: HomeAssistant, area_id: str) -> list[str]:
+    """Return the light entity_ids belonging to an area.
+
+    Includes entities directly assigned to the area and entities of devices
+    assigned to the area. The HA entity selector's `filter` schema rejects
+    any area key, so we resolve area→entities here and pass the result via
+    `include_entities`.
+    """
+
+    entity_registry = async_get(hass)
+    device_registry = async_get_device_registry(hass)
+
+    entity_ids: set[str] = set()
+
+    for entry in entities_in_area(entity_registry, area_id):
+        if entry.domain == "light":
+            entity_ids.add(entry.entity_id)
+
+    for device in devices_in_area(device_registry, area_id):
+        for entry in async_entries_for_device(
+            entity_registry, device.id, include_disabled_entities=False
+        ):
+            if entry.domain == "light" and entry.area_id in (None, area_id):
+                entity_ids.add(entry.entity_id)
+
+    return sorted(entity_ids)
 
 
 class LightenerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -187,11 +223,24 @@ class LightenerFlow:
                 self.data[CONF_ENTITIES] = entities
                 return await self.async_save_data()
 
-        # Build entity filter: filter by area if one was selected in the area step.
-        entity_filter: dict = {"domain": "light"}
+        # If an area was selected in the area step, narrow the picker to the
+        # lights in that area via include_entities. The HA entity selector's
+        # `filter` schema does not accept any area key — passing one raises a
+        # schema validation error that surfaces as an "Unknown error" toast.
+        entity_selector_config: dict[str, Any] = {
+            "multiple": True,
+            "filter": {"domain": "light"},
+            "exclude_entities": lightener_entities,
+        }
         area_id = self.data.get("_area_filter")
         if area_id:
-            entity_filter["area"] = area_id
+            area_lights = _light_entity_ids_in_area(self.flow_handler.hass, area_id)
+            if area_lights:
+                # Drop already-configured Lightener entities so they can't be
+                # picked recursively as members of another group.
+                area_lights = [e for e in area_lights if e not in lightener_entities]
+                if area_lights:
+                    entity_selector_config["include_entities"] = area_lights
 
         return self.flow_handler.async_show_form(
             step_id=self.steps.get("lights", "lights"),
@@ -200,15 +249,7 @@ class LightenerFlow:
                 {
                     vol.Required(
                         "controlled_entities", default=controlled_entities
-                    ): selector(
-                        {
-                            "entity": {
-                                "multiple": True,
-                                "filter": entity_filter,
-                                "exclude_entities": lightener_entities,
-                            }
-                        }
-                    ),
+                    ): selector({"entity": entity_selector_config}),
                     vol.Optional(
                         "curve_preset", default=DEFAULT_CURVE_PRESET
                     ): selector(
