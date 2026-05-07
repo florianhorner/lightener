@@ -250,3 +250,50 @@ Source: /autoplan on branch issue-53
   are center-aligned. Centering every element including hint pills creates a monotone
   composition without hierarchy. Consider left-aligning pills or staggering card labels.
   Priority: P3 (subtle visual hierarchy)
+
+---
+
+## Surfaced during /review of PR #72 (2026-05-08)
+
+Source: codex adversarial review on branch claude/analyze-test-coverage-ZyHsQ.
+None blocking that PR — listed here so they don't get lost.
+
+### P2 — Correctness
+
+- [ ] **`_getSvgDescription` reports last point, labels it "max %"**
+  `js/src/components/curve-graph.ts:841-846` — the SVG `<desc>` text uses the
+  curve's last control point's target value but labels it "max %". For
+  non-monotonic curves (a user can drag a midpoint above the endpoint), the
+  description lies. Fix: compute the actual max across all control points,
+  or rename the field to "end %" if the last-point semantic is intended.
+  Affects: `js/src/components/curve-graph.ts`, `js/src/components/curve-graph.test.ts`
+  Why: AT/screen-reader users get wrong information. Existing a11y tests in
+  PR #72 use only monotonic curves so the bug is currently masked.
+  Note: when fixing, add a non-monotonic-curve assertion to the new
+  `<desc>` tests in PR #72 to lock the corrected behavior.
+  Priority: P2 (a11y correctness, low-frequency surface)
+
+### P3 — Test hygiene (PR #72 follow-up)
+
+- [ ] **Harden 5 new tests flagged by codex as implementation probes**
+  Findings from codex on PR #72 — non-blocking, hygiene only:
+  1. Drop `EntityPickerLoader` `loadCardHelpers self-call` test — tautological
+     (`js/src/utils/entity-picker-loader.test.ts:124-137`).
+  2. Tighten `_isMobile` lifecycle tests at
+     `js/src/components/curve-graph.test.ts:390-422` to dispatch the change
+     event and assert rendered hint text / hit-target radius, not the
+     private `_isMobile` field.
+  3. Add `caplog` assertion to
+     `test_async_restore_config_entry_data_logs_on_reload_exception` at
+     `tests/components/lightener/test_websocket.py:1140-1165` so the "logs"
+     half of the docstring contract is verified.
+  4. Spy on the registry walker in
+     `test_list_entities_cache_hit_does_not_rebuild`
+     (`tests/components/lightener/test_websocket.py:1033-1062`) — current
+     test seeds via private setter and only proves the sentinel returns,
+     not that the rebuild path was skipped.
+  5. Add a comment to the four `hass.config_entries._entries.pop()` calls in
+     `test_websocket.py` (lines ~1205, 1294, 1322, 1351) explaining the
+     orphan-config-entry simulation. Public `async_remove` would tear down
+     the entity-registry linkage these tests deliberately preserve.
+  Priority: P3 (current tests pass and add coverage; hygiene only)
