@@ -1,0 +1,36 @@
+Bootstrap evidence for PR #77 (chore(ci): adopt engineering-standards commit-message system)
+
+Generated: 2026-05-08
+Commit: 91e950d
+Engineering-standards SHA pinned: d2824d4 (https://github.com/florianhorner/engineering-standards/commit/d2824d4)
+
+== bootstrap-repo.sh output ==
+
+[1/12] vendor commit-rules.json @ d2824d4 ... PASS
+[2/12] install .commitlintrc.json ... PASS
+[3/12] install .github/workflows/commit-lint.yml pinned to d2824d4 ... PASS
+[4/12] patch .github/dependabot.yml (commit-message.prefix = chore) ... PASS
+[5/12] update CLAUDE.md ... PASS
+[6/12] update CONTRIBUTING.md ... PASS
+[7/12] drop AUTHOR-NOTES.md if fork ... PASS
+[8/12] generate .git/hooks/commit-msg ... PASS
+[9/12] validator dry-run vs last 3 commits ... WARN 1/3 existing commits would fail (informational, not blocking)
+[10/12] verify GitHub Actions enabled ... PASS
+[11/12] compile remaining manual checklist ... PASS
+[12/12] compute TTHW ... PASS
+
+== CI evidence ==
+
+commit-lint / validate commit messages: PASS (validator + commitlint both green after the d2824d4 SHA bump)
+Frontend, HACS, Hassfest, Mypy, Pytest, Ruff, Version sync: all PASS — config-only changes do not affect existing test/build/lint.
+
+== Files added ==
+
+.commitlintrc.json
+.config/commit-rules.json
+.config/commit-rules.meta.json
+.github/dependabot.yml
+.github/workflows/commit-lint.yml
+AUTHOR-NOTES.md
+CLAUDE.md (appended)
+CONTRIBUTING.md (appended)
