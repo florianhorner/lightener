@@ -17,6 +17,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   them via `include_entities` instead. Falls back to no narrowing if the area
   resolves to zero lights.
 
+### Changed
+
+- **Native config flow drops the "Starting curve" radio.** Picking a preset by
+  text label without seeing the curve was Excel-style number crunching. New
+  groups default to a linear curve and the user is handed off to the Lightener
+  Editor immediately after creation via a markdown CTA in the success page
+  (`config.create_entry.open_editor`, links to `/lightener-editor`).
+- **Curve card auto-opens the preset chooser on a freshly-created group's
+  first appearance.** When the loaded curves are all at the linear default,
+  the presets panel opens once so the user picks a starting curve visually
+  against the live graph. One-shot per entity per card lifetime — dismissal
+  sticks across navigation.
+- **Options flow no longer asks for a starting preset for new lights.** Same
+  thesis: the curve card is where presets are picked. New lights added via
+  options flow start linear; users tune them in the editor.
+- **In-panel "Create Lightener group" modal drops its preset selector.** The
+  card's auto-opened preset chooser is now the single source of truth for
+  picking a starting curve.
+
 ### Added
 
 - **Curve editor golden path: full lifecycle ownership.** The card is now the

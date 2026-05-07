@@ -11,8 +11,16 @@
           "name": "Um nome de c\u00f4modo ou \u00e1rea funciona melhor, ex. \"Sala de Estar\""
         }
       },
+      "area": {
+        "title": "Filtrar por \u00e1rea (opcional)",
+        "description": "Selecione um c\u00f4modo ou \u00e1rea para filtrar as luzes na pr\u00f3xima tela. Com 100+ luzes isso evita muito scroll. Deixe em branco para ver todas.",
+        "data": {
+          "area_id": "C\u00f4modo / \u00e1rea"
+        }
+      },
       "lights": {
         "title": "Selecionar luzes",
+        "description": "Escolha as luzes a controlar. Voc\u00ea ajustar\u00e1 cada curva de brilho visualmente no **Editor Lightener** no pr\u00f3ximo passo \u2014 sem n\u00fameros aqui.",
         "data": {
           "controlled_entities": "Luzes a controlar"
         }
@@ -31,12 +39,16 @@
     "error": {
       "controlled_entities_empty": "Selecione pelo menos uma luz",
       "invalid_brightness": "Entrada inv\u00e1lida \"{error_entry}\". Use o formato \"X:Y\" onde X \u00e9 1\u2013100 e Y \u00e9 0\u2013100, ex. \"40:100\""
+    },
+    "create_entry": {
+      "open_editor": "Grupo criado. **[Ajustar as curvas agora \u2192]({editor_url})** \u2014 o editor \u00e9 onde voc\u00ea escolhe presets e molda a resposta de cada luz no gr\u00e1fico ao vivo."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Selecionar luzes",
+        "description": "Adicione ou remova luzes aqui. Abra o **Editor Lightener** na barra lateral para escolher presets e ajustar curvas visualmente \u2014 luzes novas come\u00e7am com curva linear.",
         "data": {
           "controlled_entities": "Luzes a controlar"
         }

@@ -4,7 +4,12 @@ import { LightCurve, Hass } from './utils/types.js';
 import { EntityPickerLoader } from './utils/entity-picker-loader.js';
 import { curvesToWsPayload, wsPayloadToCurves, cloneCurves, curvesEqual } from './utils/data.js';
 import { easeOutCubic, sampleCurveAt, CURVE_COLORS } from './utils/graph-math.js';
-import { CURVE_PRESETS, presetPolylinePoints, type PresetDef } from './utils/presets.js';
+import {
+  CURVE_PRESETS,
+  controlPointsAreLinearDefault,
+  presetPolylinePoints,
+  type PresetDef,
+} from './utils/presets.js';
 import {
   INITIAL_SAVE_STATE,
   type SaveState,
@@ -265,6 +270,11 @@ export class LightenerCurveCard extends LitElement {
   private _loaded = false;
   private _loadedEntityId: string | undefined = undefined;
   private _loadErrorEntityId: string | undefined = undefined;
+  // entity_ids we have already auto-opened the preset chooser for. Once a
+  // user has seen the auto-open for a given group, we never auto-open it
+  // again on the same card instance — even after they switch away to
+  // another group and come back. Per-card, not persisted.
+  private _autoPresetsShownFor: Set<string> = new Set();
   private _boundKeyHandler: ((e: KeyboardEvent) => void) | null = null;
   private _boundBeforeUnload: ((e: BeforeUnloadEvent) => void) | null = null;
   private _saveSuccessTimer: ReturnType<typeof setTimeout> | null = null;
@@ -958,6 +968,20 @@ export class LightenerCurveCard extends LitElement {
       this._loaded = true;
       this._loadedEntityId = requestedEntity;
       this._loadErrorEntityId = undefined;
+
+      // Onboarding handoff: a freshly-created group lands here with linear
+      // default curves. Auto-open the preset chooser so the user picks a
+      // starting curve visually instead of being told "nothing here yet."
+      // One-shot per entity for the card's lifetime — switching away and
+      // back must not re-open after the user dismissed it.
+      if (
+        !this._autoPresetsShownFor.has(requestedEntity) &&
+        curves.length > 0 &&
+        curves.every((c) => controlPointsAreLinearDefault(c.controlPoints))
+      ) {
+        this._showPresets = true;
+      }
+      this._autoPresetsShownFor.add(requestedEntity);
     } catch (err) {
       if (this._entityId !== requestedEntity) return;
       console.error('[Lightener] Failed to load curves:', err);

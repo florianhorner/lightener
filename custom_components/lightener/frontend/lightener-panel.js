@@ -785,51 +785,11 @@ class LightenerEditorPanel extends HTMLElement {
             border-color: var(--primary-color, #2563eb);
             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
           }
-          .modal-presets {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-          }
-          @media (max-width: 499px) {
-            .modal-presets {
-              grid-template-columns: 1fr;
-            }
-          }
-          .modal-preset-btn {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-height: 44px;
-            padding: 8px 10px;
-            border-radius: 10px;
-            border: 1px solid var(--divider-color);
-            background: var(--card-background-color);
-            color: var(--primary-text-color);
-            font-family: inherit;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            text-align: left;
-            transition: border-color 0.15s ease, background 0.15s ease;
-          }
-          .modal-preset-btn:hover {
-            border-color: var(--primary-color, #2563eb);
-          }
-          .modal-preset-btn.active {
-            border-color: var(--primary-color, #2563eb);
-            background: rgba(37, 99, 235, 0.1);
-          }
-          .modal-preset-btn svg {
-            width: 56px;
-            height: 36px;
-            flex-shrink: 0;
-          }
-          .modal-preset-btn polyline {
-            fill: none;
-            stroke: var(--primary-color, #2563eb);
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
+          .modal-hint {
+            margin: -2px 0 14px;
+            font-size: 0.85rem;
+            color: var(--secondary-text-color);
+            line-height: 1.4;
           }
           .modal-error {
             padding: 10px 12px;
@@ -927,10 +887,7 @@ class LightenerEditorPanel extends HTMLElement {
                   <label>Lights to control</label>
                   <div id="cgf-lights-mount"></div>
                 </div>
-                <div class="modal-field">
-                  <label>Starting curve</label>
-                  <div id="cgf-presets" class="modal-presets"></div>
-                </div>
+                <p class="modal-hint">Each light starts on a linear curve. Pick a preset and shape it visually after the group is created.</p>
                 <div class="modal-actions">
                   <button id="cgf-cancel" type="button" class="modal-btn">Cancel</button>
                   <button id="cgf-submit" type="submit" class="modal-btn primary">Create group</button>
@@ -1027,14 +984,12 @@ class LightenerEditorPanel extends HTMLElement {
     // session's mount.
     this._createGroupOpenToken = (this._createGroupOpenToken || 0) + 1;
     this._createGroupSubmitting = false;
-    this._createGroupSelectedPreset = "linear";
     this._createGroupSelectedLights = [];
     const nameInput = this.shadowRoot.querySelector("#cgf-name");
     nameInput.value = "";
     const errorEl = this.shadowRoot.querySelector("#create-group-error");
     errorEl.hidden = true;
     errorEl.textContent = "";
-    this._renderCreateGroupPresets();
     this._renderCreateGroupLightsPicker(this._createGroupOpenToken);
     this._setCreateGroupSubmitDisabled();
     modal.hidden = false;
@@ -1044,36 +999,6 @@ class LightenerEditorPanel extends HTMLElement {
   _closeCreateGroupModal() {
     const modal = this.shadowRoot.querySelector("#create-group-modal");
     if (modal) modal.hidden = true;
-  }
-
-  _renderCreateGroupPresets() {
-    const presets = [
-      { id: "linear", name: "Linear", points: "4,36 60,4" },
-      { id: "dim_accent", name: "Dim accent", points: "4,36 18,33 32,29 60,18" },
-      { id: "late_starter", name: "Late starter", points: "4,36 30,35 42,18 60,4" },
-      { id: "night_mode", name: "Night mode", points: "4,36 14,34 32,30 60,26" },
-    ];
-    const mount = this.shadowRoot.querySelector("#cgf-presets");
-    mount.innerHTML = "";
-    presets.forEach((preset) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "modal-preset-btn";
-      btn.dataset.preset = preset.id;
-      if (preset.id === this._createGroupSelectedPreset) btn.classList.add("active");
-      btn.setAttribute("aria-pressed", preset.id === this._createGroupSelectedPreset ? "true" : "false");
-      btn.innerHTML = `
-        <svg viewBox="0 0 64 40" aria-hidden="true">
-          <polyline points="${preset.points}"></polyline>
-        </svg>
-        <span>${preset.name}</span>
-      `;
-      btn.addEventListener("click", () => {
-        this._createGroupSelectedPreset = preset.id;
-        this._renderCreateGroupPresets();
-      });
-      mount.appendChild(btn);
-    });
   }
 
   async _renderCreateGroupLightsPicker(openToken = this._createGroupOpenToken) {
@@ -1221,9 +1146,8 @@ class LightenerEditorPanel extends HTMLElement {
     const cancelBtn = this.shadowRoot.querySelector("#cgf-cancel");
     const name = (nameInput?.value || "").trim();
     // Snapshot mutable modal state before any awaits — the user can keep
-    // editing lights/preset chips while the WS calls are in flight.
+    // editing the lights list while the WS calls are in flight.
     const selectedLights = [...this._createGroupSelectedLights];
-    const selectedPreset = this._createGroupSelectedPreset || "linear";
     if (!name || selectedLights.length === 0) {
       this._createGroupSubmitting = false;
       return;
@@ -1267,7 +1191,6 @@ class LightenerEditorPanel extends HTMLElement {
         flow_id: flowId,
         user_input: {
           controlled_entities: selectedLights,
-          curve_preset: selectedPreset,
         },
       });
 

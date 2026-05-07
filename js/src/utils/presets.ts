@@ -66,3 +66,22 @@ export function presetPolylinePoints(preset: PresetDef): string {
     })
     .join(' ');
 }
+
+/**
+ * Returns true if the given control points are exactly the linear default
+ * shape that fresh groups load with. Used to auto-open the preset chooser
+ * on a freshly-created group's first appearance in the editor — the
+ * onboarding handoff from the config flow happens here.
+ */
+export function controlPointsAreLinearDefault(
+  controlPoints: ReadonlyArray<{ lightener: number; target: number }>
+): boolean {
+  const linear = CURVE_PRESETS.find((p) => p.id === 'linear');
+  if (!linear) return false;
+  if (controlPoints.length !== linear.controlPoints.length) return false;
+  return controlPoints.every(
+    (cp, i) =>
+      cp.lightener === linear.controlPoints[i]!.lightener &&
+      cp.target === linear.controlPoints[i]!.target
+  );
+}

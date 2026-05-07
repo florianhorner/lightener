@@ -341,3 +341,86 @@ describe('lightener-curve-card — save flow', () => {
     expect(view._saveError).toBe('Save failed. Check connection.');
   });
 });
+
+describe('lightener-curve-card — onboarding handoff (preset auto-open)', () => {
+  // The freshly-created group's curves arrive as the linear default
+  // ({0,0}, {1,1}, {100,100} after wsPayloadToCurves seeds (0,0)). The card
+  // is the new "pick a preset visually" surface that replaced the form-based
+  // preset radio in the config flow — if this auto-open regresses, fresh
+  // groups land on a blank graph with no signposting.
+
+  it('auto-opens the presets panel when all loaded curves are at the linear default', async () => {
+    const { card } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+    });
+    expect(card.renderRoot.querySelector('.presets-panel')).not.toBeNull();
+  });
+
+  it('does not auto-open the presets panel when curves are non-default', async () => {
+    const { card } = await mountCard({
+      'light.a': { brightness: { '1': '1', '50': '20', '100': '100' } },
+    });
+    expect(card.renderRoot.querySelector('.presets-panel')).toBeNull();
+  });
+
+  it('does not re-open after dismissal on the same entity', async () => {
+    const { card, hass } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+    });
+    expect(card.renderRoot.querySelector('.presets-panel')).not.toBeNull();
+
+    // Dismiss via the side-rail toggle — same path the user takes.
+    const presetsBtn = card.renderRoot.querySelector('.presets-btn') as HTMLButtonElement;
+    expect(presetsBtn).not.toBeNull();
+    presetsBtn.click();
+    await card.updateComplete;
+    expect(card.renderRoot.querySelector('.presets-panel')).toBeNull();
+
+    // A subsequent load for the SAME entity must not re-open the panel.
+    hass.callWS.mockResolvedValueOnce({
+      entities: { 'light.a': { brightness: { '1': '1', '100': '100' } } },
+    });
+    (card as unknown as { _loaded: boolean })._loaded = false;
+    card.hass = hass;
+    await card.updateComplete;
+    await Promise.resolve();
+    await card.updateComplete;
+    expect(card.renderRoot.querySelector('.presets-panel')).toBeNull();
+  });
+
+  it('does not re-open after navigating to another fresh group and back', async () => {
+    const { card, hass } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+    });
+    // Initial auto-open for entity 1, then user dismisses.
+    (card.renderRoot.querySelector('.presets-btn') as HTMLButtonElement).click();
+    await card.updateComplete;
+    expect(card.renderRoot.querySelector('.presets-panel')).toBeNull();
+
+    // Switch to a different fresh group — should auto-open for the new one.
+    hass.callWS.mockResolvedValueOnce({
+      entities: { 'light.b': { brightness: { '1': '1', '100': '100' } } },
+    });
+    card.setConfig({ entity: 'light.lightener_two' });
+    await card.updateComplete;
+    await Promise.resolve();
+    await card.updateComplete;
+    expect(card.renderRoot.querySelector('.presets-panel')).not.toBeNull();
+
+    // User dismisses the second auto-open.
+    (card.renderRoot.querySelector('.presets-btn') as HTMLButtonElement).click();
+    await card.updateComplete;
+    expect(card.renderRoot.querySelector('.presets-panel')).toBeNull();
+
+    // Switch back to the first fresh group — must NOT re-open even though
+    // _showPresets and _loaded are reset by setConfig.
+    hass.callWS.mockResolvedValueOnce({
+      entities: { 'light.a': { brightness: { '1': '1', '100': '100' } } },
+    });
+    card.setConfig({ entity: 'light.lightener' });
+    await card.updateComplete;
+    await Promise.resolve();
+    await card.updateComplete;
+    expect(card.renderRoot.querySelector('.presets-panel')).toBeNull();
+  });
+});

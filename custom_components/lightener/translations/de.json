@@ -11,8 +11,16 @@
           "name": "Am besten ein Raum- oder Bereichsname, z.\u00a0B. \"Wohnzimmer\""
         }
       },
+      "area": {
+        "title": "Nach Bereich filtern (optional)",
+        "description": "W\u00e4hle einen Raum oder Bereich, um die Lampenliste auf der n\u00e4chsten Seite einzugrenzen. Bei 100+ Lampen erspart das viel Scrollen. Leer lassen, um alle Lampen zu sehen.",
+        "data": {
+          "area_id": "Raum / Bereich"
+        }
+      },
       "lights": {
         "title": "Lampen ausw\u00e4hlen",
+        "description": "W\u00e4hle die Lampen aus, die gesteuert werden sollen. Die Helligkeitskurven feinstellst du im n\u00e4chsten Schritt visuell im **Lightener-Editor** \u2014 kein Zahlen-Wirrwarr hier.",
         "data": {
           "controlled_entities": "Zu steuernde Lampen"
         }
@@ -31,12 +39,16 @@
     "error": {
       "controlled_entities_empty": "Mindestens eine Lampe ausw\u00e4hlen",
       "invalid_brightness": "Ung\u00fcltiger Eintrag \"{error_entry}\". Format \"X:Y\" verwenden, wobei X 1\u2013100 und Y 0\u2013100 ist, z.\u00a0B. \"40:100\""
+    },
+    "create_entry": {
+      "open_editor": "Gruppe angelegt. **[Kurven jetzt einstellen \u2192]({editor_url})** \u2014 im Editor w\u00e4hlst du Presets und passt jede Lampe direkt an der Live-Kurve an."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Lampen ausw\u00e4hlen",
+        "description": "Lampen hinzuf\u00fcgen oder entfernen. \u00d6ffne den **Lightener-Editor** in der Seitenleiste, um Presets zu w\u00e4hlen und Kurven visuell anzupassen \u2014 neue Lampen starten mit einer linearen Kurve.",
         "data": {
           "controlled_entities": "Zu steuernde Lampen"
         }

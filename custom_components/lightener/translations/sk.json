@@ -11,8 +11,16 @@
           "name": "Najlep\u0161ie funguje n\u00e1zov miestnosti alebo oblasti, napr. \"Ob\u00fdva\u010dka\""
         }
       },
+      "area": {
+        "title": "Filtrova\u0165 pod\u013ea oblasti (volite\u013en\u00e9)",
+        "description": "Vyberte miestnos\u0165 alebo oblas\u0165, aby ste obmedzili svetl\u00e1 na \u010fal\u0161ej obrazovke. Pri 100+ svetl\u00e1ch to u\u0161etr\u00ed ve\u013ea rolovania. Nechajte pr\u00e1zdne, aby ste videli v\u0161etky.",
+        "data": {
+          "area_id": "Miestnos\u0165 / oblas\u0165"
+        }
+      },
       "lights": {
         "title": "Vybra\u0165 svetl\u00e1",
+        "description": "Vyberte svetl\u00e1 na ovl\u00e1danie. Krivku jasu pre ka\u017ed\u00e9 svetlo dolad\u00edte vizu\u00e1lne v **Lightener Editore** v \u010fal\u0161om kroku \u2014 \u017eiadne \u010d\u00edsla tu.",
         "data": {
           "controlled_entities": "Svetl\u00e1 na ovl\u00e1danie"
         }
@@ -31,12 +39,16 @@
     "error": {
       "controlled_entities_empty": "Vyberte aspo\u0148 jedno svetlo",
       "invalid_brightness": "Neplatn\u00fd z\u00e1znam \"{error_entry}\". Pou\u017eite form\u00e1t \"X:Y\" kde X je 1\u2013100 a Y je 0\u2013100, napr. \"40:100\""
+    },
+    "create_entry": {
+      "open_editor": "Skupina vytvoren\u00e1. **[Doladi\u0165 krivky teraz \u2192]({editor_url})** \u2014 v editore vyber\u00e1te preset\u00ady a tvarujete odozvu ka\u017ed\u00e9ho svetla na \u017eivom grafe."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Vybra\u0165 svetl\u00e1",
+        "description": "Pridajte alebo odstr\u00e1\u0148te svetl\u00e1. Otvorte **Lightener Editor** v bo\u010dnom paneli pre vo\u013ebu presetov a vizu\u00e1lne doladenie kriviek \u2014 nov\u00e9 svetl\u00e1 za\u010d\u00ednaj\u00fa s line\u00e1rnou krivkou.",
         "data": {
           "controlled_entities": "Svetl\u00e1 na ovl\u00e1danie"
         }

@@ -22,7 +22,7 @@ from homeassistant.helpers.entity_registry import (
 )
 from homeassistant.helpers.selector import selector
 
-from .const import CURVE_PRESETS, DEFAULT_BRIGHTNESS, DEFAULT_CURVE_PRESET, DOMAIN
+from .const import DEFAULT_BRIGHTNESS, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -127,11 +127,6 @@ class LightenerFlow:
         self.data = {} if config_entry is None else config_entry.data.copy()
         self.steps = steps
 
-    @staticmethod
-    def _get_preset_curve(preset_id: str) -> dict[str, str]:
-        """Return curve for the selected preset."""
-        return dict(CURVE_PRESETS.get(preset_id, DEFAULT_BRIGHTNESS))
-
     async def async_step_name(self, user_input: dict[str, Any] | None = None):
         """Configure the lightener device name."""
 
@@ -201,14 +196,16 @@ class LightenerFlow:
 
         if user_input is not None:
             selected = user_input.get("controlled_entities")
-            selected_preset = user_input.get("curve_preset", DEFAULT_CURVE_PRESET)
-            preset_curve = self._get_preset_curve(selected_preset)
 
             if not selected:
                 errors["controlled_entities"] = "controlled_entities_empty"
             else:
                 # Build entities dict, preserving existing curves for lights
-                # that were already configured, and assigning defaults to new ones.
+                # that were already configured, and assigning the default
+                # (linear) curve to new ones. Curve choice happens visually
+                # in the Lightener Editor panel after the flow completes —
+                # the panel exposes presets as live curve thumbnails on the
+                # actual graph rather than as text radio buttons here.
                 existing_entities = self.data.get(CONF_ENTITIES, {})
                 entities = {}
 
@@ -217,8 +214,9 @@ class LightenerFlow:
                         # Deep-copy to avoid mutating the live config proxy
                         entities[entity_id] = dict(existing_entities[entity_id])
                     else:
-                        # New light — assign selected preset curve.
-                        entities[entity_id] = {CONF_BRIGHTNESS: dict(preset_curve)}
+                        entities[entity_id] = {
+                            CONF_BRIGHTNESS: dict(DEFAULT_BRIGHTNESS)
+                        }
 
                 self.data[CONF_ENTITIES] = entities
                 return await self.async_save_data()
@@ -250,21 +248,6 @@ class LightenerFlow:
                     vol.Required(
                         "controlled_entities", default=controlled_entities
                     ): selector({"entity": entity_selector_config}),
-                    vol.Optional(
-                        "curve_preset", default=DEFAULT_CURVE_PRESET
-                    ): selector(
-                        {
-                            "select": {
-                                "mode": "list",
-                                "options": [
-                                    {"value": "linear", "label": "Linear"},
-                                    {"value": "dim_accent", "label": "Dim accent"},
-                                    {"value": "late_starter", "label": "Late starter"},
-                                    {"value": "night_mode", "label": "Night mode"},
-                                ],
-                            }
-                        }
-                    ),
                 }
             ),
             errors=errors,
@@ -279,10 +262,16 @@ class LightenerFlow:
         # Strip internal flow-only keys (prefixed with _) before persisting.
         persist_data = {k: v for k, v in self.data.items() if not k.startswith("_")}
 
-        # If in a config flow, create the config entry.
+        # If in a config flow, create the config entry. Hand the user off to
+        # the Lightener Editor panel for visual curve tuning — the editor is
+        # where presets are picked against the live graph rather than as text
+        # radios, which is the actual product experience.
         if self.config_entry is None:
             return self.flow_handler.async_create_entry(
-                title=persist_data.get(CONF_FRIENDLY_NAME), data=persist_data
+                title=persist_data.get(CONF_FRIENDLY_NAME),
+                data=persist_data,
+                description="open_editor",
+                description_placeholders={"editor_url": "/lightener-editor"},
             )
 
         # In an options flow, update the config entry.

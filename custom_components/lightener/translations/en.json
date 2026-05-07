@@ -20,10 +20,9 @@
       },
       "lights": {
         "title": "Select lights",
-        "description": "Pick the lights to control and choose a starting curve. You can fine-tune each curve individually in the **Lightener Editor** after setup.",
+        "description": "Pick the lights to control. You'll tune each light's brightness curve visually in the **Lightener Editor** in the next step — no number-crunching here.",
         "data": {
-          "controlled_entities": "Lights to control",
-          "curve_preset": "Starting curve"
+          "controlled_entities": "Lights to control"
         }
       },
       "light_configuration": {
@@ -40,16 +39,18 @@
     "error": {
       "controlled_entities_empty": "Select at least one light",
       "invalid_brightness": "Invalid entry \"{error_entry}\". Use the format \"X:Y\" where X is 1\u2013100 and Y is 0\u2013100, e.g. \"40:100\""
+    },
+    "create_entry": {
+      "open_editor": "Group created. **[Tune the curves now \u2192]({editor_url})** \u2014 the editor is where you pick presets and shape each light's response on the live graph."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Select lights",
-        "description": "Add or remove lights and pick a preset for new ones. Open **Lightener Editor** in the sidebar to drag and adjust curves visually.",
+        "description": "Add or remove lights here. Open **Lightener Editor** in the sidebar to pick presets and tune curves visually \u2014 new lights start with a linear curve.",
         "data": {
-          "controlled_entities": "Lights to control",
-          "curve_preset": "Starting curve preset"
+          "controlled_entities": "Lights to control"
         }
       },
       "light_configuration": {

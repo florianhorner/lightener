@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { CURVE_PRESETS, presetPolylinePoints, type PresetDef } from './presets.js';
+import {
+  CURVE_PRESETS,
+  controlPointsAreLinearDefault,
+  presetPolylinePoints,
+  type PresetDef,
+} from './presets.js';
 
 describe('CURVE_PRESETS', () => {
   it('has exactly four presets', () => {
@@ -138,5 +143,47 @@ describe('presetPolylinePoints', () => {
       const pointCount = out.split(' ').length;
       expect(pointCount).toBe(preset.controlPoints.length);
     }
+  });
+});
+
+describe('controlPointsAreLinearDefault', () => {
+  it('returns true for the linear preset shape', () => {
+    expect(
+      controlPointsAreLinearDefault([
+        { lightener: 0, target: 0 },
+        { lightener: 1, target: 1 },
+        { lightener: 100, target: 100 },
+      ])
+    ).toBe(true);
+  });
+
+  it('returns false when the user has dragged a point', () => {
+    expect(
+      controlPointsAreLinearDefault([
+        { lightener: 0, target: 0 },
+        { lightener: 1, target: 1 },
+        { lightener: 100, target: 60 },
+      ])
+    ).toBe(false);
+  });
+
+  it('returns false when an extra point has been added', () => {
+    expect(
+      controlPointsAreLinearDefault([
+        { lightener: 0, target: 0 },
+        { lightener: 1, target: 1 },
+        { lightener: 50, target: 50 },
+        { lightener: 100, target: 100 },
+      ])
+    ).toBe(false);
+  });
+
+  it('returns false for the night_mode preset', () => {
+    const nightMode = CURVE_PRESETS.find((p) => p.id === 'night_mode')!;
+    expect(controlPointsAreLinearDefault(nightMode.controlPoints)).toBe(false);
+  });
+
+  it('returns false for an empty curve', () => {
+    expect(controlPointsAreLinearDefault([])).toBe(false);
   });
 });

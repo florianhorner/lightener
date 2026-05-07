@@ -14,7 +14,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.lightener import const
 from custom_components.lightener.config_flow import LightenerConfigFlow
-from custom_components.lightener.const import CURVE_PRESETS, DEFAULT_BRIGHTNESS
+from custom_components.lightener.const import DEFAULT_BRIGHTNESS
 
 
 async def test_config_flow_steps(hass: HomeAssistant) -> None:
@@ -113,33 +113,53 @@ async def test_config_flow_multiple_lights(hass: HomeAssistant) -> None:
     }
 
 
-async def test_config_flow_applies_selected_preset_to_new_lights(
-    hass: HomeAssistant,
-) -> None:
-    """Test config flow applies selected preset to newly configured lights."""
+async def test_config_flow_handoff_to_editor(hass: HomeAssistant) -> None:
+    """The create_entry result must point the user to the Lightener Editor.
+
+    Curve choice happens in the panel against the live graph — the form no
+    longer asks for a preset, so the success page has to bridge the user
+    from form completion to the editor canvas.
+    """
 
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], user_input={"name": "Preset Test"}
+        result["flow_id"], user_input={"name": "Handoff"}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        user_input={
-            "controlled_entities": ["light.test1", "light.test2"],
-            "curve_preset": "night_mode",
-        },
+        result["flow_id"], user_input={"controlled_entities": ["light.test1"]}
     )
 
     assert result["type"] == "create_entry"
-    assert result["data"][CONF_ENTITIES] == {
-        "light.test1": {CONF_BRIGHTNESS: dict(CURVE_PRESETS["night_mode"])},
-        "light.test2": {CONF_BRIGHTNESS: dict(CURVE_PRESETS["night_mode"])},
-    }
+    assert result["description"] == "open_editor"
+    assert result["description_placeholders"] == {"editor_url": "/lightener-editor"}
+
+
+async def test_config_flow_lights_step_has_no_preset_field(
+    hass: HomeAssistant,
+) -> None:
+    """The lights step must not expose a curve_preset field.
+
+    Preset choice is now visual and happens in the panel after creation.
+    """
+
+    result = await hass.config_entries.flow.async_init(
+        const.DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"name": "Test"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={}
+    )
+
+    schema_keys = {str(k) for k in result["data_schema"].schema}
+    assert "curve_preset" not in schema_keys
+    assert "controlled_entities" in schema_keys
 
 
 async def test_options_flow_preserves_existing_curves(hass: HomeAssistant) -> None:
@@ -169,10 +189,7 @@ async def test_options_flow_preserves_existing_curves(hass: HomeAssistant) -> No
     # Keep test1 (existing curves preserved), drop test2, add test3 (gets defaults)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        user_input={
-            "controlled_entities": ["light.test1", "light.test3"],
-            "curve_preset": "linear",
-        },
+        user_input={"controlled_entities": ["light.test1", "light.test3"]},
     )
 
     assert result["type"] == "create_entry"
@@ -188,10 +205,14 @@ async def test_options_flow_preserves_existing_curves(hass: HomeAssistant) -> No
     assert entry.options == {}
 
 
-async def test_options_flow_applies_preset_only_to_new_lights(
+async def test_options_flow_assigns_default_curve_to_new_lights(
     hass: HomeAssistant,
 ) -> None:
-    """Test options flow keeps existing curves and uses preset for added lights."""
+    """Options flow keeps existing curves and uses the linear default for added lights.
+
+    Curve tuning (incl. presets) happens in the Lightener Editor panel —
+    the options form just adds/removes lights.
+    """
 
     entry = MockConfigEntry(
         domain="lightener",
@@ -208,16 +229,13 @@ async def test_options_flow_applies_preset_only_to_new_lights(
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        user_input={
-            "controlled_entities": ["light.test1", "light.test2"],
-            "curve_preset": "late_starter",
-        },
+        user_input={"controlled_entities": ["light.test1", "light.test2"]},
     )
 
     assert result["type"] == "create_entry"
     assert dict(entry.data)[CONF_ENTITIES] == {
         "light.test1": {CONF_BRIGHTNESS: {"10": "20", "80": "90"}},
-        "light.test2": {CONF_BRIGHTNESS: dict(CURVE_PRESETS["late_starter"])},
+        "light.test2": {CONF_BRIGHTNESS: dict(DEFAULT_BRIGHTNESS)},
     }
 
 
@@ -244,10 +262,7 @@ async def test_options_flow_rolls_back_when_reload_fails(
     with patch.object(hass.config_entries, "async_reload", return_value=False):
         result = await hass.config_entries.options.async_configure(
             result["flow_id"],
-            user_input={
-                "controlled_entities": ["light.test1", "light.test2"],
-                "curve_preset": "linear",
-            },
+            user_input={"controlled_entities": ["light.test1", "light.test2"]},
         )
 
     assert result["type"] == "form"
