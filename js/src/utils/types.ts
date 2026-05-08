@@ -15,6 +15,7 @@ export interface LightCurve {
 export interface Hass {
   user: { is_admin: boolean };
   callWS: <T>(msg: Record<string, unknown>) => Promise<T>;
+  callApi: <T>(method: string, path: string, body?: Record<string, unknown>) => Promise<T>;
   callService: (domain: string, service: string, data?: Record<string, unknown>) => Promise<void>;
   states: Record<
     string,
