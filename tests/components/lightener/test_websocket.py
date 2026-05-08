@@ -990,6 +990,7 @@ def test_connection_can_read_entity_check_raises_type_error_then_succeeds():
     calls = []
 
     def check(a, b):
+        """Record args; raise TypeError on first order, succeed on reversed."""
         calls.append((a, b))
         if (a, b) == ("light.test", "read"):
             raise TypeError("wrong arg order")
@@ -1005,6 +1006,7 @@ def test_connection_can_read_entity_both_orders_raise():
     """If both argument orders raise, returns False."""
 
     def check(a, b):
+        """Raise on both arg orders to force the False fallback path."""
         if (a, b) == ("light.test", "read"):
             raise TypeError("wrong arg order")
         raise RuntimeError("still broken")
@@ -1017,6 +1019,7 @@ def test_connection_can_read_entity_non_type_error_returns_false():
     """A non-TypeError exception from check_entity returns False directly."""
 
     def check(a, b):
+        """Raise a non-TypeError to exercise the catch-all False return."""
         raise ValueError("unexpected")
 
     connection = _make_connection_with_permission_check(check)
@@ -1088,6 +1091,7 @@ async def test_async_apply_config_entry_update_rolls_back_on_exception(
     }
 
     async def boom() -> bool:
+        """Raise during apply_change to drive the exception-rollback path."""
         raise RuntimeError("apply failed")
 
     with patch.object(hass.config_entries, "async_reload", return_value=True):
@@ -1123,6 +1127,7 @@ async def test_async_apply_config_entry_update_rolls_back_when_apply_returns_fal
     }
 
     async def returns_false() -> bool:
+        """Return False from apply_change to drive the False-return rollback."""
         return False
 
     with patch.object(hass.config_entries, "async_reload", return_value=True):
