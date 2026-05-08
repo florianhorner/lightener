@@ -16,14 +16,14 @@ export default defineConfig({
         'src/lightener-curve-card.ts',
       ],
       reporter: ['text', 'html', 'lcov'],
-      // Floor, not ratchet: baseline after PR-B is 82.52/73.76/83.47/80.52
-      // (lines/branches/functions/statements) with the card excluded.
-      // Set 3-6pp below to allow legitimate refactor churn without false CI fails.
+      // Floor, not ratchet: baseline after coverage-improvement PR is
+      // 87.14/79.34/88.46/84.86 (lines/branches/functions/statements) with
+      // the card excluded. Set ~4pp below to allow legitimate refactor churn.
       thresholds: {
-        lines: 75,
-        branches: 65,
-        functions: 75,
-        statements: 75,
+        lines: 83,
+        branches: 75,
+        functions: 84,
+        statements: 81,
       },
     },
   },

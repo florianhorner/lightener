@@ -40,10 +40,10 @@ source = ["custom_components/lightener"]
 branch = true
 
 [tool.coverage.report]
-# Floor only. Baseline after PR-B (brightness helpers extracted + tested): 94.74%.
+# Floor only. Baseline after coverage-improvement PR: 95.71%.
 # CLAUDE.md rule: keep ~3-6pp cushion above baseline to avoid flakes on small
 # refactors. Raise when baseline moves.
-fail_under = 90
+fail_under = 92
 show_missing = true
 exclude_lines = [
     "pragma: no cover",
