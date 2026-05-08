@@ -1,0 +1,62 @@
+Coverage improvement evidence for PR #72 (test: add coverage for websocket, graph, entity picker)
+
+Generated: 2026-05-08
+Branch: claude/analyze-test-coverage-ZyHsQ
+
+== Python test results ==
+
+180 tests passed (was 160 before this PR)
+Coverage: 95.73% (floor: 92%)
+
+  websocket.py:  99% (was 85%)
+  brightness.py: 100%
+  config_flow.py: 95%
+  light.py:       95%
+  __init__.py:    83%
+  TOTAL:          95.73% >= 92% required
+
+== Frontend test results ==
+
+378 tests passed (was 351 before this PR)
+Coverage:
+  Statements: 85.25% (floor: 83%) PASS
+  Branches:   80.00% (floor: 75%) PASS
+  Functions:  88.67% (floor: 84%) PASS
+  Lines:      87.68% (floor: 83%) PASS
+
+  entity-picker-loader.ts: 100% statements/branches/lines
+  curve-graph.ts:          +lifecycle and a11y description tests added
+
+== Tests added ==
+
+Python (test_websocket.py):
+  - _async_apply_config_entry_update rollback on exception / False return
+  - _async_restore_config_entry_data swallowing reload exception
+  - _connection_can_read_entity TypeError fallback, non-TypeError False, None early-return
+  - ws_get_curves / ws_save_curves unauthorized and missing-config-entry branches
+  - ws_add_light / ws_remove_light missing-config-entry branches
+  - entity list cache hit path
+  - _parse_curve_percent bare-int and unsupported-type paths
+
+Frontend (curve-graph.test.ts):
+  - connectedCallback / disconnectedCallback: MQL listener registered and removed
+  - _onMqlChange: _isMobile flips on handler fire
+  - _getSvgDescription: no-curves, single-curve, plural-curves cases
+
+Frontend (entity-picker-loader.test.ts, new file):
+  - Idempotent ensureLoaded() guard
+  - Already-registered fast path
+  - Race-resolve: ready=true + requestUpdate called
+  - Timeout fallback: ready=false + requestUpdate called
+  - Disconnected-during-race: requestUpdate suppressed
+  - Late-registration upgrade after timeout
+  - loadCardHelpers kick path
+  - Disconnected before late-registration: upgrade skipped
+
+== Lint results ==
+
+Ruff: PASS
+Mypy: PASS
+Frontend (ESLint + TypeScript): PASS
+commit-lint: PASS (all 3 commits have valid type + subject <= 72 chars)
+Version sync: PASS
