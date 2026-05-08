@@ -1,16 +1,48 @@
+// @vitest-environment jsdom
+
 /**
- * Tests for card-level state management logic.
+ * Tests for the pure-function helpers in `card-logic.ts`.
  *
- * These test the pure-logic patterns used in lightener-curve-card.ts
- * without needing a DOM: undo stack, selection toggle, dirty state,
- * point add/remove guards, and mock curve factory.
+ * Previously this file replicated card logic inside the test as helper
+ * functions and tested the replicas — a shadow-tests anti-pattern that meant
+ * production code could drift while tests stayed green. The helpers now live
+ * in `./card-logic.ts` and are imported here, so these tests exercise the
+ * same code the card calls at runtime.
+ *
+ * Behaviors tested via real production helpers:
+ *   - undo stack push/cap (`pushToUndoStack`, `UNDO_STACK_MAX`)
+ *   - selection toggle (`toggleSelection`)
+ *   - hidden-curve guard (`canSelectCurve`)
+ *   - point add/remove guards (`addPointToCurves`, `removePointFromCurves`)
+ *   - visibility toggle (`toggleCurveVisibility`)
+ *   - cancel/undo animation interpolation (`interpolateControlPoints`,
+ *     `mergeFinalAnimationFrame`)
+ *   - keyboard focus guard (`shouldHandleKey`)
+ *
+ * Behaviors covered as integration tests of supporting helpers:
+ *   - dirty-state detection via `cloneCurves` + `curvesEqual`
+ *   - color palette properties via `CURVE_COLORS`
+ *   - dash + shape pattern alignment via `DASH_PATTERNS` + `LEGEND_SHAPES`
+ *   - mock curve factory (test-only fixture, kept here)
  */
 import { describe, it, expect } from 'vitest';
 import { LightCurve, ControlPoint } from './types.js';
 import { cloneCurves, curvesEqual } from './data.js';
 import { DASH_PATTERNS, LEGEND_SHAPES, easeOutCubic, CURVE_COLORS } from './graph-math.js';
+import {
+  UNDO_STACK_MAX,
+  addPointToCurves,
+  canSelectCurve,
+  interpolateControlPoints,
+  mergeFinalAnimationFrame,
+  pushToUndoStack,
+  removePointFromCurves,
+  shouldHandleKey,
+  toggleCurveVisibility,
+  toggleSelection,
+} from './card-logic.js';
 
-// ── Helpers: replicate card logic as pure functions ────────────────
+// ── Test fixtures (test-only — not extracted to source) ───────────
 
 function makeCurve(overrides: Partial<LightCurve> = {}): LightCurve {
   return {
@@ -65,14 +97,13 @@ function makeMockCurves(): LightCurve[] {
   ];
 }
 
-// ── Undo stack logic ──────────────────────────────────────────────
+// ── Undo stack (real helper) ───────────────────────────────────────
 
-describe('undo stack', () => {
+describe('pushToUndoStack', () => {
   it('push and pop restores previous state', () => {
     const undoStack: LightCurve[][] = [];
     const curves = [makeCurve()];
-    // Push current state
-    undoStack.push(cloneCurves(curves));
+    pushToUndoStack(undoStack, curves);
     // Modify
     const modified = cloneCurves(curves);
     modified[0].controlPoints[1].target = 99;
@@ -82,14 +113,13 @@ describe('undo stack', () => {
     expect(curvesEqual(restored, curves)).toBe(true);
   });
 
-  it('caps at 50 entries', () => {
+  it(`caps at ${UNDO_STACK_MAX} entries`, () => {
     const undoStack: LightCurve[][] = [];
     const curves = [makeCurve()];
     for (let i = 0; i < 60; i++) {
-      undoStack.push(cloneCurves(curves));
-      if (undoStack.length > 50) undoStack.shift();
+      pushToUndoStack(undoStack, curves);
     }
-    expect(undoStack.length).toBe(50);
+    expect(undoStack.length).toBe(UNDO_STACK_MAX);
   });
 
   it('empty stack returns undefined on pop', () => {
@@ -102,11 +132,11 @@ describe('undo stack', () => {
     const curves = [makeCurve()];
 
     // State 1: target=75 (original)
-    undoStack.push(cloneCurves(curves));
+    pushToUndoStack(undoStack, curves);
     curves[0].controlPoints[1].target = 50;
 
     // State 2: target=50
-    undoStack.push(cloneCurves(curves));
+    pushToUndoStack(undoStack, curves);
     curves[0].controlPoints[1].target = 25;
 
     // Undo to state 2 (target=50)
@@ -117,15 +147,19 @@ describe('undo stack', () => {
     const s1 = undoStack.pop()!;
     expect(s1[0].controlPoints[1].target).toBe(75);
   });
+
+  it('pushes a deep clone — caller can mutate the original without corrupting the snapshot', () => {
+    const undoStack: LightCurve[][] = [];
+    const curves = [makeCurve()];
+    pushToUndoStack(undoStack, curves);
+    curves[0].controlPoints[1].target = 99;
+    expect(undoStack[0][0].controlPoints[1].target).toBe(75);
+  });
 });
 
-// ── Selection toggle logic ────────────────────────────────────────
+// ── Selection toggle (real helper) ────────────────────────────────
 
-describe('selection toggle', () => {
-  function toggleSelection(current: string | null, entityId: string): string | null {
-    return current === entityId ? null : entityId;
-  }
-
+describe('toggleSelection', () => {
   it('selects a curve when nothing selected', () => {
     expect(toggleSelection(null, 'light.a')).toBe('light.a');
   });
@@ -139,53 +173,31 @@ describe('selection toggle', () => {
   });
 });
 
-// ── Hidden curve selection guard ──────────────────────────────────
+// ── Hidden curve guard (real helper) ──────────────────────────────
 
-describe('hidden curve guard', () => {
-  function canSelect(curves: LightCurve[], entityId: string): boolean {
-    const curve = curves.find((c) => c.entityId === entityId);
-    return curve ? curve.visible : false;
-  }
-
+describe('canSelectCurve', () => {
   it('allows selecting visible curve', () => {
     const curves = [makeCurve({ entityId: 'light.a', visible: true })];
-    expect(canSelect(curves, 'light.a')).toBe(true);
+    expect(canSelectCurve(curves, 'light.a')).toBe(true);
   });
 
   it('prevents selecting hidden curve', () => {
     const curves = [makeCurve({ entityId: 'light.a', visible: false })];
-    expect(canSelect(curves, 'light.a')).toBe(false);
+    expect(canSelectCurve(curves, 'light.a')).toBe(false);
   });
 
   it('returns false for non-existent entity', () => {
     const curves = [makeCurve({ entityId: 'light.a' })];
-    expect(canSelect(curves, 'light.nonexistent')).toBe(false);
+    expect(canSelectCurve(curves, 'light.nonexistent')).toBe(false);
   });
 });
 
-// ── Point add guards ──────────────────────────────────────────────
+// ── Point add (real helper) ───────────────────────────────────────
 
-describe('point add logic', () => {
-  function addPoint(
-    curves: LightCurve[],
-    entityId: string,
-    lightener: number,
-    target: number
-  ): LightCurve[] | null {
-    const idx = curves.findIndex((c) => c.entityId === entityId);
-    if (idx < 0) return null;
-    const existing = curves[idx].controlPoints;
-    // Reject duplicate x values
-    if (existing.some((cp) => cp.lightener === lightener)) return null;
-    const result = cloneCurves(curves);
-    result[idx].controlPoints.push({ lightener, target });
-    result[idx].controlPoints.sort((a, b) => a.lightener - b.lightener);
-    return result;
-  }
-
+describe('addPointToCurves', () => {
   it('adds a point and sorts by lightener', () => {
     const curves = [makeCurve()];
-    const result = addPoint(curves, 'light.test', 75, 90);
+    const result = addPointToCurves(curves, 'light.test', 75, 90);
     expect(result).not.toBeNull();
     const xs = result![0].controlPoints.map((cp) => cp.lightener);
     expect(xs).toEqual([0, 50, 75, 100]);
@@ -193,46 +205,28 @@ describe('point add logic', () => {
 
   it('rejects duplicate lightener value', () => {
     const curves = [makeCurve()];
-    expect(addPoint(curves, 'light.test', 50, 80)).toBeNull();
+    expect(addPointToCurves(curves, 'light.test', 50, 80)).toBeNull();
   });
 
   it('rejects add to non-existent entity', () => {
     const curves = [makeCurve()];
-    expect(addPoint(curves, 'light.nope', 75, 90)).toBeNull();
+    expect(addPointToCurves(curves, 'light.nope', 75, 90)).toBeNull();
   });
 
   it('does not mutate original curves', () => {
     const curves = [makeCurve()];
     const originalLen = curves[0].controlPoints.length;
-    addPoint(curves, 'light.test', 75, 90);
+    addPointToCurves(curves, 'light.test', 75, 90);
     expect(curves[0].controlPoints.length).toBe(originalLen);
   });
 });
 
-// ── Point remove guards ───────────────────────────────────────────
+// ── Point remove (real helper) ────────────────────────────────────
 
-describe('point remove logic', () => {
-  function removePoint(
-    curves: LightCurve[],
-    curveIndex: number,
-    pointIndex: number
-  ): LightCurve[] | null {
-    const curve = curves[curveIndex];
-    if (!curve) return null;
-    // Must keep at least 2 points
-    if (curve.controlPoints.length <= 2) return null;
-    // Cannot remove origin (index 0)
-    if (pointIndex === 0) return null;
-    const result = cloneCurves(curves);
-    result[curveIndex].controlPoints = result[curveIndex].controlPoints.filter(
-      (_, i) => i !== pointIndex
-    );
-    return result;
-  }
-
+describe('removePointFromCurves', () => {
   it('removes a point', () => {
     const curves = [makeCurve()]; // 3 points
-    const result = removePoint(curves, 0, 1); // remove middle
+    const result = removePointFromCurves(curves, 0, 1); // remove middle
     expect(result).not.toBeNull();
     expect(result![0].controlPoints).toHaveLength(2);
   });
@@ -246,43 +240,39 @@ describe('point remove logic', () => {
         ],
       }),
     ];
-    expect(removePoint(curves, 0, 1)).toBeNull();
+    expect(removePointFromCurves(curves, 0, 1)).toBeNull();
   });
 
   it('refuses to remove origin (index 0)', () => {
     const curves = [makeCurve()];
-    expect(removePoint(curves, 0, 0)).toBeNull();
+    expect(removePointFromCurves(curves, 0, 0)).toBeNull();
   });
 
   it('returns null for invalid curve index', () => {
     const curves = [makeCurve()];
-    expect(removePoint(curves, 5, 1)).toBeNull();
+    expect(removePointFromCurves(curves, 5, 1)).toBeNull();
   });
 
   it('does not mutate original', () => {
     const curves = [makeCurve()];
     const len = curves[0].controlPoints.length;
-    removePoint(curves, 0, 1);
+    removePointFromCurves(curves, 0, 1);
     expect(curves[0].controlPoints.length).toBe(len);
   });
 });
 
-// ── Toggle visibility ─────────────────────────────────────────────
+// ── Visibility toggle (real helper) ───────────────────────────────
 
-describe('toggle visibility', () => {
-  function toggleVisibility(curves: LightCurve[], entityId: string): LightCurve[] {
-    return curves.map((c) => (c.entityId === entityId ? { ...c, visible: !c.visible } : c));
-  }
-
+describe('toggleCurveVisibility', () => {
   it('hides a visible curve', () => {
     const curves = [makeCurve({ entityId: 'light.a', visible: true })];
-    const result = toggleVisibility(curves, 'light.a');
+    const result = toggleCurveVisibility(curves, 'light.a');
     expect(result[0].visible).toBe(false);
   });
 
   it('shows a hidden curve', () => {
     const curves = [makeCurve({ entityId: 'light.a', visible: false })];
-    const result = toggleVisibility(curves, 'light.a');
+    const result = toggleCurveVisibility(curves, 'light.a');
     expect(result[0].visible).toBe(true);
   });
 
@@ -291,13 +281,22 @@ describe('toggle visibility', () => {
       makeCurve({ entityId: 'light.a', visible: true }),
       makeCurve({ entityId: 'light.b', visible: true }),
     ];
-    const result = toggleVisibility(curves, 'light.a');
+    const result = toggleCurveVisibility(curves, 'light.a');
     expect(result[0].visible).toBe(false);
     expect(result[1].visible).toBe(true);
   });
+
+  it('does not mutate the original array or items', () => {
+    const curves = [makeCurve({ entityId: 'light.a', visible: true })];
+    const originalRef = curves[0];
+    const result = toggleCurveVisibility(curves, 'light.a');
+    expect(curves[0]).toBe(originalRef);
+    expect(curves[0].visible).toBe(true);
+    expect(result[0]).not.toBe(originalRef);
+  });
 });
 
-// ── Dirty state ───────────────────────────────────────────────────
+// ── Dirty state detection (integration of cloneCurves + curvesEqual) ───
 
 describe('dirty state detection', () => {
   it('clean after clone', () => {
@@ -336,7 +335,7 @@ describe('dirty state detection', () => {
   });
 });
 
-// ── Color palette cycling ─────────────────────────────────────────
+// ── Color palette ────────────────────────────────────────────────
 
 describe('color palette', () => {
   it('has 10 colors', () => {
@@ -368,7 +367,7 @@ describe('color palette', () => {
   });
 });
 
-// ── Dash + shape cycling alignment ────────────────────────────────
+// ── Dash + shape pattern alignment ────────────────────────────────
 
 describe('dash and shape pattern alignment', () => {
   it('dash patterns and shapes have same count (5 each)', () => {
@@ -391,28 +390,11 @@ describe('dash and shape pattern alignment', () => {
   });
 });
 
-// ── Cancel animation interpolation logic ──────────────────────────
+// ── Animation interpolation (real helper) ─────────────────────────
 
-describe('cancel animation interpolation', () => {
-  function interpolatePoints(
-    startPts: ControlPoint[],
-    endPts: ControlPoint[],
-    t: number
-  ): ControlPoint[] {
-    const eased = easeOutCubic(t);
-    const sharedLen = Math.min(startPts.length, endPts.length);
-    const pts: ControlPoint[] = [];
-    for (let i = 0; i < sharedLen; i++) {
-      pts.push({
-        lightener: Math.round(
-          startPts[i].lightener + (endPts[i].lightener - startPts[i].lightener) * eased
-        ),
-        target: Math.round(startPts[i].target + (endPts[i].target - startPts[i].target) * eased),
-      });
-    }
-    return pts;
-  }
-
+describe('interpolateControlPoints', () => {
+  // Production applies easeOutCubic to rawT and passes the eased value, so
+  // tests do the same — these tests exercise the exact code path the card uses.
   it('t=0 returns start points', () => {
     const start: ControlPoint[] = [
       { lightener: 0, target: 0 },
@@ -422,7 +404,7 @@ describe('cancel animation interpolation', () => {
       { lightener: 0, target: 0 },
       { lightener: 50, target: 50 },
     ];
-    const result = interpolatePoints(start, end, 0);
+    const result = interpolateControlPoints(start, end, easeOutCubic(0));
     expect(result).toEqual(start);
   });
 
@@ -435,7 +417,7 @@ describe('cancel animation interpolation', () => {
       { lightener: 0, target: 0 },
       { lightener: 50, target: 50 },
     ];
-    const result = interpolatePoints(start, end, 1);
+    const result = interpolateControlPoints(start, end, easeOutCubic(1));
     expect(result).toEqual(end);
   });
 
@@ -448,8 +430,8 @@ describe('cancel animation interpolation', () => {
       { lightener: 0, target: 0 },
       { lightener: 50, target: 0 },
     ];
-    const result = interpolatePoints(start, end, 0.5);
     // easeOutCubic(0.5) = 0.875, so target ≈ 100 + (0-100)*0.875 = 12.5 → 13
+    const result = interpolateControlPoints(start, end, easeOutCubic(0.5));
     expect(result[1].target).toBeGreaterThan(0);
     expect(result[1].target).toBeLessThan(100);
   });
@@ -464,23 +446,14 @@ describe('cancel animation interpolation', () => {
       { lightener: 0, target: 0 },
       { lightener: 100, target: 100 },
     ];
-    const result = interpolatePoints(start, end, 0.5);
+    const result = interpolateControlPoints(start, end, easeOutCubic(0.5));
     expect(result).toHaveLength(2); // min(3, 2)
   });
 });
 
-// ── Bug fix: undo/cancel must preserve visible state ─────────────
+// ── Final-frame merge: undo/cancel preserves visible state (real helper) ─
 
-describe('undo preserves visible state', () => {
-  function animateCurvesTo(currentCurves: LightCurve[], endCurves: LightCurve[]): LightCurve[] {
-    // Simulates the final frame of _animateCurvesTo (t=1) with the fix applied
-    const startCurves = cloneCurves(currentCurves);
-    return endCurves.map((ec, i) => ({
-      ...ec,
-      visible: startCurves[i]?.visible ?? ec.visible,
-    }));
-  }
-
+describe('mergeFinalAnimationFrame', () => {
   it('undo does not unhide a curve the user hid', () => {
     const curves = [
       makeCurve({ entityId: 'light.a', visible: false }),
@@ -491,7 +464,7 @@ describe('undo preserves visible state', () => {
       makeCurve({ entityId: 'light.a', visible: true }),
       makeCurve({ entityId: 'light.b', visible: true }),
     ];
-    const result = animateCurvesTo(curves, snapshot);
+    const result = mergeFinalAnimationFrame(curves, snapshot);
     // light.a should stay hidden despite snapshot saying visible
     expect(result[0].visible).toBe(false);
     expect(result[1].visible).toBe(true);
@@ -506,7 +479,7 @@ describe('undo preserves visible state', () => {
       makeCurve({ entityId: 'light.a', visible: true }),
       makeCurve({ entityId: 'light.b', visible: true }),
     ];
-    const result = animateCurvesTo(curves, original);
+    const result = mergeFinalAnimationFrame(curves, original);
     expect(result[1].visible).toBe(false);
   });
 
@@ -533,7 +506,7 @@ describe('undo preserves visible state', () => {
         ],
       }),
     ];
-    const result = animateCurvesTo(curves, snapshot);
+    const result = mergeFinalAnimationFrame(curves, snapshot);
     // Control points restored from snapshot
     expect(result[0].controlPoints[1].target).toBe(75);
     // Visible preserved from current
@@ -541,42 +514,39 @@ describe('undo preserves visible state', () => {
   });
 });
 
-// ── Bug fix: keyboard shortcut focus scoping ─────────────────────
+// ── Keyboard focus guard (real helper) ────────────────────────────
 
-describe('keyboard shortcut focus guard', () => {
-  function shouldHandleKey(
-    focusedElement: { isSelf: boolean; isBody: boolean; isContained: boolean } | null
-  ): boolean {
-    // Replicates the guard logic from _onKeyDown
-    if (!focusedElement) return true;
-    if (focusedElement.isSelf) return true;
-    if (focusedElement.isBody) return true;
-    if (focusedElement.isContained) return true;
-    return false;
-  }
-
+describe('shouldHandleKey', () => {
   it('handles keys when nothing is focused', () => {
-    expect(shouldHandleKey(null)).toBe(true);
+    const card = document.createElement('div');
+    expect(shouldHandleKey(null, card)).toBe(true);
   });
 
   it('handles keys when card itself is focused', () => {
-    expect(shouldHandleKey({ isSelf: true, isBody: false, isContained: false })).toBe(true);
+    const card = document.createElement('div');
+    expect(shouldHandleKey(card, card)).toBe(true);
   });
 
   it('handles keys when body is focused (no specific focus)', () => {
-    expect(shouldHandleKey({ isSelf: false, isBody: true, isContained: false })).toBe(true);
+    const card = document.createElement('div');
+    expect(shouldHandleKey(document.body, card)).toBe(true);
   });
 
   it('handles keys when child of card is focused', () => {
-    expect(shouldHandleKey({ isSelf: false, isBody: false, isContained: true })).toBe(true);
+    const card = document.createElement('div');
+    const child = document.createElement('span');
+    card.appendChild(child);
+    expect(shouldHandleKey(child, card)).toBe(true);
   });
 
   it('ignores keys when external element is focused', () => {
-    expect(shouldHandleKey({ isSelf: false, isBody: false, isContained: false })).toBe(false);
+    const card = document.createElement('div');
+    const external = document.createElement('div');
+    expect(shouldHandleKey(external, card)).toBe(false);
   });
 });
 
-// ── Mock curves factory ───────────────────────────────────────────
+// ── Mock curves factory (test-only fixture) ───────────────────────
 
 describe('mock curves factory', () => {
   it('creates 3 curves with different entities', () => {

@@ -3,6 +3,17 @@ import { customElement, state } from 'lit/decorators.js';
 import { LightCurve, Hass } from './utils/types.js';
 import { EntityPickerLoader } from './utils/entity-picker-loader.js';
 import { curvesToWsPayload, wsPayloadToCurves, cloneCurves, curvesEqual } from './utils/data.js';
+import {
+  addPointToCurves,
+  canSelectCurve,
+  interpolateControlPoints,
+  mergeFinalAnimationFrame,
+  pushToUndoStack,
+  removePointFromCurves,
+  shouldHandleKey,
+  toggleCurveVisibility,
+  toggleSelection,
+} from './utils/card-logic.js';
 import { easeOutCubic, sampleCurveAt, CURVE_COLORS } from './utils/graph-math.js';
 import {
   CURVE_PRESETS,
@@ -883,8 +894,7 @@ export class LightenerCurveCard extends LitElement {
 
   private _onKeyDown(e: KeyboardEvent): void {
     // Only handle shortcuts when focus is inside this card (or nothing specific is focused)
-    const focused = document.activeElement;
-    if (focused && focused !== this && focused !== document.body && !this.contains(focused)) return;
+    if (!shouldHandleKey(document.activeElement, this)) return;
 
     // Ctrl+S / Cmd+S to save
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -1139,11 +1149,8 @@ export class LightenerCurveCard extends LitElement {
   private _onSelectCurve(e: CustomEvent): void {
     if (this._cancelAnimating) return;
     const { entityId } = e.detail;
-    const curve = this._curves.find((c) => c.entityId === entityId);
-    // Cannot select a hidden curve
-    if (curve && !curve.visible) return;
-    // Toggle: deselect if already selected
-    this._selectedCurveId = this._selectedCurveId === entityId ? null : entityId;
+    if (!canSelectCurve(this._curves, entityId)) return;
+    this._selectedCurveId = toggleSelection(this._selectedCurveId, entityId);
   }
 
   private _onFocusCurve(e: CustomEvent): void {
@@ -1155,9 +1162,7 @@ export class LightenerCurveCard extends LitElement {
   }
 
   private _pushUndo(): void {
-    this._undoStack.push(cloneCurves(this._curves));
-    // Cap at 50 entries
-    if (this._undoStack.length > 50) this._undoStack.shift();
+    pushToUndoStack(this._undoStack, this._curves);
   }
 
   private _undo(): void {
@@ -1185,24 +1190,15 @@ export class LightenerCurveCard extends LitElement {
 
         const startPts = startCurve.controlPoints;
         const endPts = endCurve.controlPoints;
-        const sharedLen = Math.min(startPts.length, endPts.length);
-        const points: { lightener: number; target: number }[] = [];
+        const points = interpolateControlPoints(startPts, endPts, t);
 
-        for (let pi = 0; pi < sharedLen; pi++) {
-          points.push({
-            lightener: Math.round(
-              startPts[pi].lightener + (endPts[pi].lightener - startPts[pi].lightener) * t
-            ),
-            target: Math.round(startPts[pi].target + (endPts[pi].target - startPts[pi].target) * t),
-          });
-        }
         // Extra end points snap in on final frame
-        if (endPts.length > sharedLen && rawT >= 1) {
-          for (let pi = sharedLen; pi < endPts.length; pi++) points.push({ ...endPts[pi] });
+        if (endPts.length > points.length && rawT >= 1) {
+          for (let pi = points.length; pi < endPts.length; pi++) points.push({ ...endPts[pi] });
         }
         // Extra start points kept until final frame
-        if (startPts.length > sharedLen && rawT < 1) {
-          for (let pi = sharedLen; pi < startPts.length; pi++) points.push({ ...startPts[pi] });
+        if (startPts.length > points.length && rawT < 1) {
+          for (let pi = points.length; pi < startPts.length; pi++) points.push({ ...startPts[pi] });
         }
 
         points.sort((a, b) => a.lightener - b.lightener);
@@ -1216,10 +1212,7 @@ export class LightenerCurveCard extends LitElement {
         this._cancelAnimFrame = requestAnimationFrame(tick);
       } else {
         // Preserve live visible state on final frame too
-        this._curves = endCurves.map((ec, i) => ({
-          ...ec,
-          visible: startCurves[i]?.visible ?? ec.visible,
-        }));
+        this._curves = mergeFinalAnimationFrame(startCurves, endCurves);
         this._cancelAnimating = false;
         this._cancelAnimFrame = null;
         // If undo/cancel landed back at the clean state, sync versions so _isDirty is O(1).
@@ -1267,21 +1260,11 @@ export class LightenerCurveCard extends LitElement {
     const targetEntityId = entityId ?? this._selectedCurveId;
     if (!targetEntityId) return;
 
-    const curveIdx = this._curves.findIndex((c) => c.entityId === targetEntityId);
-    if (curveIdx < 0) return;
-
-    const existing = this._curves[curveIdx].controlPoints;
-    if (existing.some((cp) => cp.lightener === lightener)) return;
+    const next = addPointToCurves(this._curves, targetEntityId, lightener, target);
+    if (next === null) return;
 
     this._pushUndo();
-    const curves = [...this._curves];
-    const curve = { ...curves[curveIdx] };
-    const points = [...curve.controlPoints, { lightener, target }];
-    // Sort by lightener value to maintain order
-    points.sort((a, b) => a.lightener - b.lightener);
-    curve.controlPoints = points;
-    curves[curveIdx] = curve;
-    this._curves = curves;
+    this._curves = next;
     this._dirtyVersion++;
   }
 
@@ -1290,32 +1273,23 @@ export class LightenerCurveCard extends LitElement {
     // Reset drag-undo flag in case removal came from long-press (which skips point-drop)
     this._dragUndoPushed = false;
     const { curveIndex, pointIndex } = e.detail;
-    const curve = this._curves[curveIndex];
-    if (!curve) return;
-    if (curve.controlPoints.length <= 2) return;
-    // Defense-in-depth: never remove origin anchor
-    if (pointIndex === 0) return;
+
+    const next = removePointFromCurves(this._curves, curveIndex, pointIndex);
+    if (next === null) return;
 
     this._pushUndo();
-    const curves = [...this._curves];
-    const updated = { ...curves[curveIndex] };
-    updated.controlPoints = updated.controlPoints.filter((_, i) => i !== pointIndex);
-    curves[curveIndex] = updated;
-    this._curves = curves;
+    this._curves = next;
     this._dirtyVersion++;
   }
 
   private _onToggleCurve(e: CustomEvent): void {
     if (this._cancelAnimating) return;
     const { entityId } = e.detail;
-    const curves = this._curves.map((c) =>
-      c.entityId === entityId ? { ...c, visible: !c.visible } : c
-    );
     // Intentionally no _dirtyVersion++ — visibility is local UI state, not persisted to backend.
-    this._curves = curves;
+    this._curves = toggleCurveVisibility(this._curves, entityId);
     // If hiding the selected curve, clear selection
     if (this._selectedCurveId === entityId) {
-      const curve = curves.find((c) => c.entityId === entityId);
+      const curve = this._curves.find((c) => c.entityId === entityId);
       if (curve && !curve.visible) {
         this._selectedCurveId = null;
       }
