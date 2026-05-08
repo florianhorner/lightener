@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CurveGraph } from './curve-graph.js';
 
 beforeAll(async () => {
@@ -345,5 +345,179 @@ describe('curve-graph first-time hint', () => {
     const fill = overlay!.getAttribute('fill') ?? '';
     expect(fill.startsWith('var(--graph-bg')).toBe(true);
     expect(fill).toContain('--ha-card-background');
+  });
+});
+
+describe('curve-graph lifecycle and media query', () => {
+  let addListenerSpy: ReturnType<typeof vi.fn>;
+  let removeListenerSpy: ReturnType<typeof vi.fn>;
+  let mqlMatches: boolean;
+
+  beforeEach(() => {
+    document.body.replaceChildren();
+    mqlMatches = false;
+    addListenerSpy = vi.fn();
+    removeListenerSpy = vi.fn();
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: () => ({
+        get matches() {
+          return mqlMatches;
+        },
+        addEventListener: addListenerSpy,
+        removeEventListener: removeListenerSpy,
+      }),
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function makeGraph() {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.alpha',
+        friendlyName: 'Alpha',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 100, target: 100 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+    document.body.appendChild(graph);
+    return graph;
+  }
+
+  it('registers a matchMedia change listener on connect', async () => {
+    const graph = makeGraph();
+    await graph.updateComplete;
+
+    expect(addListenerSpy).toHaveBeenCalledWith('change', expect.any(Function));
+  });
+
+  it('reads matchMedia.matches on connect to initialise mobile state', async () => {
+    mqlMatches = true;
+    const graph = makeGraph();
+    await graph.updateComplete;
+
+    // When mobile, the hint text is centered (compact form) — verify the graph reflects it.
+    expect((graph as unknown as { _isMobile: boolean })._isMobile).toBe(true);
+  });
+
+  it('removes the matchMedia listener and nulls mql on disconnect', async () => {
+    const graph = makeGraph();
+    await graph.updateComplete;
+
+    document.body.removeChild(graph);
+    // Lit fires disconnectedCallback synchronously on removal from DOM.
+    expect(removeListenerSpy).toHaveBeenCalledWith('change', expect.any(Function));
+    expect((graph as unknown as { _mql: unknown })._mql).toBeNull();
+  });
+
+  it('updates _isMobile when the media query fires a change event', async () => {
+    const graph = makeGraph();
+    await graph.updateComplete;
+
+    // Grab the listener that was registered.
+    const [[, listener]] = addListenerSpy.mock.calls as [
+      [string, (e: MediaQueryListEvent) => void],
+    ];
+
+    expect((graph as unknown as { _isMobile: boolean })._isMobile).toBe(false);
+
+    listener({ matches: true } as MediaQueryListEvent);
+
+    expect((graph as unknown as { _isMobile: boolean })._isMobile).toBe(true);
+  });
+});
+
+describe('curve-graph SVG accessibility description', () => {
+  beforeEach(() => {
+    document.body.replaceChildren();
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
+    });
+  });
+
+  it('shows "No curves displayed" when all curves are hidden', async () => {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.alpha',
+        friendlyName: 'Alpha',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 100, target: 100 },
+        ],
+        visible: false,
+        color: '#2563eb',
+      },
+    ];
+    document.body.appendChild(graph);
+    await graph.updateComplete;
+
+    const desc = graph.shadowRoot!.querySelector('desc');
+    expect(desc?.textContent).toBe('No curves displayed');
+  });
+
+  it('lists visible curves with point count and max brightness in the desc', async () => {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.alpha',
+        friendlyName: 'Alpha',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: 75 },
+          { lightener: 100, target: 100 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+    document.body.appendChild(graph);
+    await graph.updateComplete;
+
+    const desc = graph.shadowRoot!.querySelector('desc');
+    expect(desc?.textContent).toContain('1 curve');
+    expect(desc?.textContent).toContain('Alpha');
+    expect(desc?.textContent).toContain('3 points');
+    expect(desc?.textContent).toContain('max 100%');
+  });
+
+  it('uses plural "curves" when more than one is visible', async () => {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.a',
+        friendlyName: 'A',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 100, target: 80 },
+        ],
+        visible: true,
+        color: '#ff0000',
+      },
+      {
+        entityId: 'light.b',
+        friendlyName: 'B',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 100, target: 60 },
+        ],
+        visible: true,
+        color: '#00ff00',
+      },
+    ];
+    document.body.appendChild(graph);
+    await graph.updateComplete;
+
+    const desc = graph.shadowRoot!.querySelector('desc');
+    expect(desc?.textContent).toContain('2 curves');
   });
 });
