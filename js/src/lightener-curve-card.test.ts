@@ -50,11 +50,13 @@ beforeAll(async () => {
 
 function makeHass(overrides?: Partial<Hass>): Hass & {
   callWS: ReturnType<typeof vi.fn>;
+  callApi: ReturnType<typeof vi.fn>;
   callService: ReturnType<typeof vi.fn>;
 } {
   return {
     user: { is_admin: true },
     callWS: vi.fn().mockResolvedValue({ entities: {} }),
+    callApi: vi.fn().mockResolvedValue(undefined),
     callService: vi.fn().mockResolvedValue(undefined),
     states: {
       'light.lightener': { state: 'on', attributes: { friendly_name: 'Lightener' } },
@@ -65,6 +67,7 @@ function makeHass(overrides?: Partial<Hass>): Hass & {
     ...overrides,
   } as Hass & {
     callWS: ReturnType<typeof vi.fn>;
+    callApi: ReturnType<typeof vi.fn>;
     callService: ReturnType<typeof vi.fn>;
   };
 }
@@ -74,11 +77,16 @@ async function mountCard(
   hass?: Hass
 ): Promise<{
   card: LightenerCurveCard;
-  hass: Hass & { callWS: ReturnType<typeof vi.fn>; callService: ReturnType<typeof vi.fn> };
+  hass: Hass & {
+    callWS: ReturnType<typeof vi.fn>;
+    callApi: ReturnType<typeof vi.fn>;
+    callService: ReturnType<typeof vi.fn>;
+  };
 }> {
   const _hass =
     (hass as typeof hass & {
       callWS: ReturnType<typeof vi.fn>;
+      callApi: ReturnType<typeof vi.fn>;
       callService: ReturnType<typeof vi.fn>;
     }) ?? makeHass();
   if (!hass) {
@@ -287,6 +295,41 @@ describe('lightener-curve-card — light management', () => {
       closeAddSignal: number;
     };
     expect(legend.closeAddSignal).toBeGreaterThan(0);
+  });
+
+  describe('delete group via curve card', () => {
+    it('happy path: registry lookup then DELETE entry via callApi', async () => {
+      const { card, hass } = await mountCard({
+        'light.a': { brightness: { '100': '100' } },
+      });
+      const deletedEvents: CustomEvent[] = [];
+      card.addEventListener('lightener-group-deleted', (event) => {
+        deletedEvents.push(event as CustomEvent);
+      });
+
+      hass.callWS.mockReset();
+      hass.callWS.mockResolvedValueOnce({
+        platform: 'lightener',
+        config_entry_id: 'E1',
+      });
+      hass.callApi.mockResolvedValueOnce(undefined);
+
+      await (card as unknown as { _onDeleteGroup: () => Promise<void> })._onDeleteGroup();
+
+      expect(hass.callWS).toHaveBeenCalledWith({
+        type: 'config/entity_registry/get',
+        entity_id: 'light.lightener',
+      });
+      expect(hass.callApi).toHaveBeenCalledTimes(1);
+      expect(hass.callApi).toHaveBeenCalledWith('DELETE', 'config/config_entries/entry/E1');
+      expect(
+        hass.callWS.mock.calls.filter(
+          ([msg]) => (msg as { type?: string } | undefined)?.type === 'config_entries/remove'
+        )
+      ).toHaveLength(0);
+      expect(deletedEvents).toHaveLength(1);
+      expect(deletedEvents[0].detail.configEntryId).toBe('E1');
+    });
   });
 });
 

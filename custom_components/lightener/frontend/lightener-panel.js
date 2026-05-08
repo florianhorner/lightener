@@ -1135,9 +1135,9 @@ class LightenerEditorPanel extends HTMLElement {
   }
 
   async _submitCreateGroup() {
-    if (!this._hass || !this._hass.callWS || this._createGroupSubmitting) return;
+    if (!this._hass || !this._hass.callApi || this._createGroupSubmitting) return;
     // Set submitting flag synchronously before any awaits to prevent double-click
-    // races (TOCTOU between the check above and the WS calls below).
+    // races (TOCTOU between the check above and the API calls below).
     this._createGroupSubmitting = true;
 
     const nameInput = this.shadowRoot.querySelector("#cgf-name");
@@ -1146,7 +1146,7 @@ class LightenerEditorPanel extends HTMLElement {
     const cancelBtn = this.shadowRoot.querySelector("#cgf-cancel");
     const name = (nameInput?.value || "").trim();
     // Snapshot mutable modal state before any awaits — the user can keep
-    // editing the lights list while the WS calls are in flight.
+    // editing the lights list while the API calls are in flight.
     const selectedLights = [...this._createGroupSelectedLights];
     if (!name || selectedLights.length === 0) {
       this._createGroupSubmitting = false;
@@ -1161,8 +1161,7 @@ class LightenerEditorPanel extends HTMLElement {
 
     let flowId = null;
     try {
-      const init = await this._hass.callWS({
-        type: "config_entries/flow/init",
+      const init = await this._hass.callApi("POST", "config/config_entries/flow", {
         handler: "lightener",
         show_advanced_options: false,
       });
@@ -1172,26 +1171,14 @@ class LightenerEditorPanel extends HTMLElement {
         throw new Error(step?.reason || "Could not start config flow");
       }
 
-      step = await this._hass.callWS({
-        type: "config_entries/flow/configure",
-        flow_id: flowId,
-        user_input: { name },
-      });
+      step = await this._hass.callApi("POST", `config/config_entries/flow/${flowId}`, { name });
       this._raiseFlowError(step, "Could not set group name");
 
-      step = await this._hass.callWS({
-        type: "config_entries/flow/configure",
-        flow_id: flowId,
-        user_input: {},
-      });
+      step = await this._hass.callApi("POST", `config/config_entries/flow/${flowId}`, {});
       this._raiseFlowError(step, "Could not skip area filter");
 
-      step = await this._hass.callWS({
-        type: "config_entries/flow/configure",
-        flow_id: flowId,
-        user_input: {
-          controlled_entities: selectedLights,
-        },
+      step = await this._hass.callApi("POST", `config/config_entries/flow/${flowId}`, {
+        controlled_entities: selectedLights,
       });
 
       if (step?.type !== "create_entry") {
@@ -1226,10 +1213,7 @@ class LightenerEditorPanel extends HTMLElement {
       // Abort the orphaned flow so HA doesn't accumulate stale flow_ids.
       if (flowId) {
         try {
-          await this._hass.callWS({
-            type: "config_entries/flow/abort",
-            flow_id: flowId,
-          });
+          await this._hass.callApi("DELETE", `config/config_entries/flow/${flowId}`);
         } catch (abortErr) {
           // Best-effort cleanup; ignore.
         }

@@ -2,6 +2,76 @@
 
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+type PanelHass = {
+  user: { is_admin: boolean };
+  states: Record<
+    string,
+    { attributes?: { friendly_name?: string; entity_id?: string }; state?: string }
+  >;
+  callWS: ReturnType<typeof vi.fn>;
+  callApi: ReturnType<typeof vi.fn>;
+};
+
+type PanelInstance = HTMLElement & {
+  hass: PanelHass;
+  _card: HTMLElement & {
+    emitDirtyState: (dirty: boolean) => void;
+    saveShouldSucceed: boolean;
+    config?: { entity: string };
+  };
+  _lightenerEntities: Array<{ entity_id: string; name: string; config_entry_id?: string }>;
+  _pendingEntity: string | null;
+  _openCreateGroupModal: () => void;
+  _submitCreateGroup: () => Promise<void>;
+  _createGroupSelectedLights: string[];
+  _ensureEntityPickerLoaded: () => Promise<void>;
+  _loadLightenerEntities: () => Promise<void>;
+  _setSelectedEntity: (entityId: string | null) => void;
+};
+
+function makePanelHass(overrides: Partial<PanelHass> = {}): PanelHass {
+  return {
+    user: { is_admin: true },
+    states: {},
+    callWS: vi.fn().mockResolvedValue({ entities: [] }),
+    callApi: vi.fn(),
+    ...overrides,
+  };
+}
+
+async function mountPanel(hass: PanelHass = makePanelHass()): Promise<PanelInstance> {
+  const Panel = customElements.get('lightener-editor-panel');
+  if (!Panel) {
+    throw new Error('lightener-editor-panel was not defined');
+  }
+  const panel = new Panel() as PanelInstance;
+  document.body.appendChild(panel);
+  panel._ensureEntityPickerLoaded = vi.fn().mockResolvedValue(undefined);
+  panel.hass = hass;
+  await Promise.resolve();
+  await Promise.resolve();
+  return panel;
+}
+
+async function mountCreateGroupPanel(hass: PanelHass = makePanelHass()) {
+  const panel = await mountPanel(hass);
+  panel._openCreateGroupModal();
+  await Promise.resolve();
+  const modal = panel.shadowRoot!.querySelector('#create-group-modal') as HTMLElement;
+  const nameInput = panel.shadowRoot!.querySelector('#cgf-name') as HTMLInputElement;
+  const errorEl = panel.shadowRoot!.querySelector('#create-group-error') as HTMLDivElement;
+  return { panel, hass, modal, nameInput, errorEl };
+}
+
+function expectNoConfigEntriesWs(hass: { callWS: ReturnType<typeof vi.fn> }) {
+  const forbidden = hass.callWS.mock.calls.filter(([msg]) =>
+    /^config_entries\/(flow|remove)/.test(
+      String((msg as { type?: string } | undefined)?.type ?? '')
+    )
+  );
+  expect(forbidden).toHaveLength(0);
+}
+
 beforeAll(async () => {
   if (!customElements.get('lightener-curve-card')) {
     class FakeCurveCard extends HTMLElement {
@@ -66,12 +136,11 @@ describe('lightener-editor-panel', () => {
     };
 
     document.body.appendChild(panel);
-
     panel._requestedConfigEntryId = 'entry-1';
     panel._lightenerEntities = [
       { entity_id: 'light.test', name: 'Test Light', config_entry_id: 'entry-1' },
     ];
-    panel.hass = { states: {}, callWS: async () => ({ entities: [] }) };
+    panel.hass = makePanelHass();
     await Promise.resolve();
 
     const mount = panel.shadowRoot!.querySelector('#card-mount')!;
@@ -85,7 +154,7 @@ describe('lightener-editor-panel', () => {
     );
 
     panel._lightenerEntities = [];
-    panel.hass = { states: {}, callWS: async () => ({ entities: [] }) };
+    panel.hass = makePanelHass();
     await Promise.resolve();
 
     expect(mount.children).toHaveLength(1);
@@ -233,13 +302,12 @@ describe('lightener-editor-panel', () => {
       _lightenerEntities: Array<{ entity_id: string; name: string }>;
       _pendingEntity: string | null;
     };
-
     document.body.appendChild(panel);
     panel._lightenerEntities = [
       { entity_id: 'light.alpha', name: 'Alpha' },
       { entity_id: 'light.beta', name: 'Beta' },
     ];
-    panel.hass = { states: {}, callWS: async () => ({ entities: [] }) };
+    panel.hass = makePanelHass();
     await Promise.resolve();
 
     panel._card.emitDirtyState(true);
@@ -270,13 +338,12 @@ describe('lightener-editor-panel', () => {
       };
       _lightenerEntities: Array<{ entity_id: string; name: string }>;
     };
-
     document.body.appendChild(panel);
     panel._lightenerEntities = [
       { entity_id: 'light.alpha', name: 'Alpha' },
       { entity_id: 'light.beta', name: 'Beta' },
     ];
-    panel.hass = { states: {}, callWS: async () => ({ entities: [] }) };
+    panel.hass = makePanelHass();
     await Promise.resolve();
 
     panel._card.emitDirtyState(true);
@@ -309,13 +376,12 @@ describe('lightener-editor-panel', () => {
       _lightenerEntities: Array<{ entity_id: string; name: string }>;
       _pendingEntity: string | null;
     };
-
     document.body.appendChild(panel);
     panel._lightenerEntities = [
       { entity_id: 'light.alpha', name: 'Alpha' },
       { entity_id: 'light.beta', name: 'Beta' },
     ];
-    panel.hass = { states: {}, callWS: async () => ({ entities: [] }) };
+    panel.hass = makePanelHass();
     await Promise.resolve();
 
     panel._card.emitDirtyState(true);
@@ -334,5 +400,118 @@ describe('lightener-editor-panel', () => {
     expect(panel._card.config).toMatchObject({ entity: 'light.beta' });
     expect(select.value).toBe('light.beta');
     expect(panel.shadowRoot!.querySelector('#switch-guard')!.hasAttribute('hidden')).toBe(true);
+  });
+
+  describe('submit create group flow', () => {
+    it('happy path completes the config flow via callApi', async () => {
+      const hass = makePanelHass({
+        states: {
+          'light.a': { state: 'on', attributes: { friendly_name: 'Alpha' } },
+          'light.b': { state: 'on', attributes: { friendly_name: 'Beta' } },
+        },
+      });
+      hass.callApi
+        .mockResolvedValueOnce({ flow_id: 'F1', type: 'form', step_id: 'user' })
+        .mockResolvedValueOnce({ type: 'form', step_id: 'area' })
+        .mockResolvedValueOnce({ type: 'form', step_id: 'lights' })
+        .mockResolvedValueOnce({
+          type: 'create_entry',
+          title: 'My Group',
+          result: { entry_id: 'E1' },
+        });
+
+      const { panel, modal, nameInput } = await mountCreateGroupPanel(hass);
+      vi.spyOn(panel, '_loadLightenerEntities').mockImplementation(async () => {
+        panel._lightenerEntities = [
+          { entity_id: 'light.my_group', name: 'My Group', config_entry_id: 'E1' },
+        ];
+      });
+      const setSelectedEntity = vi.spyOn(panel, '_setSelectedEntity');
+
+      nameInput.value = 'My Group';
+      panel._createGroupSelectedLights = ['light.a', 'light.b'];
+
+      await panel._submitCreateGroup();
+
+      expect(hass.callApi.mock.calls).toEqual([
+        [
+          'POST',
+          'config/config_entries/flow',
+          { handler: 'lightener', show_advanced_options: false },
+        ],
+        ['POST', 'config/config_entries/flow/F1', { name: 'My Group' }],
+        ['POST', 'config/config_entries/flow/F1', {}],
+        ['POST', 'config/config_entries/flow/F1', { controlled_entities: ['light.a', 'light.b'] }],
+      ]);
+      expect(setSelectedEntity).toHaveBeenCalledWith('light.my_group');
+      expect(modal.hidden).toBe(true);
+      expectNoConfigEntriesWs(hass);
+    });
+
+    it('error path shows the abort reason and aborts the orphaned flow', async () => {
+      const hass = makePanelHass();
+      hass.callApi
+        .mockResolvedValueOnce({ flow_id: 'F2', type: 'form', step_id: 'user' })
+        .mockResolvedValueOnce({ type: 'form', step_id: 'area' })
+        .mockResolvedValueOnce({ type: 'abort', reason: 'no_lights_in_area' })
+        .mockResolvedValueOnce(undefined);
+
+      const { panel, errorEl, modal, nameInput } = await mountCreateGroupPanel(hass);
+      nameInput.value = 'My Group';
+      panel._createGroupSelectedLights = ['light.a', 'light.b'];
+
+      await panel._submitCreateGroup();
+
+      expect(hass.callApi.mock.calls).toEqual([
+        [
+          'POST',
+          'config/config_entries/flow',
+          { handler: 'lightener', show_advanced_options: false },
+        ],
+        ['POST', 'config/config_entries/flow/F2', { name: 'My Group' }],
+        ['POST', 'config/config_entries/flow/F2', {}],
+        ['DELETE', 'config/config_entries/flow/F2'],
+      ]);
+      expect(errorEl.textContent).toBe('no_lights_in_area');
+      expect(errorEl.hidden).toBe(false);
+      expect(modal.hidden).toBe(false);
+      expectNoConfigEntriesWs(hass);
+    });
+
+    it('regression: never calls callWS for config_entries/* on either path', async () => {
+      const happyHass = makePanelHass();
+      happyHass.callApi
+        .mockResolvedValueOnce({ flow_id: 'F1', type: 'form', step_id: 'user' })
+        .mockResolvedValueOnce({ type: 'form', step_id: 'area' })
+        .mockResolvedValueOnce({ type: 'form', step_id: 'lights' })
+        .mockResolvedValueOnce({
+          type: 'create_entry',
+          title: 'My Group',
+          result: { entry_id: 'E1' },
+        });
+      const happy = await mountCreateGroupPanel(happyHass);
+      vi.spyOn(happy.panel, '_loadLightenerEntities').mockImplementation(async () => {
+        happy.panel._lightenerEntities = [
+          { entity_id: 'light.my_group', name: 'My Group', config_entry_id: 'E1' },
+        ];
+      });
+      happy.nameInput.value = 'My Group';
+      happy.panel._createGroupSelectedLights = ['light.a', 'light.b'];
+      await happy.panel._submitCreateGroup();
+
+      const abortHass = makePanelHass();
+      abortHass.callApi
+        .mockResolvedValueOnce({ flow_id: 'F2', type: 'form', step_id: 'user' })
+        .mockResolvedValueOnce({ type: 'form', step_id: 'area' })
+        .mockResolvedValueOnce({ type: 'abort', reason: 'no_lights_in_area' })
+        .mockResolvedValueOnce(undefined);
+      const abort = await mountCreateGroupPanel(abortHass);
+      abort.nameInput.value = 'My Group';
+      abort.panel._createGroupSelectedLights = ['light.a', 'light.b'];
+      await abort.panel._submitCreateGroup();
+
+      expectNoConfigEntriesWs(happyHass);
+      expectNoConfigEntriesWs(abortHass);
+    });
   });
 });

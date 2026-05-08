@@ -1379,10 +1379,7 @@ export class LightenerCurveCard extends LitElement {
       if (!configEntryId) {
         throw new Error('Group is not backed by a config entry — cannot delete from the card.');
       }
-      await this._hass.callWS({
-        type: 'config_entries/remove',
-        entry_id: configEntryId,
-      });
+      await this._hass.callApi('DELETE', `config/config_entries/entry/${configEntryId}`);
       // Reset manage mode locally before the handoff. The panel auto-selects
       // another group on this event — if _manageMode survives the switch, the
       // next group opens already showing remove/delete affordances.
