@@ -9,6 +9,7 @@ import type { Hass, LightCurve } from './utils/types.js';
 // Read-only on the post-#70 source: _saving and _saveError are getters from _saveState.
 type CardInternals = {
   _curves: LightCurve[];
+  _selectedCurveId: string | null;
   _onSave: () => Promise<void>;
 };
 
@@ -465,5 +466,93 @@ describe('lightener-curve-card — onboarding handoff (preset auto-open)', () =>
     await Promise.resolve();
     await card.updateComplete;
     expect(card.renderRoot.querySelector('.presets-panel')).toBeNull();
+  });
+});
+
+describe('lightener-curve-card — selection (_onSelectCurve wiring)', () => {
+  // These tests cover the card's integration with canSelectCurve + toggleSelection
+  // helpers in card-logic.ts. The helpers are unit-tested in isolation; here we
+  // verify the wiring: dispatching select-curve events from a child component
+  // mutates _selectedCurveId in the documented ways.
+
+  it('selects a visible curve and toggles deselect on second event', async () => {
+    const { card } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+      'light.b': { brightness: { '1': '1', '100': '100' } },
+    });
+    const internal = card as unknown as CardInternals;
+    expect(internal._selectedCurveId).toBeNull();
+
+    fireLegend(card, 'select-curve', { entityId: 'light.a' });
+    await card.updateComplete;
+    expect(internal._selectedCurveId).toBe('light.a');
+
+    fireLegend(card, 'select-curve', { entityId: 'light.a' });
+    await card.updateComplete;
+    expect(internal._selectedCurveId).toBeNull();
+  });
+
+  it('switches selection when a different visible curve is clicked', async () => {
+    const { card } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+      'light.b': { brightness: { '1': '1', '100': '100' } },
+    });
+    const internal = card as unknown as CardInternals;
+
+    fireLegend(card, 'select-curve', { entityId: 'light.a' });
+    await card.updateComplete;
+    expect(internal._selectedCurveId).toBe('light.a');
+
+    fireLegend(card, 'select-curve', { entityId: 'light.b' });
+    await card.updateComplete;
+    expect(internal._selectedCurveId).toBe('light.b');
+  });
+
+  it('blocks selection of a hidden curve', async () => {
+    const { card } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+      'light.b': { brightness: { '1': '1', '100': '100' } },
+    });
+    const internal = card as unknown as CardInternals;
+    // Hide light.b
+    internal._curves = internal._curves.map((c) =>
+      c.entityId === 'light.b' ? { ...c, visible: false } : c
+    );
+    await card.updateComplete;
+
+    fireLegend(card, 'select-curve', { entityId: 'light.b' });
+    await card.updateComplete;
+    expect(internal._selectedCurveId).toBeNull();
+  });
+
+  it('blocks selection of an unknown entityId (the post-refactor behavior tightening)', async () => {
+    const { card } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+    });
+    const internal = card as unknown as CardInternals;
+
+    fireLegend(card, 'select-curve', { entityId: 'light.does-not-exist' });
+    await card.updateComplete;
+    expect(internal._selectedCurveId).toBeNull();
+  });
+
+  it('still allows deselect when the currently-selected curve has gone missing (race during reload)', async () => {
+    const { card } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+      'light.b': { brightness: { '1': '1', '100': '100' } },
+    });
+    const internal = card as unknown as CardInternals;
+
+    // Simulate the user having selected light.b, then a reload that drops it
+    // from _curves (e.g. it was removed by another tab).
+    internal._selectedCurveId = 'light.b';
+    internal._curves = internal._curves.filter((c) => c.entityId !== 'light.b');
+    await card.updateComplete;
+
+    // User clicks the now-stale row again. The card should let them dismiss
+    // it instead of trapping them in a "nothing matches" dimmed state.
+    fireLegend(card, 'select-curve', { entityId: 'light.b' });
+    await card.updateComplete;
+    expect(internal._selectedCurveId).toBeNull();
   });
 });

@@ -1149,7 +1149,10 @@ export class LightenerCurveCard extends LitElement {
   private _onSelectCurve(e: CustomEvent): void {
     if (this._cancelAnimating) return;
     const { entityId } = e.detail;
-    if (!canSelectCurve(this._curves, entityId)) return;
+    // Always allow deselect of the currently-selected curve, even if it has
+    // since gone missing (race during reload). Otherwise require the curve
+    // to exist and be visible.
+    if (entityId !== this._selectedCurveId && !canSelectCurve(this._curves, entityId)) return;
     this._selectedCurveId = toggleSelection(this._selectedCurveId, entityId);
   }
 
