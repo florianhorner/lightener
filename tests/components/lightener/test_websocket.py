@@ -1158,14 +1158,21 @@ async def test_async_restore_config_entry_data_logs_on_reload_exception(
         "entities": {"light.test1": {"brightness": {"100": "100"}}},
     }
 
-    with patch.object(
-        hass.config_entries, "async_reload", side_effect=RuntimeError("reload blew up")
+    with (
+        patch.object(
+            hass.config_entries,
+            "async_reload",
+            side_effect=RuntimeError("reload blew up"),
+        ),
+        patch("custom_components.lightener.websocket._LOGGER") as mock_logger,
     ):
         # Should not raise — exception is caught and logged.
         await _async_restore_config_entry_data(hass, config_entry, previous_data)
 
     restored = hass.config_entries.async_get_entry(config_entry.entry_id)
     assert dict(restored.data) == previous_data
+    # The "logs" half of the contract: assert the exception was actually logged.
+    assert mock_logger.exception.called or mock_logger.warning.called
 
 
 # ---------------------------------------------------------------------------

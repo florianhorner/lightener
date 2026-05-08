@@ -121,6 +121,23 @@ describe('EntityPickerLoader', () => {
     expect(requestUpdate.mock.calls.length).toBeGreaterThan(firstCallCount);
   });
 
+  it('falls back safely when whenDefined rejects', async () => {
+    // The race between whenDefined and the 1500ms timeout settles on the
+    // synchronous rejection first; the source's `.catch()` swallows it.
+    // ready stays false; requestUpdate is NOT called (no state change to flush).
+    vi.spyOn(customElements, 'get').mockReturnValue(undefined);
+    vi.spyOn(customElements, 'whenDefined').mockReturnValue(
+      Promise.reject(new Error('registration failed'))
+    );
+
+    const loader = makeLoader();
+    loader.ensureLoaded();
+    await vi.runAllTimersAsync();
+
+    expect(loader.ready).toBe(false);
+    expect(requestUpdate).not.toHaveBeenCalled();
+  });
+
   it('calls window.loadCardHelpers when available during kick', async () => {
     const loadCardHelpers = vi.fn().mockResolvedValue(undefined);
     (window as unknown as Record<string, unknown>).loadCardHelpers = loadCardHelpers;
