@@ -297,3 +297,44 @@ None blocking that PR — listed here so they don't get lost.
      orphan-config-entry simulation. Public `async_remove` would tear down
      the entity-registry linkage these tests deliberately preserve.
   Priority: P3 (current tests pass and add coverage; hygiene only)
+
+---
+
+## Pre-release UX hardening — from research findings audit (2026-05-09)
+
+Source: `.context/audit/findings-vs-lightener.md` (22-row check vs ~110 GitHub issues across 8 HA-frontend repos). 7 PASS · 8 PARTIAL · 7 GAP.
+
+### P1 — ship before next release
+
+- **#14 Drag-state debounce in `set hass()`** — `js/src/lightener-curve-card.ts:698`. Add `_dragCurveIdx` guard so inbound HA state pushes don't re-load curves mid-drag and snap the dragged handle. Effort: S. Pair with vitest unit test.
+- **#15 20-light × long-name × 320px stress fixture** — `js/src/__tests__/`. Snapshot test that exercises all wide-input failure modes from the matrix (#27570, #2138, #149). Effort: S. Release gate.
+- **#21 Hydrate `_selectedCurveId` + scrubber position on mount** — `js/src/lightener-curve-card.ts:698–704`. Persist across re-mount so navigation away/back doesn't reset selection. Effort: M.
+- **#20 ResizeObserver / IntersectionObserver for hidden-parent re-render** — card lifecycle. Card inside vertical-stack/popup/tab regularly renders blank (validated by `apex` repo issues #1019/#1030/#1078). Effort: M.
+- **#11 Re-fetch confirmation before "saved" indicator** — `js/src/utils/save-lifecycle.ts:50`, card success branch at `lightener-curve-card.ts:1439–1447`. Tighten `saved` phase to await re-load. Effort: S.
+
+### P2 — ship within next 2 releases
+
+- **#12 Live-derive scrubber bounds from `_hass` every render** — `js/src/components/curve-scrubber.ts`. Effort: S.
+- **#6 Pinned readout chip showing `(input %, output %)` on selected control point** — `js/src/components/curve-graph.ts`. Replaces hover-only tooltip (currently shows raw lightener:target, not %). Effort: M.
+- **#16 WebKit Playwright job in CI** — `.github/workflows/`. Catches iOS Safari regressions. Effort: M.
+- **#22 Defensive `String()` coercion of `friendly_name`** — `js/src/utils/data.ts:69`. Prevents `light_group` crash class (`bubble #1548`). Effort: S.
+
+### P3 — quality polish
+
+- **#19 Validate Y-value (`isFinite`) on drag drop** — drag-end path in `curve-graph.ts`. Effort: S.
+- **#17 Add `role="listbox"` to control points + explicit `readonly` mode** — `curve-graph.ts:857–866` area. Effort: S.
+- **#13 Explicit pointermove/up listener cleanup on pointerup/cancel** — `curve-graph.ts`. Defensive; Lit covers most cases. Effort: S.
+- **#10 Replace standalone `#fff` at `curve-legend.ts:321` with token + add lint rule** rejecting non-fallback hex/rgb in `js/src/components/*.ts`. Effort: XS.
+- **#2 Unify selected-state color identity** — either standardize selected curve/handle to `--primary-color` or document the intent of two systems. Effort: M.
+- **#18 Render skeleton even before first `set hass()`** — initial-render guard in `lightener-curve-card.ts`. Effort: S.
+
+### Mechanizable as CI checks (rather than report rows on re-run)
+
+- #10 → eslint/grep rule
+- #14 → vitest unit test
+- #15 → vitest fixture in standard run
+- #16 → Playwright WebKit matrix entry
+
+### Refresh trigger
+
+Re-run the 22-row audit pre-release, OR on any PR touching `curve-graph.ts` / `lightener-curve-card.ts` / `save-lifecycle.ts`. Diff via `findings-vs-lightener.json`.
