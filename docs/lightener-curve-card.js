@@ -45,7 +45,7 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
         x1="${i}" y1="${r}"
         x2="${$e}" y2="${r}"
         stroke="${e.color}" opacity="0.5" />
-    `}_renderTooltip(e,t){const i=Ce(t.lightener),r=Ae(t.target),n=`(${t.lightener}%, ${t.target}%)`,o=5*n.length,s=Ee(i-o/2-2,$e,344-o-8),a=Math.max(16,r-16);return q`
+    `}_renderTooltip(e,t){const i=Ce(t.lightener),r=Ae(t.target),n=`(${t.lightener}%, ${t.target}%)`,o=Math.ceil(5.8*n.length),s=Ee(i-o/2-2,$e,344-o-8),a=Math.max(16,r-16);return q`
       <rect class="tooltip-bg"
         x="${s}" y="${a-8}"
         width="${o+8}" height="14" />
