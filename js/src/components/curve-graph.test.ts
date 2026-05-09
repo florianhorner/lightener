@@ -521,3 +521,110 @@ describe('curve-graph SVG accessibility description', () => {
     expect(desc?.textContent).toContain('2 curves');
   });
 });
+
+// ── Group E: pinned readout chip + scrubber (Wave 1) ────────────────
+// Encodes T-2.1 (chip format + dismissal), T-4.6 (filled/hollow semantics),
+// T-6.6a / T-4.10 (no duplicate "Group brightness" axis label).
+
+describe('Group E — readout chip + scrubber/axis label', () => {
+  beforeEach(() => {
+    document.body.replaceChildren();
+  });
+
+  function makeFocusableGraph(opts?: {
+    points?: Array<{ lightener: number; target: number }>;
+  }): CurveGraph {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.alpha',
+        friendlyName: 'Alpha',
+        controlPoints: opts?.points ?? [
+          { lightener: 0, target: 0 },
+          { lightener: 51, target: 0 },
+          { lightener: 100, target: 100 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+    graph.selectedCurveId = 'light.alpha';
+    document.body.appendChild(graph);
+    return graph;
+  }
+
+  function tooltipText(graph: CurveGraph): string | null {
+    const text = graph.shadowRoot!.querySelector('text.tooltip-text');
+    return text ? (text.textContent ?? '').trim() : null;
+  }
+
+  it('E.16 shows the readout chip in (input %, output %) format on hover', async () => {
+    const graph = makeFocusableGraph();
+    await graph.updateComplete;
+
+    // Hover the (51, 0) interior point — index 1.
+    const hit = graph.shadowRoot!.querySelectorAll<SVGCircleElement>('.hit-circle')[1];
+    hit.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    await graph.updateComplete;
+
+    const text = tooltipText(graph);
+    expect(text, 'tooltip text must exist while hovering').not.toBeNull();
+    // Want: "(51%, 0%)". Today the source emits "51:0" — this test
+    // documents the format contract from T-2.1.
+    expect(text).toMatch(/^\(\s*\d+%\s*,\s*\d+%\s*\)$/);
+  });
+
+  it('E.17 readout chip clears on pointercancel', async () => {
+    const graph = makeFocusableGraph();
+    await graph.updateComplete;
+
+    const hit = graph.shadowRoot!.querySelectorAll<SVGCircleElement>('.hit-circle')[1];
+    hit.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    await graph.updateComplete;
+    expect(tooltipText(graph)).not.toBeNull();
+
+    // The iOS regression: pointerleave doesn't always fire on touch cancel.
+    // Source must wire pointercancel as a fallback dismissal path.
+    hit.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, composed: true }));
+    await graph.updateComplete;
+
+    expect(
+      tooltipText(graph),
+      'pointercancel must dismiss the readout chip (iOS fallback)'
+    ).toBeNull();
+  });
+
+  it('E.18 readout chip uses integer format (no .0 suffix) for integer control points', async () => {
+    const graph = makeFocusableGraph({
+      points: [
+        { lightener: 0, target: 0 },
+        { lightener: 75, target: 50 },
+        { lightener: 100, target: 100 },
+      ],
+    });
+    await graph.updateComplete;
+
+    const hit = graph.shadowRoot!.querySelectorAll<SVGCircleElement>('.hit-circle')[1];
+    hit.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    await graph.updateComplete;
+
+    const text = tooltipText(graph) ?? '';
+    expect(text, 'integer points must not render with decimals').not.toMatch(/\.\d/);
+  });
+
+  it('E.19 graph does not render its own "Group brightness" x-axis label', async () => {
+    // The slider above the graph carries the label. Duplicating it inside the
+    // SVG (T-6.6a) creates label collision with tick numbers (T-4.10).
+    const graph = makeFocusableGraph();
+    await graph.updateComplete;
+
+    const labels = Array.from(graph.shadowRoot!.querySelectorAll('text.axis-label'));
+    const hasGroupBrightness = labels.some((el) =>
+      ((el as SVGTextElement).textContent ?? '').trim().toLowerCase().includes('group brightness')
+    );
+    expect(
+      hasGroupBrightness,
+      'graph must not include an x-axis "Group brightness" label — the slider already labels it'
+    ).toBe(false);
+  });
+});

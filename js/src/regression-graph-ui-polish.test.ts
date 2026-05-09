@@ -6,7 +6,7 @@
  */
 
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { sampleCurveAt } from './utils/graph-math.js';
+import { GRAPH_H, GRAPH_W, PAD_LEFT, PAD_TOP, sampleCurveAt, toSvgX } from './utils/graph-math.js';
 import type { CurveGraph } from './components/curve-graph.js';
 import type { CurveScrubber } from './components/curve-scrubber.js';
 import type { LightenerCurveCard } from './lightener-curve-card.js';
@@ -698,6 +698,151 @@ describe('save success timer', () => {
     expect(phase()).toBe('idle');
 
     vi.useRealTimers();
+  });
+});
+
+// ── Group F: curve fade and endpoint geometry (Wave 1) ──────────────
+// Encodes the *Want* states from T-2.5 / T-2.6 / T-2.2 / T-4.5.
+
+describe('Group F — curve fade and endpoint geometry', () => {
+  beforeEach(() => {
+    document.body.replaceChildren();
+  });
+
+  function makeMultiGraph(scrubberPosition: number | null = null): CurveGraph {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.alpha',
+        friendlyName: 'Alpha',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: 50 },
+          { lightener: 100, target: 100 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+      {
+        entityId: 'light.beta',
+        friendlyName: 'Beta',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 100, target: 80 },
+        ],
+        visible: true,
+        color: '#ef5350',
+      },
+    ];
+    graph.selectedCurveId = 'light.alpha';
+    graph.scrubberPosition = scrubberPosition;
+    document.body.appendChild(graph);
+    return graph;
+  }
+
+  it('F.20 every control point sits inside the plot frame [0..GRAPH_W] × [0..GRAPH_H]', async () => {
+    const graph = makeMultiGraph();
+    await graph.updateComplete;
+
+    const xMin = PAD_LEFT;
+    const xMax = PAD_LEFT + GRAPH_W;
+    const yMin = PAD_TOP;
+    const yMax = PAD_TOP + GRAPH_H;
+
+    const points = Array.from(
+      graph.shadowRoot!.querySelectorAll<SVGCircleElement>('circle.control-point')
+    );
+    expect(points.length).toBeGreaterThan(0);
+    for (const p of points) {
+      const cx = parseFloat(p.getAttribute('cx') ?? '');
+      const cy = parseFloat(p.getAttribute('cy') ?? '');
+      expect(cx, `control point cx=${cx} must be inside [${xMin}, ${xMax}]`).toBeGreaterThanOrEqual(
+        xMin
+      );
+      expect(cx).toBeLessThanOrEqual(xMax + 0.001);
+      expect(cy).toBeGreaterThanOrEqual(yMin);
+      expect(cy).toBeLessThanOrEqual(yMax + 0.001);
+    }
+  });
+
+  it('F.21 endpoint markers fade with the curve when past the scrubber', async () => {
+    const graph = makeMultiGraph(/* scrubberPosition */ 65);
+    await graph.updateComplete;
+
+    // Find the right endpoint (lightener=100, cx = toSvgX(100)) for either curve.
+    const rightEdgeX = toSvgX(100);
+    const points = Array.from(
+      graph.shadowRoot!.querySelectorAll<SVGCircleElement>('circle.control-point')
+    );
+    const endpoints = points.filter(
+      (p) => Math.abs(parseFloat(p.getAttribute('cx') ?? '') - rightEdgeX) < 0.001
+    );
+    expect(endpoints.length, 'at least one curve must have a right-edge endpoint').toBeGreaterThan(
+      0
+    );
+
+    // Contract: endpoint markers past the scrubber render at reduced opacity.
+    // Either via inline style="opacity: <X>" with X<1, or via a class like
+    // ".faded" / "[data-fade]". Today's source renders them at full opacity
+    // because they are layered after the scrubber dim overlay — this test
+    // documents the gap.
+    const isFaded = (el: SVGCircleElement): boolean => {
+      const inline = el.getAttribute('style') ?? '';
+      const opacityMatch = inline.match(/opacity:\s*([0-9.]+)/);
+      if (opacityMatch && parseFloat(opacityMatch[1]) < 1) return true;
+      if (el.classList.contains('faded') || el.classList.contains('past-scrubber')) return true;
+      if (el.hasAttribute('data-faded')) return true;
+      return false;
+    };
+
+    expect(
+      endpoints.every(isFaded),
+      'endpoints past the scrubber must inherit the curve fade (style.opacity<1, .faded class, or data-faded)'
+    ).toBe(true);
+  });
+
+  it('F.22 dim overlay covers the right of the scrubber for every value 0/25/50/75/95/100', async () => {
+    const graph = makeMultiGraph(0);
+    await graph.updateComplete;
+
+    for (const pos of [0, 25, 50, 75, 95, 100]) {
+      graph.scrubberPosition = pos;
+      await graph.updateComplete;
+
+      // The dim overlay is the only element with fill-opacity=0.93 — pinned by source.
+      const overlay = graph.shadowRoot!.querySelector<SVGRectElement>('rect[fill-opacity="0.93"]');
+      expect(overlay, `dim overlay must render at scrubber=${pos}`).not.toBeNull();
+      const x = parseFloat(overlay!.getAttribute('x') ?? '');
+      const width = parseFloat(overlay!.getAttribute('width') ?? '');
+
+      const expectedX = toSvgX(pos);
+      const expectedRight = toSvgX(100);
+
+      expect(x, `overlay.x at scrubber=${pos}`).toBeCloseTo(expectedX, 3);
+      expect(
+        x + width,
+        `overlay's right edge at scrubber=${pos} must equal toSvgX(100)`
+      ).toBeCloseTo(expectedRight, 3);
+    }
+  });
+
+  it('F.23 each visible curve renders exactly one control-point per right endpoint', async () => {
+    // No selection → all curves interactive → both render their own points.
+    const graph = makeMultiGraph();
+    graph.selectedCurveId = null;
+    await graph.updateComplete;
+
+    const rightEdgeX = toSvgX(100);
+    const points = Array.from(
+      graph.shadowRoot!.querySelectorAll<SVGCircleElement>('circle.control-point')
+    );
+    const endpoints = points.filter(
+      (p) => Math.abs(parseFloat(p.getAttribute('cx') ?? '') - rightEdgeX) < 0.001
+    );
+
+    // Two curves, each with a single (lightener=100, target=*) point.
+    // No duplicated filled+hollow markers (T-2.5).
+    expect(endpoints.length).toBe(2);
   });
 });
 
