@@ -227,7 +227,7 @@ export class LightenerCurveCardEditor extends LitElement {
                   @change=${this._onFallbackEntityInput}
                 />
                 <span class="hint">
-                  Entity picker unavailable — enter a Lightener light entity ID manually (must start
+                  Entity picker unavailable — enter a Lightener group entity ID manually (must start
                   with <code>light.</code>).
                 </span>
               `}
@@ -354,11 +354,6 @@ export class LightenerCurveCard extends LitElement {
       gap: 8px;
       margin-bottom: 16px;
     }
-    .header-icon {
-      width: 18px;
-      height: 18px;
-      opacity: 0.5;
-    }
     h2 {
       margin: 0;
       font-size: var(--text-lg);
@@ -392,13 +387,9 @@ export class LightenerCurveCard extends LitElement {
     .card.embedded .graph-panel {
       padding: 14px;
     }
-    .card.embedded .header-icon {
-      opacity: 0.42;
-    }
     .card.embedded h2 {
       font-size: 0.95rem;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
+      letter-spacing: 0.01em;
       color: var(--secondary-text);
     }
     .error {
@@ -1516,17 +1507,6 @@ export class LightenerCurveCard extends LitElement {
         aria-label="Brightness Curves Editor"
       >
         <div class="header">
-          <svg
-            class="header-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M2 20 C6 20, 8 4, 12 4 S18 20, 22 20" />
-          </svg>
           <h2>${(this._config.title as string) ?? 'Brightness Curves'}</h2>
           ${!this._loading && this._isAdmin && this._curves.length > 0
             ? html`<button

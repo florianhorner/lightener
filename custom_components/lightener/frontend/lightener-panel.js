@@ -112,7 +112,7 @@ class LightenerEditorPanel extends HTMLElement {
     if (entity) {
       return entity.name;
     }
-    return entityId || "this Lightener entity";
+    return entityId || "this Lightener group";
   }
 
   async _loadLightenerEntities() {
@@ -716,6 +716,7 @@ class LightenerEditorPanel extends HTMLElement {
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            white-space: nowrap;
             transition: border-color 0.15s ease, color 0.15s ease;
           }
           .new-group-btn:hover {
@@ -845,9 +846,9 @@ class LightenerEditorPanel extends HTMLElement {
         </style>
         <div class="shell">
           <h1>Lightener Curve Editor</h1>
-          <p>Pick a Lightener light entity and edit its curves directly here.</p>
+          <p>Pick a Lightener group to edit its curves directly here.</p>
           <div class="control-row">
-            <label for="entity-select">Light entity</label>
+            <label for="entity-select">Lightener group</label>
             <div class="entity-select-row">
               <div class="select-wrapper">
                 <select id="entity-select"></select>
@@ -940,7 +941,7 @@ class LightenerEditorPanel extends HTMLElement {
         select.appendChild(option);
       });
       statusMsg.className = "hint";
-      statusMsg.textContent = "Select the Lightener group entity you want to edit.";
+      statusMsg.textContent = "Select the Lightener group you want to edit.";
     } else {
       select.disabled = true;
       statusMsg.className = "hint";

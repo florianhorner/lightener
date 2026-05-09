@@ -47,7 +47,7 @@ type: custom:lightener-curve-card
 entity: light.your_lightener_device
 ```
 
-The fork also registers a **Lightener Editor** sidebar panel at `/lightener-editor` — use it to pick a Lightener entity and edit curves without adding a dashboard card first.
+The fork also registers a **Lightener Editor** sidebar panel at `/lightener-editor` — use it to pick a Lightener group and edit curves without adding a dashboard card first.
 
 To switch back to upstream: remove this repo from HACS custom repositories and reinstall "Lightener" from the default HACS store. All Lightener devices and automations remain unaffected.
 

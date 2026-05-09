@@ -140,12 +140,6 @@ export class CurveGraph extends LitElement {
       opacity: 0.7;
       font-weight: 500;
     }
-    .diagonal-ref {
-      stroke: var(--secondary-text, #616161);
-      stroke-width: 0.75;
-      opacity: 0.12;
-      stroke-dasharray: 4 3;
-    }
     .crosshair {
       stroke-width: 0.75;
       stroke-dasharray: 3 3;
@@ -549,10 +543,6 @@ export class CurveGraph extends LitElement {
           <rect x="${PAD_LEFT - 30}" y="${PAD_TOP - 30}" width="${GRAPH_W + 60}" height="${GRAPH_H + 60}" />
         </clipPath>
       </defs>
-      <!-- Diagonal reference line (1:1) -->
-      <line class="diagonal-ref"
-        x1="${toSvgX(0)}" y1="${toSvgY(0)}"
-        x2="${toSvgX(100)}" y2="${toSvgY(100)}" />
 
       ${ticks.map(
         (t) => svg`
@@ -586,7 +576,7 @@ export class CurveGraph extends LitElement {
         x="${PAD_LEFT + GRAPH_W / 2}" y="${VB_H - 4}">Group brightness</text>
       <text class="axis-label" text-anchor="middle"
         transform="rotate(-90, 10, ${PAD_TOP + GRAPH_H / 2})"
-        x="10" y="${PAD_TOP + GRAPH_H / 2}">Light brightness</text>
+        x="10" y="${PAD_TOP + GRAPH_H / 2}">Per-light output</text>
     `;
   }
 
@@ -613,8 +603,11 @@ export class CurveGraph extends LitElement {
   private _renderTooltip(curve: LightCurve, cp: ControlPoint) {
     const cx = toSvgX(cp.lightener);
     const cy = toSvgY(cp.target);
-    const label = `${cp.lightener}:${cp.target}`;
-    const textWidth = label.length * 5;
+    const label = `(${cp.lightener}%, ${cp.target}%)`;
+    // 5.8 px/char accounts for parens and % glyphs being wider than digits at the
+    // 9.5px font-size used by .tooltip-text. Underestimating clipped the rect at
+    // max-length labels like "(100%, 100%)".
+    const textWidth = Math.ceil(label.length * 5.8);
     // Position above the point, clamped within viewBox
     const tx = clamp(cx - textWidth / 2 - 2, PAD_LEFT, PAD_LEFT + GRAPH_W - textWidth - 8);
     const ty = Math.max(PAD_TOP + 4, cy - 16);

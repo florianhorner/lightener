@@ -57,11 +57,11 @@ function makeLegend(opts?: {
 }
 
 describe('curve-legend', () => {
-  it('renders the "Lights" section label', async () => {
+  it('renders the "Group lights" section label', async () => {
     const el = makeLegend();
     await el.updateComplete;
     const label = el.renderRoot.querySelector('.legend-label');
-    expect(label?.textContent?.trim()).toBe('Lights');
+    expect(label?.textContent?.trim()).toBe('Group lights');
   });
 
   it('renders one legend-item per curve', async () => {

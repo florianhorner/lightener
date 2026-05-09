@@ -521,3 +521,68 @@ describe('curve-graph SVG accessibility description', () => {
     expect(desc?.textContent).toContain('2 curves');
   });
 });
+
+describe('curve-graph axis labels', () => {
+  beforeEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it('labels the Y-axis "Per-light output"', async () => {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.a',
+        friendlyName: 'A',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 100, target: 100 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+    document.body.appendChild(graph);
+    await graph.updateComplete;
+
+    const axisLabels = Array.from(graph.shadowRoot!.querySelectorAll('text.axis-label')).map((n) =>
+      n.textContent?.trim()
+    );
+    expect(axisLabels).toContain('Per-light output');
+    expect(axisLabels).toContain('Group brightness');
+  });
+});
+
+describe('curve-graph control-point tooltip', () => {
+  beforeEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it('renders tooltip text as "(N%, N%)" on a focused control point', async () => {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.alpha',
+        friendlyName: 'Alpha',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: 75 },
+          { lightener: 100, target: 100 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+    graph.selectedCurveId = 'light.alpha';
+    document.body.appendChild(graph);
+    await graph.updateComplete;
+
+    // Focus the middle control point — selectedCurveId makes the curve interactive.
+    const hits = graph.shadowRoot!.querySelectorAll<SVGElement>('.hit-circle');
+    expect(hits.length).toBeGreaterThan(1);
+    hits[1].dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    await graph.updateComplete;
+
+    const tooltip = graph.shadowRoot!.querySelector('text.tooltip-text');
+    expect(tooltip?.textContent?.trim()).toBe('(50%, 75%)');
+  });
+});

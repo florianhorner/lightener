@@ -33,7 +33,7 @@ export class CurveScrubber extends LitElement {
     .scrubber-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-end;
       margin-bottom: 10px;
       min-height: 22px;
     }
@@ -286,7 +286,6 @@ export class CurveScrubber extends LitElement {
     return html`
       <div class="scrubber-panel">
         <div class="scrubber-header">
-          <div class="scrubber-label">Group brightness</div>
           ${this.canPreview
             ? this.previewActive
               ? html`<button class="preview-toggle-btn active" @click=${this._onPreviewToggle}>

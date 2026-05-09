@@ -4,10 +4,6 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
           <rect x="${14}" y="${-18}" width="${360}" height="${260}" />
         </clipPath>
       </defs>
-      <!-- Diagonal reference line (1:1) -->
-      <line class="diagonal-ref"
-        x1="${Ce(0)}" y1="${Ae(0)}"
-        x2="${Ce(100)}" y2="${Ae(100)}" />
 
       ${[0,25,50,75,100].map(e=>q`
         <!-- Vertical grid -->
@@ -39,7 +35,7 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
         x="${194}" y="${244}">Group brightness</text>
       <text class="axis-label" text-anchor="middle"
         transform="rotate(-90, 10, ${112})"
-        x="10" y="${112}">Light brightness</text>
+        x="10" y="${112}">Per-light output</text>
     `}_renderCrossHair(e){if(this._dragCurveIdx<0)return K;const t=e.controlPoints[this._dragPointIdx];if(!t)return K;const i=Ce(t.lightener),r=Ae(t.target);return q`
       <line class="crosshair"
         x1="${i}" y1="${r}"
@@ -49,7 +45,7 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
         x1="${i}" y1="${r}"
         x2="${$e}" y2="${r}"
         stroke="${e.color}" opacity="0.5" />
-    `}_renderTooltip(e,t){const i=Ce(t.lightener),r=Ae(t.target),n=`${t.lightener}:${t.target}`,o=5*n.length,s=Ee(i-o/2-2,$e,344-o-8),a=Math.max(16,r-16);return q`
+    `}_renderTooltip(e,t){const i=Ce(t.lightener),r=Ae(t.target),n=`(${t.lightener}%, ${t.target}%)`,o=Math.ceil(5.8*n.length),s=Ee(i-o/2-2,$e,344-o-8),a=Math.max(16,r-16);return q`
       <rect class="tooltip-bg"
         x="${s}" y="${a-8}"
         width="${o+8}" height="14" />
@@ -283,12 +279,6 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
       opacity: 0.7;
       font-weight: 500;
     }
-    .diagonal-ref {
-      stroke: var(--secondary-text, #616161);
-      stroke-width: 0.75;
-      opacity: 0.12;
-      stroke-dasharray: 4 3;
-    }
     .crosshair {
       stroke-width: 0.75;
       stroke-dasharray: 3 3;
@@ -334,7 +324,6 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
   `,e([ue({type:Array})],ze.prototype,"curves",void 0),e([ue({type:String})],ze.prototype,"selectedCurveId",void 0),e([ue({type:String})],ze.prototype,"entityId",void 0),e([ue({type:Boolean})],ze.prototype,"readOnly",void 0),e([ue({type:Number})],ze.prototype,"scrubberPosition",void 0),e([ve()],ze.prototype,"_dragCurveIdx",void 0),e([ve()],ze.prototype,"_dragPointIdx",void 0),e([ve()],ze.prototype,"_hoveredPoint",void 0),e([ve()],ze.prototype,"_focusedPoint",void 0),e([ve()],ze.prototype,"_isMobile",void 0),e([ve()],ze.prototype,"_graphHintDismissed",void 0),e([function(e){return(t,i,r)=>((e,t,i)=>(i.configurable=!0,i.enumerable=!0,Reflect.decorate&&"object"!=typeof t&&Object.defineProperty(e,t,i),i))(t,i,{get(){return(t=>t.renderRoot?.querySelector(e)??null)(this)}})}("svg")],ze.prototype,"_svgRef",void 0),ze=e([he("curve-graph")],ze);let Oe=class extends de{constructor(){super(...arguments),this.curves=[],this.readOnly=!1,this.previewActive=!1,this.canPreview=!1,this._dragging=!1,this._position=50,this._trackRef=null}_onPointerDown(e){this.readOnly||(e.preventDefault(),this._dragging=!0,e.target.setPointerCapture(e.pointerId),this._updatePositionFromClient(e.clientX),this.dispatchEvent(new CustomEvent("scrubber-start",{bubbles:!0,composed:!0})))}_onPointerMove(e){this._dragging&&(e.preventDefault(),this._updatePositionFromClient(e.clientX))}_onPointerUp(){this._dragging&&(this._dragging=!1,this.dispatchEvent(new CustomEvent("scrubber-end",{bubbles:!0,composed:!0})))}_onTrackClick(e){this.readOnly||this._updatePositionFromClient(e.clientX)}_onKeyDown(e){if(this.readOnly)return;const t=e.shiftKey?10:1;if("ArrowRight"===e.key||"ArrowUp"===e.key)e.preventDefault(),this._position=Math.min(100,this._position+t);else if("ArrowLeft"===e.key||"ArrowDown"===e.key)e.preventDefault(),this._position=Math.max(0,this._position-t);else if("Home"===e.key)e.preventDefault(),this._position=0;else{if("End"!==e.key)return;e.preventDefault(),this._position=100}this._emitPosition()}_updatePositionFromClient(e){const t=this._trackRef;if(!t)return;const i=t.getBoundingClientRect(),r=(e-i.left)/i.width*100;this._position=Math.max(0,Math.min(100,r)),this._emitPosition()}_emitPosition(){this.dispatchEvent(new CustomEvent("scrubber-move",{detail:{position:this._position},bubbles:!0,composed:!0}))}_onPreviewToggle(){this.dispatchEvent(new CustomEvent("preview-toggle",{bubbles:!0,composed:!0}))}firstUpdated(){this._trackRef=this.renderRoot.querySelector(".track-area")}render(){const e=Math.round(this._position);return V`
       <div class="scrubber-panel">
         <div class="scrubber-header">
-          <div class="scrubber-label">Group brightness</div>
           ${this.canPreview?this.previewActive?V`<button class="preview-toggle-btn active" @click=${this._onPreviewToggle}>
                   <span class="preview-live-dot"></span>
                   Previewing all lights &nbsp;·&nbsp;
@@ -387,7 +376,7 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
     .scrubber-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-end;
       margin-bottom: 10px;
       min-height: 22px;
     }
@@ -620,7 +609,7 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
       </div>
     `}render(){return V`
       <div class="legend-panel">
-        <div class="legend-label">Lights</div>
+        <div class="legend-label">Group lights</div>
         <div class="legend" role="listbox" aria-label="Light curves">
           ${this.curves.map((e,t)=>{const i=this.canManage&&!this.managing&&this._confirmingRemove===e.entityId;return V`
               <div
@@ -819,8 +808,7 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
     .legend-label {
       font-size: 11px;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.02em;
       color: var(--secondary-text-color, #616161);
       padding: 6px 10px 4px;
     }
@@ -1607,7 +1595,7 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
                   @change=${this._onFallbackEntityInput}
                 />
                 <span class="hint">
-                  Entity picker unavailable — enter a Lightener light entity ID manually (must start
+                  Entity picker unavailable — enter a Lightener group entity ID manually (must start
                   with <code>light.</code>).
                 </span>
               `}
@@ -1701,17 +1689,6 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
         aria-label="Brightness Curves Editor"
       >
         <div class="header">
-          <svg
-            class="header-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M2 20 C6 20, 8 4, 12 4 S18 20, 22 20" />
-          </svg>
           <h2>${this._config.title??"Brightness Curves"}</h2>
           ${!this._loading&&this._isAdmin&&this._curves.length>0?V`<button
                 class="presets-btn ${this._showPresets?"active":""}"
@@ -1865,11 +1842,6 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
       gap: 8px;
       margin-bottom: 16px;
     }
-    .header-icon {
-      width: 18px;
-      height: 18px;
-      opacity: 0.5;
-    }
     h2 {
       margin: 0;
       font-size: var(--text-lg);
@@ -1903,13 +1875,9 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
     .card.embedded .graph-panel {
       padding: 14px;
     }
-    .card.embedded .header-icon {
-      opacity: 0.42;
-    }
     .card.embedded h2 {
       font-size: 0.95rem;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
+      letter-spacing: 0.01em;
       color: var(--secondary-text);
     }
     .error {

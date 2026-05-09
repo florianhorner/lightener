@@ -47,11 +47,11 @@ function makeScrubber(opts?: {
 }
 
 describe('curve-scrubber — render + ARIA', () => {
-  it('renders the "Group brightness" label', async () => {
+  it('does not render a redundant "Group brightness" label (deduped against the chart x-axis)', async () => {
     const el = makeScrubber();
     await el.updateComplete;
     const label = el.renderRoot.querySelector('.scrubber-label');
-    expect(label?.textContent?.trim()).toBe('Group brightness');
+    expect(label).toBeNull();
   });
 
   it('exposes ARIA slider role with valid min/max/now/text', async () => {

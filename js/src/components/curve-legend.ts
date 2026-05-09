@@ -60,8 +60,7 @@ export class CurveLegend extends LitElement {
     .legend-label {
       font-size: 11px;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.02em;
       color: var(--secondary-text-color, #616161);
       padding: 6px 10px 4px;
     }
@@ -913,7 +912,7 @@ export class CurveLegend extends LitElement {
   render() {
     return html`
       <div class="legend-panel">
-        <div class="legend-label">Lights</div>
+        <div class="legend-label">Group lights</div>
         <div class="legend" role="listbox" aria-label="Light curves">
           ${this.curves.map((curve, idx) => {
             const confirming =

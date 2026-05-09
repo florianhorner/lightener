@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Mobile UX audit — Wave 1 cleanup.** Tightens the curve editor's first
+  impression after a 50-item visual audit on iPhone screenshots:
+  - Unified terminology to "Lightener group" everywhere user-facing
+    (panel subtitle, dropdown label, status messages, editor hints,
+    fallback strings). Drops "light entity" / "group entity" / "Lightener
+    entity" mismatches that left users guessing what they were editing.
+  - Renamed chart Y-axis from "Light brightness" to "Per-light output".
+    Disambiguates which light the chart is showing — there are many.
+  - Reformatted the on-graph control-point tooltip from `51:0` to
+    `(51%, 0%)`. The colon read as a time format before it read as
+    coordinates.
+  - Renamed the legend section from "Lights" to "Group lights" and
+    dropped the tracked-uppercase styling on section headers so they
+    no longer SHOUT at the surrounding sentence-case copy.
+  - Removed the redundant "Group brightness" label above the slider —
+    the chart's X-axis already names the same axis.
+  - Dropped the decorative mini-curve icon next to the "Brightness
+    Curves" heading — it competed with the Presets button for
+    attention without earning its keep.
+  - Dropped the faint dashed 1:1 reference line — too dim to read,
+    too visible to ignore.
+  - Prevented "+ New group" button label from wrapping to two lines
+    on narrow viewports.
+
 ## [2.15.0-dev.6] - 2026-05-08
 
 ### Fixed
