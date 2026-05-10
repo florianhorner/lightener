@@ -13,6 +13,12 @@ export function curvesToWsPayload(
     let lastLightener = -1;
     let lastTarget = 0;
     for (const cp of curve.controlPoints) {
+      // Skip non-finite or out-of-range points so we never serialize "NaN"
+      // or values the backend would reject. Mirrors the read-side guard in
+      // wsPayloadToCurves — symmetric trust at the boundary.
+      if (!Number.isFinite(cp.lightener) || !Number.isFinite(cp.target)) continue;
+      if (cp.lightener < 0 || cp.lightener > 100) continue;
+      if (cp.target < 0 || cp.target > 100) continue;
       // The default 0->0 point is not stored, but a non-zero origin dim floor is.
       if (cp.lightener === 0 && cp.target === 0) continue;
       brightness[String(cp.lightener)] = String(cp.target);

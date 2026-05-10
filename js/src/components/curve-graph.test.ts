@@ -116,6 +116,10 @@ describe('curve-graph SVG def ID scoping', () => {
         color: '#2563eb',
       },
     ];
+    // After T-4.2 fix, fills (and their <linearGradient>) only render for the
+    // selected curve. Set a selection so the per-instance gradient assertion
+    // exercises a real def.
+    graph.selectedCurveId = 'light.alpha';
     document.body.appendChild(graph);
     return graph;
   }
@@ -522,50 +526,26 @@ describe('curve-graph SVG accessibility description', () => {
   });
 });
 
-describe('curve-graph axis labels', () => {
+// ── Group E: pinned readout chip + scrubber (Wave 1) ────────────────
+// Encodes T-2.1 (chip format + dismissal), T-4.6 (filled/hollow semantics),
+// T-6.6a / T-4.10 (no duplicate "Group brightness" axis label).
+
+describe('Group E — readout chip + scrubber/axis label', () => {
   beforeEach(() => {
     document.body.replaceChildren();
   });
 
-  it('labels the Y-axis "Per-light output"', async () => {
-    const graph = document.createElement('curve-graph') as CurveGraph;
-    graph.curves = [
-      {
-        entityId: 'light.a',
-        friendlyName: 'A',
-        controlPoints: [
-          { lightener: 0, target: 0 },
-          { lightener: 100, target: 100 },
-        ],
-        visible: true,
-        color: '#2563eb',
-      },
-    ];
-    document.body.appendChild(graph);
-    await graph.updateComplete;
-
-    const axisLabels = Array.from(graph.shadowRoot!.querySelectorAll('text.axis-label')).map((n) =>
-      n.textContent?.trim()
-    );
-    expect(axisLabels).toContain('Per-light output');
-    expect(axisLabels).toContain('Group brightness');
-  });
-});
-
-describe('curve-graph control-point tooltip', () => {
-  beforeEach(() => {
-    document.body.replaceChildren();
-  });
-
-  it('renders tooltip text as "(N%, N%)" on a focused control point', async () => {
+  function makeFocusableGraph(opts?: {
+    points?: Array<{ lightener: number; target: number }>;
+  }): CurveGraph {
     const graph = document.createElement('curve-graph') as CurveGraph;
     graph.curves = [
       {
         entityId: 'light.alpha',
         friendlyName: 'Alpha',
-        controlPoints: [
+        controlPoints: opts?.points ?? [
           { lightener: 0, target: 0 },
-          { lightener: 50, target: 75 },
+          { lightener: 51, target: 0 },
           { lightener: 100, target: 100 },
         ],
         visible: true,
@@ -574,15 +554,114 @@ describe('curve-graph control-point tooltip', () => {
     ];
     graph.selectedCurveId = 'light.alpha';
     document.body.appendChild(graph);
+    return graph;
+  }
+
+  function tooltipText(graph: CurveGraph): string | null {
+    const text = graph.shadowRoot!.querySelector('text.tooltip-text');
+    return text ? (text.textContent ?? '').trim() : null;
+  }
+
+  it('E.16 shows the readout chip in (input %, output %) format on hover', async () => {
+    const graph = makeFocusableGraph();
     await graph.updateComplete;
 
-    // Focus the middle control point — selectedCurveId makes the curve interactive.
-    const hits = graph.shadowRoot!.querySelectorAll<SVGElement>('.hit-circle');
-    expect(hits.length).toBeGreaterThan(1);
-    hits[1].dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    // Hover the (51, 0) interior point — index 1.
+    const hit = graph.shadowRoot!.querySelectorAll<SVGCircleElement>('.hit-circle')[1];
+    hit.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
     await graph.updateComplete;
 
-    const tooltip = graph.shadowRoot!.querySelector('text.tooltip-text');
-    expect(tooltip?.textContent?.trim()).toBe('(50%, 75%)');
+    const text = tooltipText(graph);
+    expect(text, 'tooltip text must exist while hovering').not.toBeNull();
+    expect(text).toMatch(/^\(\s*\d+%\s*,\s*\d+%\s*\)$/);
+  });
+
+  it('E.17 readout chip clears on pointercancel', async () => {
+    const graph = makeFocusableGraph();
+    await graph.updateComplete;
+
+    const hit = graph.shadowRoot!.querySelectorAll<SVGCircleElement>('.hit-circle')[1];
+    hit.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    await graph.updateComplete;
+    expect(tooltipText(graph)).not.toBeNull();
+
+    // The iOS regression: pointerleave doesn't always fire on touch cancel.
+    // Source must wire pointercancel as a fallback dismissal path.
+    hit.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, composed: true }));
+    await graph.updateComplete;
+
+    expect(
+      tooltipText(graph),
+      'pointercancel must dismiss the readout chip (iOS fallback)'
+    ).toBeNull();
+  });
+
+  it('E.17b pointercancel also clears focused state (not just hover)', async () => {
+    const graph = makeFocusableGraph();
+    await graph.updateComplete;
+
+    const hit = graph.shadowRoot!.querySelectorAll<SVGCircleElement>('.hit-circle')[1];
+    hit.dispatchEvent(new FocusEvent('focus', { bubbles: true, composed: true }));
+    hit.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    await graph.updateComplete;
+    expect(
+      tooltipText(graph),
+      'tooltip must show when point is both focused and hovered'
+    ).not.toBeNull();
+
+    // iOS edge case: gesture cancels mid-interaction while a11y focus persists.
+    // pointercancel must clear both, otherwise the readout stays stuck.
+    hit.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, composed: true }));
+    await graph.updateComplete;
+
+    expect(
+      tooltipText(graph),
+      'pointercancel must dismiss the readout even when focus state was set'
+    ).toBeNull();
+  });
+
+  it('E.18 readout chip uses integer format (no .0 suffix) for integer control points', async () => {
+    const graph = makeFocusableGraph({
+      points: [
+        { lightener: 0, target: 0 },
+        { lightener: 75, target: 50 },
+        { lightener: 100, target: 100 },
+      ],
+    });
+    await graph.updateComplete;
+
+    const hit = graph.shadowRoot!.querySelectorAll<SVGCircleElement>('.hit-circle')[1];
+    hit.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    await graph.updateComplete;
+
+    const text = tooltipText(graph) ?? '';
+    expect(text, 'integer points must not render with decimals').not.toMatch(/\.\d/);
+  });
+
+  it('E.19 graph does not render its own "Group brightness" x-axis label', async () => {
+    // The slider above the graph carries the label. Duplicating it inside the
+    // SVG (T-6.6a) creates label collision with tick numbers (T-4.10).
+    const graph = makeFocusableGraph();
+    await graph.updateComplete;
+
+    const labels = Array.from(graph.shadowRoot!.querySelectorAll('text.axis-label'));
+    const hasGroupBrightness = labels.some((el) =>
+      ((el as SVGTextElement).textContent ?? '').trim().toLowerCase().includes('group brightness')
+    );
+    expect(
+      hasGroupBrightness,
+      'graph must not include an x-axis "Group brightness" label — the slider already labels it'
+    ).toBe(false);
+  });
+
+  it('E.* y-axis is labeled "Per-light output"', async () => {
+    // Y-axis still carries an inline label since no other surface labels it.
+    // Pinned from master's wave-1 UX audit cleanup.
+    const graph = makeFocusableGraph();
+    await graph.updateComplete;
+    const axisLabels = Array.from(graph.shadowRoot!.querySelectorAll('text.axis-label')).map((n) =>
+      n.textContent?.trim()
+    );
+    expect(axisLabels).toContain('Per-light output');
   });
 });

@@ -3,6 +3,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { LightCurve, Hass } from '../utils/types.js';
 import { EntityPickerLoader } from '../utils/entity-picker-loader.js';
 import { LEGEND_SHAPES, sampleCurveAt } from '../utils/graph-math.js';
+import { discriminator as splitName } from '../utils/naming.js';
 import { CURVE_PRESETS, presetPolylinePoints } from '../utils/presets.js';
 
 export interface LegendPresetOption {
@@ -224,12 +225,42 @@ export class CurveLegend extends LitElement {
       height: 16px;
       display: block;
     }
+    .name-block {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+      gap: 1px;
+    }
     .name {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      flex: 1;
       min-width: 0;
+    }
+    .discriminator {
+      font-weight: inherit;
+    }
+    .prefix {
+      display: block;
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--secondary-text-color, #757575);
+      opacity: 0.85;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+    .entity-id {
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--secondary-text-color, #757575);
+      opacity: 0.7;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
     }
     .brightness-value {
       font-size: 11px;
@@ -237,7 +268,12 @@ export class CurveLegend extends LitElement {
       font-variant-numeric: tabular-nums;
       color: var(--secondary-text-color, #616161);
       flex-shrink: 0;
-      min-width: 2.8ch;
+      /* Reserve space for "100%" so the badge never auto-shrinks/grows
+         and never clips a 3-digit value (Bubble #2138). */
+      min-width: 36px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       text-align: right;
     }
     .editing-chip {
@@ -910,6 +946,10 @@ export class CurveLegend extends LitElement {
   }
 
   render() {
+    // Compute shared-prefix discriminators once per render so each row gets a
+    // consistent split. With <2 curves the helper returns the full name as
+    // discriminator and an empty prefix.
+    const nameParts = splitName(this.curves.map((c) => c.friendlyName));
     return html`
       <div class="legend-panel">
         <div class="legend-label">Group lights</div>
@@ -917,6 +957,7 @@ export class CurveLegend extends LitElement {
           ${this.curves.map((curve, idx) => {
             const confirming =
               this.canManage && !this.managing && this._confirmingRemove === curve.entityId;
+            const part = nameParts[idx];
             return html`
               <div
                 class="legend-item ${curve.visible ? '' : 'hidden'} ${this.selectedCurveId ===
@@ -937,7 +978,13 @@ export class CurveLegend extends LitElement {
                 ${confirming
                   ? this._renderConfirmRow(curve)
                   : html`
-                      <span class="name" title=${curve.friendlyName}>${curve.friendlyName}</span>
+                      <span class="name-block">
+                        <span class="name discriminator" title=${curve.friendlyName}
+                          >${part.discriminator}</span
+                        >
+                        ${part.prefix ? html`<span class="prefix">${part.prefix}</span>` : nothing}
+                        <span class="entity-id" title=${curve.entityId}>${curve.entityId}</span>
+                      </span>
                       ${this.scrubberPosition !== null
                         ? html`<span class="brightness-value"
                             >${Math.round(

@@ -536,6 +536,119 @@ describe('lightener-curve-card — selection (_onSelectCurve wiring)', () => {
     expect(internal._selectedCurveId).toBeNull();
   });
 
+  // ── Group A: selection state contract (Wave 1, plan groups A.1–A.4) ──
+  // These document the intended four-way visual contract. Some currently fail
+  // against master — that is the point. Each failing test is the work
+  // definition for the corresponding fix.
+
+  it('A.1 hides the in-graph "Select a light" hint while a curve is selected', async () => {
+    const { card } = await mountCard({
+      'light.a': { brightness: { '1': '1', '50': '40', '100': '100' } },
+    });
+    const graph = card.renderRoot.querySelector('curve-graph')!;
+    await graph.updateComplete;
+
+    // No selection: the hint is rendered.
+    const hintBefore = graph.shadowRoot?.querySelector('.hint-select');
+    expect(hintBefore, 'hint-select should render when nothing is selected').not.toBeNull();
+    expect(hintBefore?.textContent ?? '').toMatch(/select a light/i);
+
+    // After selecting, the hint must be gone (replaced by editing-label).
+    fireLegend(card, 'select-curve', { entityId: 'light.a' });
+    await card.updateComplete;
+    await graph.updateComplete;
+    expect(
+      graph.shadowRoot?.querySelector('.hint-select'),
+      'hint-select must not render when a curve is selected'
+    ).toBeNull();
+    expect(graph.shadowRoot?.querySelector('.editing-label')).not.toBeNull();
+  });
+
+  it('A.2 selected curve has solid stroke; unselected curves are dashed', async () => {
+    const { card } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+      'light.b': { brightness: { '1': '1', '100': '100' } },
+    });
+    const internal = card as unknown as CardInternals;
+    // Select light.b deliberately. light.a is curveIdx=0 and the legacy
+    // DASH_PATTERNS lookup makes idx-0 solid by coincidence; selecting light.b
+    // forces the test to actually depend on selection, not index.
+    fireLegend(card, 'select-curve', { entityId: 'light.b' });
+    await card.updateComplete;
+    const graph = card.renderRoot.querySelector('curve-graph')!;
+    await graph.updateComplete;
+
+    const lines = Array.from(
+      graph.shadowRoot?.querySelectorAll('path.curve-line') ?? []
+    ) as SVGPathElement[];
+    expect(lines.length).toBe(2);
+    const selectedColor = internal._curves.find((c) => c.entityId === 'light.b')!.color;
+    const selectedLine = lines.find((line) => line.getAttribute('stroke') === selectedColor);
+    const unselectedLines = lines.filter((line) => line !== selectedLine);
+    expect(selectedLine, 'selected curve line must render').not.toBeUndefined();
+
+    // Contract: exactly one line is solid (the selected curve). Solid is
+    // either no dasharray attribute, "0", "none", or a single "0 0" pattern.
+    const isSolid = (el: SVGPathElement): boolean => {
+      const v = (el.getAttribute('stroke-dasharray') ?? '').trim();
+      return v === '' || v === '0' || v === 'none' || /^0(\s+0)*$/.test(v);
+    };
+    expect(isSolid(selectedLine!), 'the selected curve-line itself must be solid').toBe(true);
+    expect(
+      unselectedLines.every((line) => !isSolid(line)),
+      'all unselected curve-lines must be dashed'
+    ).toBe(true);
+  });
+
+  it('A.3 only the selected curve renders a filled area; others are line-only', async () => {
+    const { card } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+      'light.b': { brightness: { '1': '1', '100': '100' } },
+      'light.c': { brightness: { '1': '1', '100': '100' } },
+    });
+    fireLegend(card, 'select-curve', { entityId: 'light.b' });
+    await card.updateComplete;
+    const graph = card.renderRoot.querySelector('curve-graph')!;
+    await graph.updateComplete;
+
+    // Fill paths are <path fill="url(#grad-…)"> rendered alongside curve-line.
+    const fillPaths = Array.from(
+      graph.shadowRoot?.querySelectorAll('path[fill^="url(#grad-"]') ?? []
+    ) as SVGPathElement[];
+    expect(
+      fillPaths.length,
+      'with N curves and one selected, exactly 1 fill polygon must render'
+    ).toBe(1);
+  });
+
+  it('A.4 clear-edit affordance toggles the selection off', async () => {
+    const { card } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+      'light.b': { brightness: { '1': '1', '100': '100' } },
+    });
+    const internal = card as unknown as CardInternals;
+
+    fireLegend(card, 'select-curve', { entityId: 'light.a' });
+    await card.updateComplete;
+    expect(internal._selectedCurveId).toBe('light.a');
+
+    const legend = card.renderRoot.querySelector('curve-legend')!;
+    await (legend as unknown as { updateComplete: Promise<void> }).updateComplete;
+    const clearBtn = legend.shadowRoot?.querySelector<HTMLButtonElement>('.clear-edit-icon');
+    expect(clearBtn, 'clear-edit-icon must render on the selected legend row').not.toBeNull();
+
+    let dispatched: CustomEvent | null = null;
+    card.addEventListener('select-curve', (e) => {
+      dispatched = e as CustomEvent;
+    });
+    clearBtn!.click();
+    await card.updateComplete;
+
+    expect(dispatched, 'clicking clear-edit must dispatch a select-curve event').not.toBeNull();
+    expect((dispatched as unknown as CustomEvent).detail).toEqual({ entityId: 'light.a' });
+    expect(internal._selectedCurveId, 'selection must clear after the toggle').toBeNull();
+  });
+
   it('still allows deselect when the currently-selected curve has gone missing (race during reload)', async () => {
     const { card } = await mountCard({
       'light.a': { brightness: { '1': '1', '100': '100' } },

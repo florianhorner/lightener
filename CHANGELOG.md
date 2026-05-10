@@ -32,6 +32,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Prevented "+ New group" button label from wrapping to two lines
     on narrow viewports.
 
+- **Screenshot critique — Wave 1 + 2 follow-ups.** Encodes 26 visual /
+  correctness contracts from the iPhone screenshot audit and the
+  cross-repo failure-mode research as vitest tests, then fixes the
+  gaps. User-visible:
+  - Only the selected curve gets a filled area; unselected curves
+    render line-only. Five stacked translucent fills no longer mush
+    into a purple-pink soup.
+  - Control-point dots past the scrubber fade with the curve segment
+    they belong to. Saturated endpoints in the dimmed region were
+    misleading the eye on the right side of the chart.
+  - Touch-cancel events dismiss the on-graph readout chip on iOS.
+    Previously a stuck "(51%, 0%)" tooltip persisted across slider
+    moves because `pointerleave` doesn't always fire on cancel.
+  - Per-row legend layout: bold discriminator on line 1, common
+    prefix muted below, monospace `entity_id` as a third secondary
+    line. Long shared prefixes (e.g. `Kleiderschrank - Magic Area`)
+    no longer eat the discriminating suffix.
+  - Brightness-value badge reserves room for `100%` and ellipsizes
+    instead of clipping or auto-shrinking.
+
+### Fixed
+
+- **`curvesToWsPayload` drops non-finite or out-of-range control points
+  before serialization.** Previously a `NaN` target would serialize as
+  the string `"NaN"`, and a `NaN`/out-of-range lightener would become
+  the object key `"NaN"`. The reader (`wsPayloadToCurves`) already
+  guarded both axes; the writer now mirrors that contract.
+
 ## [2.15.0-dev.6] - 2026-05-08
 
 ### Fixed

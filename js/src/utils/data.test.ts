@@ -250,3 +250,143 @@ describe('curvesEqual', () => {
     expect(curvesEqual(a, b)).toBe(true);
   });
 });
+
+// ── Group K (Wave 2): round-trip persistence at edges ───────────────
+// Encodes plan items K.33 (0/100 round-trip), K.34 (NaN/empty rejection on
+// write), K.35 (removal persists, not just visual clear).
+
+describe('Group K — round-trip persistence at edges', () => {
+  const hassStates = {
+    'light.test': { attributes: { friendly_name: 'Test Light' } },
+  };
+
+  it('K.33 control point at exactly 0% and 100% round-trips through save/load identical', () => {
+    const original: LightCurve[] = [
+      makeCurve({
+        controlPoints: [
+          { lightener: 0, target: 25 }, // explicit non-zero dim floor
+          { lightener: 50, target: 50 },
+          { lightener: 100, target: 100 },
+        ],
+      }),
+    ];
+    const payload = curvesToWsPayload(original);
+    const reloaded = wsPayloadToCurves(payload, hassStates, COLORS);
+
+    // The dim-floor 0% entry must survive the round-trip and the explicit
+    // 100% endpoint must not be silently dropped.
+    expect(reloaded[0].controlPoints).toEqual([
+      { lightener: 0, target: 25 },
+      { lightener: 50, target: 50 },
+      { lightener: 100, target: 100 },
+    ]);
+  });
+
+  it('K.34 a curve with a NaN target is rejected on write — not silently coerced to "NaN"', () => {
+    const broken: LightCurve[] = [
+      makeCurve({
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: NaN },
+          { lightener: 100, target: 100 },
+        ],
+      }),
+    ];
+
+    // Contract: the writer must either throw, return null, or omit the
+    // bad entry — but it must NOT serialize "NaN" as a brightness value.
+    let payload: ReturnType<typeof curvesToWsPayload> | null = null;
+    let threw = false;
+    try {
+      payload = curvesToWsPayload(broken);
+    } catch {
+      threw = true;
+    }
+    if (threw) return;
+
+    const brightness = payload?.['light.test']?.brightness ?? {};
+    const values = Object.values(brightness);
+    expect(values, 'no brightness value may serialize as the string "NaN"').not.toContain('NaN');
+    expect(
+      values.every((v) => Number.isFinite(Number(v))),
+      'every value must parse to a finite number'
+    ).toBe(true);
+  });
+
+  it.each<[string, number, number]>([
+    ['NaN lightener', NaN, 50],
+    ['Infinity lightener', Infinity, 50],
+    ['negative lightener', -1, 50],
+    ['out-of-range lightener', 150, 50],
+    ['NaN target', 50, NaN],
+    ['Infinity target', 50, Infinity],
+    ['negative target', 50, -5],
+    ['out-of-range target', 50, 150],
+  ])(
+    'K.34 drops bad point (%s) and never serializes the bad axis as a key or value',
+    (_label, lightener, target) => {
+      const broken: LightCurve[] = [
+        makeCurve({
+          controlPoints: [
+            { lightener: 0, target: 0 },
+            { lightener, target },
+            { lightener: 100, target: 100 },
+          ],
+        }),
+      ];
+
+      const payload = curvesToWsPayload(broken);
+      const brightness = payload['light.test'].brightness;
+      const keys = Object.keys(brightness);
+      const values = Object.values(brightness);
+
+      // Keys (lightener) must never include "NaN"/"Infinity"/"-1"/"150" etc.
+      expect(keys, 'no key may be NaN/Infinity/out-of-range').not.toContain('NaN');
+      expect(keys).not.toContain('Infinity');
+      for (const k of keys) {
+        const n = Number(k);
+        expect(Number.isFinite(n) && n >= 0 && n <= 100).toBe(true);
+      }
+
+      // Values (target) must never be "NaN"/"Infinity"/out of range.
+      expect(values).not.toContain('NaN');
+      expect(values).not.toContain('Infinity');
+      for (const v of values) {
+        const n = Number(v);
+        expect(Number.isFinite(n) && n >= 0 && n <= 100).toBe(true);
+      }
+    }
+  );
+
+  it('K.35 removing a control point persists as a deletion, not just a visual clear', () => {
+    const before: LightCurve[] = [
+      makeCurve({
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: 50 },
+          { lightener: 100, target: 100 },
+        ],
+      }),
+    ];
+    const beforePayload = curvesToWsPayload(before);
+    expect(beforePayload['light.test'].brightness).toHaveProperty('50');
+
+    // Simulate the user removing the (50, 50) interior point.
+    const after = cloneCurves(before);
+    after[0].controlPoints = after[0].controlPoints.filter((p) => p.lightener !== 50);
+    const afterPayload = curvesToWsPayload(after);
+
+    expect(
+      afterPayload['light.test'].brightness,
+      'removed point must NOT remain in the payload'
+    ).not.toHaveProperty('50');
+    // And the surviving endpoints must still be there.
+    expect(afterPayload['light.test'].brightness).toHaveProperty('100');
+
+    // Round-trip the after-state: reload and verify the removed point is
+    // truly gone (not re-derived from a stale cache).
+    const reloaded = wsPayloadToCurves(afterPayload, hassStates, COLORS);
+    const lighteners = reloaded[0].controlPoints.map((p) => p.lightener);
+    expect(lighteners).not.toContain(50);
+  });
+});

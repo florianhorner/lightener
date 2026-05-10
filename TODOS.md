@@ -338,3 +338,16 @@ Source: `.context/audit/findings-vs-lightener.md` (22-row check vs ~110 GitHub i
 ### Refresh trigger
 
 Re-run the 22-row audit pre-release, OR on any PR touching `curve-graph.ts` / `lightener-curve-card.ts` / `save-lifecycle.ts`. Diff via `findings-vs-lightener.json`.
+
+---
+
+## Tooling — from PR #84 ship loop (2026-05-10)
+
+### P2 — DX
+
+- **gstack: `pr-proof refresh` subcommand** — every time a follow-up commit lands on a PR with an existing `## Proof` block, the proof URLs go stale (they pin to the prior HEAD's CI run). Manually swapping the run ID three times in one PR is a clear mechanism gap. The workflow:
+  1. Read PR head SHA from `gh pr view --json headRefOid`
+  2. Find the most recent successful `Quality` (or equivalent stack-aware) run for that SHA via `gh run list --branch ... --json headSha,databaseId,conclusion,workflowName`
+  3. `sed`-swap every `actions/runs/<id>` URL in the PR body
+  4. `gh pr edit --body-file` push
+  Affects: `~/.claude/skills/gstack/bin/` (new binary), `~/.claude/skills/ship/SKILL.md` (call it from Step 19 idempotency block when an open PR is detected). Effort: S. **Why ship-loop:** PR #84 burned 3 round-trips on this exact pattern; the next 4-digit micro-release will hit it again.
