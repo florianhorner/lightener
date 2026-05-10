@@ -569,6 +569,7 @@ describe('lightener-curve-card — selection (_onSelectCurve wiring)', () => {
       'light.a': { brightness: { '1': '1', '100': '100' } },
       'light.b': { brightness: { '1': '1', '100': '100' } },
     });
+    const internal = card as unknown as CardInternals;
     // Select light.b deliberately. light.a is curveIdx=0 and the legacy
     // DASH_PATTERNS lookup makes idx-0 solid by coincidence; selecting light.b
     // forces the test to actually depend on selection, not index.
@@ -581,6 +582,10 @@ describe('lightener-curve-card — selection (_onSelectCurve wiring)', () => {
       graph.shadowRoot?.querySelectorAll('path.curve-line') ?? []
     ) as SVGPathElement[];
     expect(lines.length).toBe(2);
+    const selectedColor = internal._curves.find((c) => c.entityId === 'light.b')!.color;
+    const selectedLine = lines.find((line) => line.getAttribute('stroke') === selectedColor);
+    const unselectedLines = lines.filter((line) => line !== selectedLine);
+    expect(selectedLine, 'selected curve line must render').not.toBeUndefined();
 
     // Contract: exactly one line is solid (the selected curve). Solid is
     // either no dasharray attribute, "0", "none", or a single "0 0" pattern.
@@ -588,11 +593,11 @@ describe('lightener-curve-card — selection (_onSelectCurve wiring)', () => {
       const v = (el.getAttribute('stroke-dasharray') ?? '').trim();
       return v === '' || v === '0' || v === 'none' || /^0(\s+0)*$/.test(v);
     };
-    const solidCount = lines.filter(isSolid).length;
+    expect(isSolid(selectedLine!), 'the selected curve-line itself must be solid').toBe(true);
     expect(
-      solidCount,
-      'exactly one curve-line must be solid (the selected one); the rest dashed'
-    ).toBe(1);
+      unselectedLines.every((line) => !isSolid(line)),
+      'all unselected curve-lines must be dashed'
+    ).toBe(true);
   });
 
   it('A.3 only the selected curve renders a filled area; others are line-only', async () => {

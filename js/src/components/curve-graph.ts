@@ -704,7 +704,12 @@ export class CurveGraph extends LitElement {
         ` L${toSvgX(0)},${toSvgY(0)} Z`;
 
       const gradientId = `grad-${curveIdx}-${this._uid}`;
-      const dashArray = DASH_PATTERNS[curveIdx % DASH_PATTERNS.length];
+      const dashArray =
+        this.selectedCurveId === null
+          ? DASH_PATTERNS[curveIdx % DASH_PATTERNS.length]
+          : curve.entityId === this.selectedCurveId
+            ? ''
+            : DASH_PATTERNS[(curveIdx % (DASH_PATTERNS.length - 1)) + 1];
 
       // T-4.2: only the selected curve gets a filled area. With nothing
       // selected, treat that as "all curves equally readable" — render lines
