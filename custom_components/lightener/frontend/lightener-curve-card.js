@@ -1602,7 +1602,7 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
         min-height: 44px;
       }
     }
-  `,e([ue({type:Boolean})],je.prototype,"dirty",void 0),e([ue({type:Boolean})],je.prototype,"readOnly",void 0),e([ue({type:Boolean})],je.prototype,"saving",void 0),e([ue({type:Boolean})],je.prototype,"canUndo",void 0),je=e([he("curve-footer")],je);"undefined"!=typeof window&&(window.__LIGHTENER_CURVE_CARD_VERSION__="2.15.0-dev.5");const Ve=V`<svg
+  `,e([ue({type:Boolean})],je.prototype,"dirty",void 0),e([ue({type:Boolean})],je.prototype,"readOnly",void 0),e([ue({type:Boolean})],je.prototype,"saving",void 0),e([ue({type:Boolean})],je.prototype,"canUndo",void 0),je=e([he("curve-footer")],je);"undefined"!=typeof window&&(window.__LIGHTENER_CURVE_CARD_VERSION__="2.15.0-dev.7");const Ve=V`<svg
   class="status-icon"
   viewBox="0 0 24 24"
   fill="none"

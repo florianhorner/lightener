@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.15.0-dev.7] - 2026-05-10
+
 ### Changed
 
 - **Mobile UX audit — Wave 1 cleanup.** Tightens the curve editor's first
@@ -54,6 +56,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Card "+ New group" no longer freezes HA on submit.** The lights picker
+  in the create-group modal accepted other Lightener entities as
+  controlled lights, creating a recursive `LightGroup` whose state
+  listeners fed each other and deadlocked the HA event loop while the
+  new entity registered and immediately received state events from
+  itself. The form now enumerates Lightener-platform lights from the
+  entity registry across every config entry and excludes them from the
+  picker — schema validation rejects bypass attempts at the framework
+  level. Adds per-step diagnostic logs (`_LOGGER.debug` /
+  `console.debug`) so the next reproducible flow freeze pinpoints the
+  offending step in seconds.
 - **`curvesToWsPayload` drops non-finite or out-of-range control points
   before serialization.** Previously a `NaN` target would serialize as
   the string `"NaN"`, and a `NaN`/out-of-range lightener would become
