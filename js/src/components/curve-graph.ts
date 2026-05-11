@@ -942,12 +942,15 @@ export class CurveGraph extends LitElement {
           }
           if (this.selectedCurveId === null && this._dragCurveIdx < 0) {
             const gestureWord = this._isMobile ? 'double-tap' : 'double-click';
-            const hintText = this._graphHintDismissed
-              ? 'Select a light to edit its curve'
-              : `Select a light, then ${gestureWord} its curve to add a control point`;
-            return svg`<text class="hint hint-select" text-anchor="middle"
-                x="${PAD_LEFT + GRAPH_W / 2}" y="${PAD_TOP + GRAPH_H / 2}"
-                >${hintText}</text>`;
+            if (this._graphHintDismissed) {
+              return svg`<text class="hint hint-select" text-anchor="middle"
+                  x="${PAD_LEFT + GRAPH_W / 2}" y="${PAD_TOP + GRAPH_H / 2}"
+                  >Select a light to edit its curve</text>`;
+            }
+            return svg`<text class="hint hint-select" text-anchor="middle">
+                <tspan x="${PAD_LEFT + GRAPH_W / 2}" y="${PAD_TOP + GRAPH_H / 2 - 8}">Select a light, then</tspan>
+                <tspan x="${PAD_LEFT + GRAPH_W / 2}" dy="16">${gestureWord} its curve to add a point</tspan>
+            </text>`;
           }
           const selected = this.curves.find((c) => c.entityId === this.selectedCurveId);
           const interactionHint = this._isMobile

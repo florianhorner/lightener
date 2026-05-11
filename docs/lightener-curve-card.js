@@ -179,9 +179,12 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
         ${(()=>{const e=this._orderedCurves();return q`<g clip-path="url(#graph-area-${this._uid})">${e.map(({curve:e,idx:t})=>this._renderCurvePoints(e,t))}</g>`})()}
         ${(()=>{if(this.readOnly)return G;if(0===this.curves.length)return q`<text class="hint hint-select" text-anchor="middle"
                 x="${194}" y="${112}"
-                >Add a light below to get started</text>`;if(null===this.selectedCurveId&&this._dragCurveIdx<0){const e=this._isMobile?"double-tap":"double-click",t=this._graphHintDismissed?"Select a light to edit its curve":`Select a light, then ${e} its curve to add a control point`;return q`<text class="hint hint-select" text-anchor="middle"
-                x="${194}" y="${112}"
-                >${t}</text>`}const e=this.curves.find(e=>e.entityId===this.selectedCurveId),t=this._isMobile?"Double-tap add · Hold remove":"Double-click to add · Right-click to remove";return q`
+                >Add a light below to get started</text>`;if(null===this.selectedCurveId&&this._dragCurveIdx<0){const e=this._isMobile?"double-tap":"double-click";return this._graphHintDismissed?q`<text class="hint hint-select" text-anchor="middle"
+                  x="${194}" y="${112}"
+                  >Select a light to edit its curve</text>`:q`<text class="hint hint-select" text-anchor="middle">
+                <tspan x="${194}" y="${104}">Select a light, then</tspan>
+                <tspan x="${194}" dy="16">${e} its curve to add a point</tspan>
+            </text>`}const e=this.curves.find(e=>e.entityId===this.selectedCurveId),t=this._isMobile?"Double-tap add · Hold remove":"Double-click to add · Right-click to remove";return q`
               <text class="editing-label"
                 x="${50}" y="${26}"
                 fill="${e?.color??"currentColor"}"
