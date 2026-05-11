@@ -8,7 +8,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GRAPH_H, GRAPH_W, PAD_LEFT, PAD_TOP, sampleCurveAt, toSvgX } from './utils/graph-math.js';
 import type { CurveGraph } from './components/curve-graph.js';
-import type { CurveScrubber } from './components/curve-scrubber.js';
 import type { LightenerCurveCard } from './lightener-curve-card.js';
 import type { LightCurve } from './utils/types.js';
 
@@ -46,35 +45,6 @@ function makeGraph(opts?: { curves?: LightCurve[]; selectedCurveId?: string | nu
   graph.selectedCurveId = opts?.selectedCurveId ?? 'light.alpha';
   document.body.appendChild(graph);
   return graph;
-}
-
-function makeScrubber(curves?: LightCurve[]): CurveScrubber {
-  const scrubber = document.createElement('curve-scrubber') as CurveScrubber;
-  scrubber.curves = curves ?? [
-    {
-      entityId: 'light.alpha',
-      friendlyName: 'Alpha',
-      controlPoints: [
-        { lightener: 0, target: 0 },
-        { lightener: 50, target: 75 },
-        { lightener: 100, target: 100 },
-      ],
-      visible: true,
-      color: '#2563eb',
-    },
-    {
-      entityId: 'light.beta',
-      friendlyName: 'Beta',
-      controlPoints: [
-        { lightener: 0, target: 0 },
-        { lightener: 100, target: 50 },
-      ],
-      visible: true,
-      color: '#ef5350',
-    },
-  ];
-  document.body.appendChild(scrubber);
-  return scrubber;
 }
 
 // ── 1. Origin point long-press guard ─────────────────────────────────
@@ -387,7 +357,6 @@ describe('preview stops on disconnect', () => {
 
     // Spy on _stopPreview
     const stopSpy = vi.fn();
-    const originalStop = (card as unknown as Record<string, () => void>)['_stopPreview'];
     (card as unknown as Record<string, () => void>)['_stopPreview'] = () => {
       stopSpy();
       // Don't call original — it needs _hass which is null

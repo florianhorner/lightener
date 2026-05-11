@@ -599,7 +599,7 @@ export class CurveGraph extends LitElement {
     `;
   }
 
-  private _renderTooltip(curve: LightCurve, cp: ControlPoint) {
+  private _renderTooltip(cp: ControlPoint) {
     const cx = toSvgX(cp.lightener);
     const cy = toSvgY(cp.target);
     // (input %, output %) — reads as a coordinate, not a time (T-2.1 / T-6.7).
@@ -828,7 +828,7 @@ export class CurveGraph extends LitElement {
             />
           `;
         })}
-        ${tooltipPoint !== null ? this._renderTooltip(curve, tooltipPoint) : nothing}
+        ${tooltipPoint !== null ? this._renderTooltip(tooltipPoint) : nothing}
       `;
     } catch {
       return nothing;
