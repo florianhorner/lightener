@@ -67,9 +67,38 @@ class LightenerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         super().__init__()
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
-        """Configure the lightener device name."""
+        """Entry point for the config flow.
 
-        return await self.lightener_flow.async_step_name(user_input)
+        Branches on the shape of user_input so a single step serves both the
+        cog-flow handoff (HA Settings -> Add Integration -> Lightener) and the
+        in-card "New group" wizard, unifying the two onboarding paths:
+
+        - user_input is None: first display. Show a notice form pointing the
+          user at the Lightener Editor panel where the visual wizard lives.
+        - user_input is an empty dict: cog user clicked Submit on the notice.
+          Abort with a redirect placeholder so HA renders a "continue in the
+          editor" link instead of advancing into the legacy 3-step form.
+        - user_input contains "name": the panel modal is walking the existing
+          flow programmatically. Proceed through name -> area -> lights as
+          before; the panel collects all values client-side first.
+        """
+        if user_input is None:
+            return self.async_show_form(
+                step_id="user",
+                # ALLOW_EXTRA so the panel modal can POST {"name": ...} into
+                # the same step without HA's schema validator rejecting the
+                # extra key. The cog UI still renders an empty form because
+                # there are no declared fields.
+                data_schema=vol.Schema({}, extra=vol.ALLOW_EXTRA),
+                last_step=True,
+                description_placeholders={"editor_url": "/lightener-editor?action=new"},
+            )
+        if "name" not in user_input:
+            return self.async_abort(
+                reason="open_editor",
+                description_placeholders={"editor_url": "/lightener-editor?action=new"},
+            )
+        return await self.lightener_flow.async_step_name({"name": user_input["name"]})
 
     async def async_step_area(
         self, user_input: dict[str, Any] | None = None

@@ -2,14 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "New Lightener device",
-        "description": "",
-        "data": {
-          "name": "Name"
-        },
-        "data_description": {
-          "name": "A room or area name works best, e.g. \"Living Room\""
-        }
+        "title": "Set up Lightener",
+        "description": "Lightener uses a visual editor to set up groups — pick lights, shape brightness curves on a live graph, and try presets without typing numbers. Click Submit to continue in the **Lightener Editor**."
       },
       "area": {
         "title": "Filter by area (optional)",
@@ -42,6 +36,9 @@
     },
     "create_entry": {
       "open_editor": "Group created. **[Tune the curves now \u2192]({editor_url})** \u2014 the editor is where you pick presets and shape each light's response on the live graph."
+    },
+    "abort": {
+      "open_editor": "**[Continue in Lightener Editor \u2192]({editor_url})** \u2014 pick lights, choose a curve preset, and shape the response on the live graph."
     }
   },
   "options": {
