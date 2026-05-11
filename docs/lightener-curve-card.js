@@ -44,12 +44,12 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
         x1="${i}" y1="${r}"
         x2="${$e}" y2="${r}"
         stroke="${e.color}" opacity="0.5" />
-    `}_renderTooltip(e,t){const i=Ce(t.lightener),r=Ae(t.target),n=`(${t.lightener}%, ${t.target}%)`,o=Math.ceil(5.8*n.length),s=Ee(i-o/2-2,$e,344-o-8),a=Math.max(16,r-16);return q`
+    `}_renderTooltip(e){const t=Ce(e.lightener),i=Ae(e.target),r=`(${e.lightener}%, ${e.target}%)`,n=Math.ceil(5.8*r.length),o=Ee(t-n/2-2,$e,344-n-8),s=Math.max(16,i-16);return q`
       <rect class="tooltip-bg"
-        x="${s}" y="${a-8}"
-        width="${o+8}" height="14" />
+        x="${o}" y="${s-8}"
+        width="${n+8}" height="14" />
       <text class="tooltip-text" text-anchor="start"
-        x="${s+4}" y="${a+2}">${n}</text>
+        x="${o+4}" y="${s+2}">${r}</text>
     `}_renderScrubberIndicator(){if(null===this.scrubberPosition)return G;const e=this.scrubberPosition,t=Ce(e),i=q`
       <rect
         x="${t}" y="${Ae(100)}"
@@ -130,7 +130,7 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
               pointer-events="none"
             />
           `})}
-        ${null!==o?this._renderTooltip(e,o):G}
+        ${null!==o?this._renderTooltip(o):G}
       `}catch{return G}}connectedCallback(){super.connectedCallback(),this._mql=window.matchMedia("(max-width: 500px)"),this._isMobile=this._mql.matches,this._mql.addEventListener("change",this._onMqlChange)}disconnectedCallback(){super.disconnectedCallback(),this._clearLongPress(),this._mql?.removeEventListener("change",this._onMqlChange),this._mql=null}_getSvgDescription(){const e=this.curves.filter(e=>e.visible);if(!e.length)return"No curves displayed";const t=e.map(e=>{const t=e.controlPoints[e.controlPoints.length-1];return`${e.friendlyName} (${e.controlPoints.length} points, max ${t?.target??0}%)`});return`${e.length} curve${1===e.length?"":"s"}: ${t.join(", ")}`}render(){return V`
       <svg
         viewBox="0 0 ${356} ${248}"
