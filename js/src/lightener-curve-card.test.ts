@@ -11,6 +11,11 @@ type CardInternals = {
   _curves: LightCurve[];
   _selectedCurveId: string | null;
   _onSave: () => Promise<void>;
+  _tryLoadCurves: () => Promise<void>;
+  _loaded: boolean;
+  _loading: boolean;
+  _dirtyVersion: number;
+  _cleanVersion: number;
 };
 
 function forceDirty(card: LightenerCurveCard): void {
@@ -335,6 +340,88 @@ describe('lightener-curve-card — light management', () => {
 });
 
 describe('lightener-curve-card — save flow', () => {
+  it('defers curve overwrite when dirty', async () => {
+    const { card, hass } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+    });
+    const internal = card as unknown as CardInternals;
+    const graph = card.renderRoot.querySelector('curve-graph')!;
+    let resolveReload: (value: {
+      entities: Record<string, { brightness: Record<string, string> }>;
+    }) => void = () => {};
+    const reloadPromise = new Promise<{
+      entities: Record<string, { brightness: Record<string, string> }>;
+    }>((resolve) => {
+      resolveReload = resolve;
+    });
+
+    hass.callWS.mockReset();
+    hass.callWS.mockReturnValueOnce(reloadPromise);
+    internal._loaded = false;
+    const load = internal._tryLoadCurves();
+
+    graph.dispatchEvent(
+      new CustomEvent('point-move', {
+        detail: { curveIndex: 0, pointIndex: 1, lightener: 50, target: 60 },
+        bubbles: true,
+        composed: true,
+      })
+    );
+
+    resolveReload({ entities: { 'light.b': { brightness: { '1': '5', '100': '10' } } } });
+    await load;
+    await card.updateComplete;
+
+    expect(internal._curves.map((curve) => curve.entityId)).toEqual(['light.a']);
+    expect(internal._curves[0].controlPoints).toContainEqual({ lightener: 50, target: 60 });
+    expect(internal._loading).toBe(false);
+    expect(internal._loaded).toBe(true);
+  });
+
+  it('applies reload when clean after dirty state clears', async () => {
+    const { card, hass } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+    });
+    const internal = card as unknown as CardInternals;
+    const graph = card.renderRoot.querySelector('curve-graph')!;
+    let resolveDirtyReload: (value: {
+      entities: Record<string, { brightness: Record<string, string> }>;
+    }) => void = () => {};
+    const dirtyReloadPromise = new Promise<{
+      entities: Record<string, { brightness: Record<string, string> }>;
+    }>((resolve) => {
+      resolveDirtyReload = resolve;
+    });
+
+    hass.callWS.mockReset();
+    hass.callWS.mockReturnValueOnce(dirtyReloadPromise);
+    internal._loaded = false;
+    const dirtyLoad = internal._tryLoadCurves();
+    graph.dispatchEvent(
+      new CustomEvent('point-move', {
+        detail: { curveIndex: 0, pointIndex: 1, lightener: 50, target: 60 },
+        bubbles: true,
+        composed: true,
+      })
+    );
+    resolveDirtyReload({ entities: { 'light.b': { brightness: { '1': '5', '100': '10' } } } });
+    await dirtyLoad;
+
+    // Simulate the save path: _saveCurves() resets _loaded before calling _tryLoadCurves().
+    // Without this reset, the early-out guard correctly blocks re-loading.
+    internal._cleanVersion = internal._dirtyVersion;
+    internal._loaded = false;
+    hass.callWS.mockResolvedValueOnce({
+      entities: { 'light.b': { brightness: { '1': '5', '100': '10' } } },
+    });
+
+    await internal._tryLoadCurves();
+    await card.updateComplete;
+
+    expect(internal._curves.map((curve) => curve.entityId)).toEqual(['light.b']);
+    expect(internal._loading).toBe(false);
+  });
+
   it('_onSave dispatches lightener/save_curves with the current curves payload', async () => {
     const { card, hass } = await mountCard({
       'light.a': { brightness: { '100': '100' } },

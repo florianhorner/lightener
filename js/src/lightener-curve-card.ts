@@ -682,6 +682,9 @@ export class LightenerCurveCard extends LitElement {
       this._loadErrorEntityId = undefined;
       this._groupDeleted = false;
       this._showPresets = false;
+      // Abandon any unsaved edits so the dirty-reload guard in _tryLoadCurves()
+      // does not block the incoming response for the new entity.
+      this._cleanVersion = this._dirtyVersion;
       this._tryLoadCurves();
     }
   }
@@ -963,6 +966,17 @@ export class LightenerCurveCard extends LitElement {
       if (this._entityId !== requestedEntity) return;
 
       const curves = wsPayloadToCurves(result.entities, this._hass.states, CURVE_COLORS);
+      if (this._isDirty) {
+        // Do not overwrite unsaved local curve edits with an in-flight reload response.
+        // Mark as loaded so set hass() stops re-triggering on every HA state update.
+        // Clear error state and mark the entity as seen for auto-preset suppression
+        // — the same housekeeping the success path does below.
+        this._loaded = true;
+        this._loadedEntityId = requestedEntity;
+        this._loadErrorEntityId = undefined;
+        this._autoPresetsShownFor.add(requestedEntity);
+        return;
+      }
       this._curves = curves;
       this._originalCurves = cloneCurves(curves);
       this._cleanVersion = this._dirtyVersion;
