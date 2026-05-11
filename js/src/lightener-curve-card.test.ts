@@ -608,6 +608,7 @@ describe('lightener-curve-card — save flow', () => {
     card.setConfig({ entity: 'light.lightener_two' });
 
     expect(card.dirty).toBe(false);
+    expect(internal._selectedCurveId).toBeNull();
     expect(internal._undoStack).toHaveLength(0);
   });
 

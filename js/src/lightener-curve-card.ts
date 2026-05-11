@@ -684,6 +684,7 @@ export class LightenerCurveCard extends LitElement {
       this._loadErrorEntityId = undefined;
       this._groupDeleted = false;
       this._showPresets = false;
+      this._selectedCurveId = null;
       this._undoStack = [];
       this._pendingReloadEntityId = undefined;
       this._reloadAfterLoadEntityId = undefined;
@@ -958,6 +959,7 @@ export class LightenerCurveCard extends LitElement {
     this._loading = true;
     // Capture the entity we're loading so we can discard stale responses
     const requestedEntity = this._entityId;
+    let shouldRunQueuedReload = false;
 
     try {
       const result = await this._hass.callWS<{
@@ -969,42 +971,44 @@ export class LightenerCurveCard extends LitElement {
 
       // Discard if entity changed while the request was in flight
       if (this._entityId !== requestedEntity) return;
-      if (this._reloadAfterLoadEntityId === requestedEntity) return;
-
-      const curves = wsPayloadToCurves(result.entities, this._hass.states, CURVE_COLORS);
-      if (this._isDirty) {
-        // Do not overwrite unsaved local curve edits with an in-flight reload response.
-        // Mark as loaded so set hass() stops re-triggering on every HA state update.
-        // Clear error state and mark the entity as seen for auto-preset suppression
-        // — the same housekeeping the success path does below.
-        this._pendingReloadEntityId = requestedEntity;
+      if (this._reloadAfterLoadEntityId === requestedEntity) {
+        shouldRunQueuedReload = true;
+      } else {
+        const curves = wsPayloadToCurves(result.entities, this._hass.states, CURVE_COLORS);
+        if (this._isDirty) {
+          // Do not overwrite unsaved local curve edits with an in-flight reload response.
+          // Mark as loaded so set hass() stops re-triggering on every HA state update.
+          // Clear error state and mark the entity as seen for auto-preset suppression
+          // — the same housekeeping the success path does below.
+          this._pendingReloadEntityId = requestedEntity;
+          this._loaded = true;
+          this._loadedEntityId = requestedEntity;
+          this._loadErrorEntityId = undefined;
+          this._autoPresetsShownFor.add(requestedEntity);
+          return;
+        }
+        this._pendingReloadEntityId = undefined;
+        this._curves = curves;
+        this._originalCurves = cloneCurves(curves);
+        this._cleanVersion = this._dirtyVersion;
         this._loaded = true;
         this._loadedEntityId = requestedEntity;
         this._loadErrorEntityId = undefined;
-        this._autoPresetsShownFor.add(requestedEntity);
-        return;
-      }
-      this._pendingReloadEntityId = undefined;
-      this._curves = curves;
-      this._originalCurves = cloneCurves(curves);
-      this._cleanVersion = this._dirtyVersion;
-      this._loaded = true;
-      this._loadedEntityId = requestedEntity;
-      this._loadErrorEntityId = undefined;
 
-      // Onboarding handoff: a freshly-created group lands here with linear
-      // default curves. Auto-open the preset chooser so the user picks a
-      // starting curve visually instead of being told "nothing here yet."
-      // One-shot per entity for the card's lifetime — switching away and
-      // back must not re-open after the user dismissed it.
-      if (
-        !this._autoPresetsShownFor.has(requestedEntity) &&
-        curves.length > 0 &&
-        curves.every((c) => controlPointsAreLinearDefault(c.controlPoints))
-      ) {
-        this._showPresets = true;
+        // Onboarding handoff: a freshly-created group lands here with linear
+        // default curves. Auto-open the preset chooser so the user picks a
+        // starting curve visually instead of being told "nothing here yet."
+        // One-shot per entity for the card's lifetime — switching away and
+        // back must not re-open after the user dismissed it.
+        if (
+          !this._autoPresetsShownFor.has(requestedEntity) &&
+          curves.length > 0 &&
+          curves.every((c) => controlPointsAreLinearDefault(c.controlPoints))
+        ) {
+          this._showPresets = true;
+        }
+        this._autoPresetsShownFor.add(requestedEntity);
       }
-      this._autoPresetsShownFor.add(requestedEntity);
     } catch (err) {
       if (this._entityId !== requestedEntity) return;
       console.error('[Lightener] Failed to load curves:', err);
@@ -1016,16 +1020,18 @@ export class LightenerCurveCard extends LitElement {
       this._loadErrorEntityId = requestedEntity;
     } finally {
       this._loading = false;
-      if (this._reloadAfterLoadEntityId === requestedEntity && this._entityId === requestedEntity) {
-        this._reloadAfterLoadEntityId = undefined;
-        this._loaded = false;
-        void this._tryLoadCurves();
-        return;
-      }
       // If entity changed during flight, trigger reload for the new entity
       if (this._entityId !== requestedEntity) {
         this._tryLoadCurves();
       }
+    }
+    if (
+      shouldRunQueuedReload ||
+      (this._reloadAfterLoadEntityId === requestedEntity && this._entityId === requestedEntity)
+    ) {
+      this._reloadAfterLoadEntityId = undefined;
+      this._loaded = false;
+      void this._tryLoadCurves();
     }
   }
 
