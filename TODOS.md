@@ -348,6 +348,33 @@ Re-run the 22-row audit pre-release, OR on any PR touching `curve-graph.ts` / `l
 
 ---
 
+## Design Review Findings (2026-05-11)
+
+Source: /design-review on branch florianhorner/release-preview-design-qa
+
+### P1 — Fixed
+
+- [x] **SVG hint text overflows graph on first load**
+  `js/src/components/curve-graph.ts` — the 67-char non-dismissed hint "Select a light,
+  then double-click its curve to add a control point" was rendered as a single `<text>`
+  element centered in a 300px graph area. At 11px font the text was ~340px wide, overflowing
+  ~30px past the right edge of the SVG viewbox.
+  Fix: split into two `<tspan>` lines (20 + 37 chars). Dismissed hint stays single-line.
+  **Completed:** commit `c3dd742` on branch florianhorner/release-preview-design-qa
+
+### P3 — Deferred
+
+- [ ] **SVG control point focus rings not themed to `--accent`**
+  `js/src/components/curve-graph.ts` — SVG hit circles use `role="button"` with tabindex
+  and full keyboard handlers, but the browser-default SVG focus ring is not normalized to
+  `color-mix(in srgb, var(--accent) 60%, transparent)` as legend/footer buttons are.
+  Keyboard-navigable but visually inconsistent with the rest of the card.
+  Affects: SVG `<circle>` hit-targets in curve-graph.ts; add `outline` or SVG `stroke`
+  on `:focus-visible` to match the `--accent`-keyed style used elsewhere.
+  Priority: P3 (visual consistency — all focus rings work, just styled differently)
+
+---
+
 ## Tooling — from PR #84 ship loop (2026-05-10)
 
 ### P2 — DX
