@@ -7,6 +7,8 @@ A fork of [fredck/lightener](https://github.com/fredck/lightener) that adds an i
 
 **[Try the live demo](https://florianhorner.github.io/lightener-curve-editor/)** — no install needed.
 
+![Animated Lightener Curve Editor demo](.github/assets/lightener-curve-editor-demo.gif)
+
 ![Lightener Curve Editor — light and dark mode side by side](.github/assets/lightener-curve-editor-screenshot.png)
 
 ## Curve Editor Card (`custom:lightener-curve-card`)
@@ -28,13 +30,9 @@ A visual editor for per-light brightness curves, directly in your HA dashboard �
 - **Theme-aware**: adapts to both HA light and dark modes
 - **Scales from 2 to 20+ lights**: legend rows and curve labels truncate cleanly at any card width
 
-### WebSocket API
-
-- `lightener/get_curves` — read brightness configs (all authenticated users)
-- `lightener/save_curves` — write brightness configs (admin only)
-- `lightener/list_entities` — list available Lightener entities (used by the sidebar panel)
-
 ## Installing
+
+Requires Home Assistant 2024.2.0 or newer.
 
 1. In HACS, go to the three-dot menu → **Custom repositories**
 2. Add `florianhorner/lightener-curve-editor` as an Integration
@@ -51,13 +49,19 @@ The fork also registers a **Lightener Editor** sidebar panel at `/lightener-edit
 
 To switch back to upstream: remove this repo from HACS custom repositories and reinstall "Lightener" from the default HACS store. All Lightener devices and automations remain unaffected.
 
+## WebSocket API
+
+- `lightener/get_curves` — read brightness configs (all authenticated users)
+- `lightener/save_curves` — write brightness configs (admin only)
+- `lightener/list_entities` — list available Lightener entities (used by the sidebar panel)
+
 ## Documentation
 
 - [CHANGELOG.md](CHANGELOG.md) — release history
 - [CONTRIBUTING.md](CONTRIBUTING.md) — local setup, tooling, and workflow
 - [SECURITY.md](SECURITY.md) — vulnerability reporting policy
 - [DESIGN.md](DESIGN.md) — UI tokens, patterns, and accessibility baseline
-- [CLAUDE.md](CLAUDE.md) — repository notes for AI-assisted contributors
+- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — upgrade and caching recovery guide
 
 ## Local Development
 

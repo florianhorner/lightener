@@ -38,6 +38,11 @@ js/                            # TypeScript — Lit 3.x frontend card
 
 docs/                          # GitHub Pages demo site (live demo)
 
+.github/assets/                # README screenshots and demo GIF
+.config/                       # Commit-message rules consumed by local hooks/CI
+config/                        # Minimal Home Assistant dev configuration
+images/                        # HACS/Home Assistant brand assets
+
 tests/                         # pytest — backend unit tests
 ```
 
@@ -51,8 +56,8 @@ tests/                         # pytest — backend unit tests
 
 The easiest way to get started is to open this repository in VS Code with the
 [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-extension. The included `.devcontainer.json` provides a Home Assistant preview
-server with the integration pre-loaded.
+extension. The included `.devcontainer.json` provides a Python test environment
+with all backend and frontend dependencies pre-installed.
 
 For a manual setup:
 
@@ -113,7 +118,7 @@ Notes:
 | Ruff   | Linting + formatting | `ruff check . --fix` / `ruff format .` |
 | Mypy   | Type checking        | `mypy custom_components/lightener/` |
 | Pytest | Unit tests           | `scripts/test-python` |
-| Coverage | Coverage check     | `scripts/test-python --cov=custom_components/lightener --cov-fail-under=90` |
+| Coverage | Coverage check     | `scripts/test-python --cov=custom_components/lightener --cov-fail-under=92` |
 
 Configuration lives in `pyproject.toml`. Ruff and Mypy still target `py312` /
 Python 3.12 there as tooling compatibility settings. Local backend pytest
@@ -181,7 +186,7 @@ By contributing, you agree that your contributions will be licensed under the
 
 
 
-<!-- BEGIN: commit-message-standards (managed by bootstrap-repo.sh — do not hand-edit) -->
+<!-- BEGIN: commit-message-standards (do not hand-edit — update .config/commit-rules.json instead) -->
 ## Commit messages
 
 This repo follows the [engineering-standards commit-message spec](https://github.com/florianhorner/engineering-standards/blob/main/specs/commit-message-spec.md). The cheat sheet below is self-sufficient — you do not need to leave the repo to write a conformant commit.

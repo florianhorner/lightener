@@ -32,7 +32,7 @@ on a test HA instance ONLY on Florian's explicit signal. Do not auto-tag.
   `custom_components/lightener/frontend/lightener-panel.js`,
   `docs/lightener-curve-card.js`. `npm run build` from `js/`.
 - `scripts/test-fast` passes (backend pytest + frontend vitest + frontend
-  typecheck). Coverage gates hold: Python `fail_under = 90`; frontend lines 75,
+  typecheck). Coverage gates hold: Python `fail_under = 92`; frontend lines 75,
   branches 65, functions 75, statements 75.
 - GitHub checks `Quality` (lint.yml), `Validate` (validate.yml), and
   `verify-claims` (verify-claims.yml) green on the merge SHA.
@@ -71,7 +71,7 @@ in parallel before the release tag is cut:
    frontend assets, stale-card mitigation (`docs/TROUBLESHOOTING.md`),
    `customElements.define` one-shot collisions across HACS upgrade boundary,
    websocket contracts, brightness serialization, docs sync (README,
-   CLAUDE.md, TROUBLESHOOTING.md, ARCHITECTURE if present).
+   TROUBLESHOOTING.md, ARCHITECTURE if present).
 
 Deduplicate, rank P0/P1/P2, fix all P0/P1 inline. P2 → `.context/todos.md`,
 never bundle into the release. If any gate errors, returns empty, or fails
