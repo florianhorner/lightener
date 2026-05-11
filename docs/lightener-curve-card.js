@@ -182,8 +182,8 @@ function e(e,t,i,r){var n,o=arguments.length,s=o<3?t:null===r?r=Object.getOwnPro
                 >Add a light below to get started</text>`;if(null===this.selectedCurveId&&this._dragCurveIdx<0){const e=this._isMobile?"double-tap":"double-click";return this._graphHintDismissed?q`<text class="hint hint-select" text-anchor="middle"
                   x="${194}" y="${112}"
                   >Select a light to edit its curve</text>`:q`<text class="hint hint-select" text-anchor="middle">
-                <tspan x="${194}" y="${104}">Select a light, then</tspan>
-                <tspan x="${194}" dy="16">${e} its curve to add a point</tspan>
+                <tspan x="${194}" y="${102}">Select a light, then</tspan>
+                <tspan x="${194}" dy="20">${e} its curve to add a point</tspan>
             </text>`}const e=this.curves.find(e=>e.entityId===this.selectedCurveId),t=this._isMobile?"Double-tap add · Hold remove":"Double-click to add · Right-click to remove";return q`
               <text class="editing-label"
                 x="${50}" y="${26}"

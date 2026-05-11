@@ -948,8 +948,8 @@ export class CurveGraph extends LitElement {
                   >Select a light to edit its curve</text>`;
             }
             return svg`<text class="hint hint-select" text-anchor="middle">
-                <tspan x="${PAD_LEFT + GRAPH_W / 2}" y="${PAD_TOP + GRAPH_H / 2 - 8}">Select a light, then</tspan>
-                <tspan x="${PAD_LEFT + GRAPH_W / 2}" dy="16">${gestureWord} its curve to add a point</tspan>
+                <tspan x="${PAD_LEFT + GRAPH_W / 2}" y="${PAD_TOP + GRAPH_H / 2 - 10}">Select a light, then</tspan>
+                <tspan x="${PAD_LEFT + GRAPH_W / 2}" dy="20">${gestureWord} its curve to add a point</tspan>
             </text>`;
           }
           const selected = this.curves.find((c) => c.entityId === this.selectedCurveId);
