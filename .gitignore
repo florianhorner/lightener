@@ -14,9 +14,6 @@ coverage.xml
 # Visual Studio Code
 .vscode/*
 !.vscode/extensions.json
-!.vscode/launch.json
-!.vscode/settings.json
-!.vscode/tasks.json
 
 # Home Assistant configuration
 config/*
@@ -27,3 +24,9 @@ js/coverage/
 .context/
 .env.workspace
 **/.gstack-qa/
+
+# Local/private workspace artifacts (agent configs, QA proofs, Conductor workspace files)
+CLAUDE.md
+AUTHOR-NOTES.md
+conductor.json
+proof/
