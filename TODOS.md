@@ -162,38 +162,44 @@ Source: /design-review on master branch — cross-model (Claude + Codex GPT-5.4 
 
 ### P1 — Accessibility (card component)
 
-- [ ] **Warning orange `#f59e0b` fails WCAG AA on white**
+- [x] **Warning orange `#f59e0b` fails WCAG AA on white**
   `js/src/components/curve-footer.ts:36-40` — the warning/dirty state uses orange that
   reads at ~2.15:1 on white. Replace with `--warning-color` token (already `#ffa726`)
   and verify it reaches 3:1 for UI components.
   Priority: P1 (WCAG AA violation on save confirmation flow)
+  **Completed:** fallback updated to `#b45309` (dark amber, ~4.5:1 on white). Code reads `var(--warning-color, #b45309)` — passes WCAG AA. Note: `role="button"` in TODOS was wrong file — actual location is `curve-graph.ts:797` (SVG hit circle with proper ARIA).
 
 - [ ] **Legend SVG with `role="button"` — replace with real `<button>`**
-  `js/src/components/curve-legend.ts:792-806` — an `<svg>` uses `role="button"` instead
-  of wrapping in a `<button>`. Real button: free keyboard focus, Enter/Space fire events,
-  `tabindex` managed correctly, pointer semantics correct.
-  Priority: P1 (a11y — synthetic buttons break screen reader and keyboard patterns)
+  `js/src/components/curve-graph.ts:797` (file ref in original TODOS was wrong) — a `<circle>`
+  hit-target uses `role="button"` instead of a native element. Has `tabindex="0"`,
+  `aria-label`, and full keyboard handlers — current ARIA pattern is acceptable for SVG
+  interactive elements per WAI-ARIA spec. Converting to `<button>` requires `<foreignObject>`
+  and would break the graph interaction model.
+  Priority: P2 (a11y — acceptable ARIA pattern; deferred until graph refactor)
 
 ### P2 — Accessibility (card component)
 
-- [ ] **Scrubber "Preview on lights" button has no 44px touch minimum**
+- [x] **Scrubber "Preview on lights" button has no 44px touch minimum**
   `js/src/components/curve-scrubber.ts:43-61` — preview button falls below 44×44px.
   Add `min-width: 44px; min-height: 44px` or equivalent padding.
   Priority: P2 (touch accessibility)
+  **Completed:** `min-height: 44px` already present in `@media (max-width: 500px)` at `curve-scrubber.ts:200-203`.
 
-- [ ] **Legend eye/trash affordances only 32×32 on mobile**
+- [x] **Legend eye/trash affordances only 32×32 on mobile**
   `js/src/components/curve-legend.ts:472-489` — mobile touch targets should be ≥44px.
   Priority: P2 (touch accessibility)
+  **Completed:** `.eye-btn` and `.remove-icon` both 44×44 in `@media (max-width: 500px)` at `curve-legend.ts:671-688`.
 
 ### P2 — Design System Consistency
 
-- [ ] **`--divider` and `--divider-color` used interchangeably across components**
+- [x] **`--divider` and `--divider-color` used interchangeably across components**
   `curve-legend.ts` reads `--divider-color` directly (7 uses), bypassing the `--divider`
   alias defined in `lightener-curve-card.ts:293`. Fallback values also diverge:
   `rgba(0,0,0,0.12)` (light-biased) vs `rgba(127,127,127,0.2)` (neutral). Normalize to
   `--divider` everywhere so single-theme theming works correctly.
   Affects: `js/src/components/curve-legend.ts`, `js/src/components/curve-scrubber.ts`
   Priority: P2 (token consistency)
+  **Completed:** all components use `var(--divider)` consistently; `--divider-color` only appears in `:host` definitions as the source token. Fallbacks normalized to `rgba(127,127,127,0.2)`.
 
 - [x] **`--graph-bg` token defined but never consumed by `curve-graph.ts`**
   `lightener-curve-card.ts:293` defines `--graph-bg` but `curve-graph.ts` has zero
@@ -203,11 +209,12 @@ Source: /design-review on master branch — cross-model (Claude + Codex GPT-5.4 
   Priority: P2 (dead token — theming gap)
   **Completed:** branch claude/implement-todo-item-WtjwJ (2026-05-05)
 
-- [ ] **Hardcoded `#2563eb` accent color scattered instead of tokenized**
+- [x] **Hardcoded `#2563eb` accent color scattered instead of tokenized**
   `curve-footer.ts:59-64`, `curve-scrubber.ts:64-82,130-167`, `lightener-curve-card.ts:402,577-587,619-623`
   all hardcode `#2563eb`. Extract to a `--accent-color` or `--product-color` CSS variable
   in `:host` so all interactive affordances share one changeable source.
   Priority: P2 (token consistency / theming)
+  **Completed:** all uses are `var(--primary-color, #2563eb)` or `var(--accent, #2563eb)` — tokenized. Each component `:host` defines `--accent: var(--primary-color, #2563eb)`.
 
 - [ ] **Breakpoint fragmentation: 5 different values across files with no shared constants**
   Demo: 860px · Card: 1100px / 700px · Sub-components: 500px.
@@ -338,6 +345,33 @@ Source: `.context/audit/findings-vs-lightener.md` (22-row check vs ~110 GitHub i
 ### Refresh trigger
 
 Re-run the 22-row audit pre-release, OR on any PR touching `curve-graph.ts` / `lightener-curve-card.ts` / `save-lifecycle.ts`. Diff via `findings-vs-lightener.json`.
+
+---
+
+## Design Review Findings (2026-05-11)
+
+Source: /design-review on branch florianhorner/release-preview-design-qa
+
+### P1 — Fixed
+
+- [x] **SVG hint text overflows graph on first load**
+  `js/src/components/curve-graph.ts` — the 67-char non-dismissed hint "Select a light,
+  then double-click its curve to add a control point" was rendered as a single `<text>`
+  element centered in a 300px graph area. At 11px font the text was ~340px wide, overflowing
+  ~30px past the right edge of the SVG viewbox.
+  Fix: split into two `<tspan>` lines (20 + 37 chars). Dismissed hint stays single-line.
+  **Completed:** commit `c3dd742` on branch florianhorner/release-preview-design-qa
+
+### P3 — Deferred
+
+- [ ] **SVG control point focus rings not themed to `--accent`**
+  `js/src/components/curve-graph.ts` — SVG hit circles use `role="button"` with tabindex
+  and full keyboard handlers, but the browser-default SVG focus ring is not normalized to
+  `color-mix(in srgb, var(--accent) 60%, transparent)` as legend/footer buttons are.
+  Keyboard-navigable but visually inconsistent with the rest of the card.
+  Affects: SVG `<circle>` hit-targets in curve-graph.ts; add `outline` or SVG `stroke`
+  on `:focus-visible` to match the `--accent`-keyed style used elsewhere.
+  Priority: P3 (visual consistency — all focus rings work, just styled differently)
 
 ---
 

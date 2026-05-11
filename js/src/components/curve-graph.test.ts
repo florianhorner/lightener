@@ -306,9 +306,10 @@ describe('curve-graph first-time hint', () => {
     await graph.updateComplete;
     const hint = graph.shadowRoot!.querySelector<SVGTextElement>('.hint-select')!;
     expect(hint).not.toBeNull();
-    expect(hint.textContent).toBe(
-      'Select a light, then double-click its curve to add a control point'
-    );
+    const text = hint.textContent?.replace(/\s+/g, ' ').trim();
+    expect(text).toContain('Select a light, then');
+    expect(text).toContain('double-click its curve to add a point');
+    expect(hint.querySelectorAll('tspan')).toHaveLength(2);
   });
 
   it('falls back to the short hint after the user has interacted in the current entity session', async () => {
@@ -334,9 +335,11 @@ describe('curve-graph first-time hint', () => {
 
     graph.entityId = 'light.lightener_b';
     await graph.updateComplete;
-    expect(graph.shadowRoot!.querySelector<SVGTextElement>('.hint-select')!.textContent).toBe(
-      'Select a light, then double-click its curve to add a control point'
-    );
+    const resetHintEl = graph.shadowRoot!.querySelector<SVGTextElement>('.hint-select')!;
+    const resetHint = resetHintEl.textContent?.replace(/\s+/g, ' ').trim();
+    expect(resetHint).toContain('Select a light, then');
+    expect(resetHint).toContain('double-click its curve to add a point');
+    expect(resetHintEl.querySelectorAll('tspan')).toHaveLength(2);
   });
 
   it('renders the scrubber dim overlay using the --graph-bg token (themeable)', async () => {
