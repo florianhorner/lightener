@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **TypeScript strictness tightened.** `noUnusedLocals` and `noUnusedParameters` are now enforced in `js/tsconfig.json`. Three dead symbols were removed to clear the new flags: the unused `curve` parameter in `_renderTooltip`, the never-called `makeScrubber` test helper, and the immediately-overwritten `originalStop` variable.
+
 ### Fixed
 
 - **Graph hint text no longer overflows on first load.** The two-line "Select a light, then double-click its curve" hint was rendering as a single line that extended ~30px past the right edge of the graph area. It now splits cleanly into two centered lines with proper line spacing at all breakpoints (11px desktop, 14px mobile).
