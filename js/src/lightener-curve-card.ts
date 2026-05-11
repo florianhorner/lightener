@@ -1022,7 +1022,7 @@ export class LightenerCurveCard extends LitElement {
       this._loading = false;
       // If entity changed during flight, trigger reload for the new entity
       if (this._entityId !== requestedEntity) {
-        this._tryLoadCurves();
+        void this._tryLoadCurves();
       }
     }
     if (
