@@ -38,6 +38,15 @@ class LightenerEditorPanel extends HTMLElement {
     try {
       this._requestedConfigEntryId = new URLSearchParams(window.location.search).get("config_entry");
     } catch (err) {}
+    try {
+      // ?action=new lets the cog flow (HA Settings -> Add Integration -> Lightener)
+      // hand off into this panel and immediately open the create-group wizard,
+      // unifying the two onboarding entry points so users see the same UX
+      // regardless of where they started. Consumed once on first hass set.
+      this._pendingAction = new URLSearchParams(window.location.search).get("action");
+    } catch (err) {
+      this._pendingAction = null;
+    }
   }
 
   set hass(hass) {
@@ -62,6 +71,31 @@ class LightenerEditorPanel extends HTMLElement {
 
     this._render();
     this._syncCard();
+    this._maybeAutoOpenCreateGroup();
+  }
+
+  _maybeAutoOpenCreateGroup() {
+    // Consume the ?action=new handoff exactly once — only if the panel can
+    // actually open the wizard (admin user, no scoped config-entry mode).
+    if (this._pendingAction !== "new") return;
+    const isAdmin = !!(this._hass?.user?.is_admin);
+    if (!isAdmin || this._requestedConfigEntryId) {
+      this._pendingAction = null;
+      return;
+    }
+    if (!this.shadowRoot?.querySelector("#create-group-modal")) {
+      // Render hasn't built the modal DOM yet; try again on next hass set.
+      return;
+    }
+    this._pendingAction = null;
+    this._openCreateGroupModal();
+    // Strip ?action=new so a page refresh doesn't re-open the modal. Preserve
+    // every other query param (e.g. ?config_entry=X) the panel may rely on.
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("action");
+      window.history.replaceState(null, "", url.toString());
+    } catch (err) {}
   }
 
   connectedCallback() {
@@ -803,11 +837,73 @@ class LightenerEditorPanel extends HTMLElement {
           .modal-error[hidden] {
             display: none;
           }
+          .modal-header {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+          }
+          .step-indicator {
+            list-style: none;
+            display: flex;
+            gap: 8px;
+            padding: 0;
+            margin: 0;
+            font-size: 0.78rem;
+            color: var(--secondary-text-color);
+          }
+          .step-indicator li {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            opacity: 0.55;
+          }
+          .step-indicator li.active {
+            opacity: 1;
+            color: var(--primary-text-color);
+          }
+          .step-indicator li.done {
+            opacity: 0.85;
+          }
+          .step-dot {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--divider-color, rgba(0,0,0,0.12));
+            color: var(--primary-text-color);
+            font-size: 0.75rem;
+            font-weight: 600;
+          }
+          .step-indicator li.active .step-dot {
+            background: #2563eb;
+            color: #fff;
+          }
+          .step-indicator li.done .step-dot {
+            background: rgba(37, 99, 235, 0.25);
+            color: #2563eb;
+          }
+          .step-indicator li:not(:last-child)::after {
+            content: "";
+            display: inline-block;
+            width: 18px;
+            height: 1px;
+            background: var(--divider-color, rgba(0,0,0,0.12));
+            margin-left: 4px;
+          }
+          .modal-step[hidden] {
+            display: none;
+          }
           .modal-actions {
             display: flex;
-            justify-content: flex-end;
+            align-items: center;
             gap: 8px;
             margin-top: 18px;
+          }
+          .modal-actions-spacer {
+            flex: 1;
           }
           .modal-btn {
             padding: 9px 18px;
@@ -841,6 +937,25 @@ class LightenerEditorPanel extends HTMLElement {
             .switch-guard {
               align-items: stretch;
               flex-direction: column;
+            }
+          }
+          @media (max-width: 500px) {
+            .modal {
+              padding: 0;
+            }
+            .modal-content {
+              max-width: 100%;
+              width: 100%;
+              height: 100vh;
+              max-height: 100vh;
+              border-radius: 0;
+              padding: 18px 16px 14px;
+            }
+            .modal-actions {
+              position: sticky;
+              bottom: 0;
+              padding-top: 12px;
+              background: var(--card-background-color);
             }
           }
         </style>
@@ -877,21 +992,43 @@ class LightenerEditorPanel extends HTMLElement {
           <div id="create-group-modal" class="modal" hidden>
             <div class="modal-backdrop" id="create-group-backdrop"></div>
             <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="create-group-title">
-              <h2 id="create-group-title">Create Lightener group</h2>
+              <div class="modal-header">
+                <h2 id="create-group-title">Create Lightener group</h2>
+                <ol id="cgf-step-indicator" class="step-indicator" aria-label="Wizard progress">
+                  <li data-step="0" class="active"><span class="step-dot">1</span><span class="step-label">Name</span></li>
+                  <li data-step="1"><span class="step-dot">2</span><span class="step-label">Area</span></li>
+                  <li data-step="2"><span class="step-dot">3</span><span class="step-label">Lights</span></li>
+                </ol>
+              </div>
               <div id="create-group-error" class="modal-error" hidden></div>
               <form id="create-group-form">
-                <div class="modal-field">
-                  <label for="cgf-name">Name</label>
-                  <input id="cgf-name" type="text" placeholder="e.g. Living Room" required>
+                <div class="modal-step" data-step="0">
+                  <div class="modal-field">
+                    <label for="cgf-name">Name</label>
+                    <input id="cgf-name" type="text" placeholder="e.g. Living Room" required>
+                    <p class="modal-hint">A room or area name works best — e.g. "Living Room" or "Kitchen".</p>
+                  </div>
                 </div>
-                <div class="modal-field">
-                  <label>Lights to control</label>
-                  <div id="cgf-lights-mount"></div>
+                <div class="modal-step" data-step="1" hidden>
+                  <div class="modal-field">
+                    <label>Filter lights by area (optional)</label>
+                    <div id="cgf-area-mount"></div>
+                    <p class="modal-hint">Pick a room to narrow the lights picker on the next step. Leave empty to see every light. Useful when you have lots of lights.</p>
+                  </div>
                 </div>
-                <p class="modal-hint">Each light starts on a linear curve. Pick a preset and shape it visually after the group is created.</p>
+                <div class="modal-step" data-step="2" hidden>
+                  <div class="modal-field">
+                    <label>Lights to control</label>
+                    <div id="cgf-lights-mount"></div>
+                  </div>
+                  <p class="modal-hint">Each light starts on a linear curve. Pick a preset and shape it visually after the group is created.</p>
+                </div>
                 <div class="modal-actions">
                   <button id="cgf-cancel" type="button" class="modal-btn">Cancel</button>
-                  <button id="cgf-submit" type="submit" class="modal-btn primary">Create group</button>
+                  <span class="modal-actions-spacer"></span>
+                  <button id="cgf-back" type="button" class="modal-btn" hidden>Back</button>
+                  <button id="cgf-next" type="button" class="modal-btn primary">Next</button>
+                  <button id="cgf-submit" type="submit" class="modal-btn primary" hidden>Create group</button>
                 </div>
               </form>
             </div>
@@ -919,7 +1056,19 @@ class LightenerEditorPanel extends HTMLElement {
       });
       this.shadowRoot.querySelector("#create-group-form").addEventListener("submit", (event) => {
         event.preventDefault();
-        this._submitCreateGroup();
+        // Form submit can fire from Enter on any input. Route to the wizard:
+        // last step -> create the group, earlier steps -> advance.
+        if (this._createGroupStep === 2) {
+          this._submitCreateGroup();
+        } else {
+          this._goCreateGroupNext();
+        }
+      });
+      this.shadowRoot.querySelector("#cgf-back").addEventListener("click", () => {
+        if (!this._createGroupSubmitting) this._goCreateGroupBack();
+      });
+      this.shadowRoot.querySelector("#cgf-next").addEventListener("click", () => {
+        if (!this._createGroupSubmitting) this._goCreateGroupNext();
       });
       this.shadowRoot.querySelector("#cgf-name").addEventListener("input", () => {
         this._setCreateGroupSubmitDisabled();
@@ -976,6 +1125,23 @@ class LightenerEditorPanel extends HTMLElement {
     ]);
   }
 
+  async _ensureAreaPickerLoaded() {
+    if (customElements.get("ha-area-picker")) return;
+    try {
+      if (typeof window.loadCardHelpers === "function") {
+        await window.loadCardHelpers();
+      }
+    } catch (_) {}
+    try {
+      const cls = customElements.get("hui-entities-card");
+      await cls?.getConfigElement?.();
+    } catch (_) {}
+    await Promise.race([
+      customElements.whenDefined("ha-area-picker"),
+      new Promise((r) => setTimeout(r, 1500)),
+    ]);
+  }
+
   _openCreateGroupModal() {
     if (this._createGroupSubmitting) return;
     const modal = this.shadowRoot.querySelector("#create-group-modal");
@@ -986,12 +1152,17 @@ class LightenerEditorPanel extends HTMLElement {
     this._createGroupOpenToken = (this._createGroupOpenToken || 0) + 1;
     this._createGroupSubmitting = false;
     this._createGroupSelectedLights = [];
+    this._createGroupAreaId = null;
+    this._createGroupStep = 0;
+    // Track the highest step the user has reached so the indicator can
+    // mark visited steps as "done" even after the user clicks Back.
+    this._createGroupMaxStep = 0;
     const nameInput = this.shadowRoot.querySelector("#cgf-name");
     nameInput.value = "";
     const errorEl = this.shadowRoot.querySelector("#create-group-error");
     errorEl.hidden = true;
     errorEl.textContent = "";
-    this._renderCreateGroupLightsPicker(this._createGroupOpenToken);
+    this._renderCreateGroupStep();
     this._setCreateGroupSubmitDisabled();
     modal.hidden = false;
     setTimeout(() => nameInput.focus(), 0);
@@ -1002,23 +1173,199 @@ class LightenerEditorPanel extends HTMLElement {
     if (modal) modal.hidden = true;
   }
 
-  async _renderCreateGroupLightsPicker(openToken = this._createGroupOpenToken) {
+  _renderCreateGroupStep() {
+    const step = this._createGroupStep || 0;
+    const root = this.shadowRoot;
+    if (!root) return;
+    // Toggle step panels.
+    root.querySelectorAll(".modal-step").forEach((el) => {
+      const elStep = Number(el.getAttribute("data-step"));
+      el.hidden = elStep !== step;
+    });
+    // Update step indicator. "done" reflects the highest step ever visited,
+    // so navigating Back doesn't visually undo the user's progress.
+    const maxStep = Math.max(this._createGroupMaxStep || 0, step);
+    this._createGroupMaxStep = maxStep;
+    root.querySelectorAll("#cgf-step-indicator li").forEach((el) => {
+      const elStep = Number(el.getAttribute("data-step"));
+      el.classList.remove("active", "done");
+      el.removeAttribute("aria-current");
+      if (elStep === step) {
+        el.classList.add("active");
+        el.setAttribute("aria-current", "step");
+      } else if (elStep <= maxStep) {
+        el.classList.add("done");
+      }
+    });
+    // Toggle action buttons.
+    const backBtn = root.querySelector("#cgf-back");
+    const nextBtn = root.querySelector("#cgf-next");
+    const submitBtn = root.querySelector("#cgf-submit");
+    if (backBtn) backBtn.hidden = step === 0;
+    if (nextBtn) nextBtn.hidden = step === 2;
+    if (submitBtn) submitBtn.hidden = step !== 2;
+    // Bump the per-render token before kicking off async picker mounts.
+    // This invalidates any in-flight render from a prior step change so
+    // rapid Next/Back navigation can't append duplicate pickers into the
+    // same mount once their lazy-load resolves.
+    this._createGroupRenderToken = (this._createGroupRenderToken || 0) + 1;
+    const renderToken = this._createGroupRenderToken;
+    if (step === 1) {
+      this._renderCreateGroupAreaPicker(this._createGroupOpenToken, renderToken);
+    } else if (step === 2) {
+      this._renderCreateGroupLightsPicker(this._createGroupOpenToken, renderToken);
+    }
+    this._setCreateGroupSubmitDisabled();
+    // Move focus into the active step for keyboard users.
+    if (step === 0) {
+      const name = root.querySelector("#cgf-name");
+      if (name) setTimeout(() => name.focus(), 0);
+    }
+  }
+
+  _goCreateGroupNext() {
+    const step = this._createGroupStep || 0;
+    if (step >= 2) return;
+    // Name is required to leave step 0 OR to advance from any later step
+    // (e.g. user could have cleared the name input via Back navigation).
+    // Validating on every Next keeps the contract symmetric with the submit
+    // button, which is also gated on hasName.
+    const nameInput = this.shadowRoot.querySelector("#cgf-name");
+    const name = (nameInput?.value || "").trim();
+    if (!name) {
+      // Snap user back to the name step so they can fix it.
+      this._createGroupStep = 0;
+      this._renderCreateGroupStep();
+      nameInput?.focus();
+      return;
+    }
+    this._createGroupStep = step + 1;
+    this._renderCreateGroupStep();
+  }
+
+  _goCreateGroupBack() {
+    const step = this._createGroupStep || 0;
+    if (step <= 0) return;
+    this._createGroupStep = step - 1;
+    this._renderCreateGroupStep();
+  }
+
+  async _renderCreateGroupAreaPicker(openToken = this._createGroupOpenToken, renderToken = this._createGroupRenderToken) {
+    const mount = this.shadowRoot.querySelector("#cgf-area-mount");
+    if (!mount) return;
+    mount.innerHTML = "";
+    await this._ensureAreaPickerLoaded();
+    const modal = this.shadowRoot.querySelector("#create-group-modal");
+    if (
+      openToken !== this._createGroupOpenToken ||
+      renderToken !== this._createGroupRenderToken ||
+      !this.shadowRoot.querySelector("#cgf-area-mount") ||
+      !modal ||
+      modal.hidden
+    ) {
+      return;
+    }
+    if (customElements.get("ha-area-picker")) {
+      const picker = document.createElement("ha-area-picker");
+      picker.hass = this._hass;
+      picker.value = this._createGroupAreaId || "";
+      picker.addEventListener("value-changed", (event) => {
+        // Defensive: third-party HA forks have been observed to emit
+        // event.detail.value as an object ({area_id, name}) instead of a
+        // plain string. Coerce to string before trimming so we never throw.
+        const rawValue = event.detail?.value;
+        const id = typeof rawValue === "string" ? rawValue.trim() : "";
+        this._createGroupAreaId = id || null;
+      });
+      mount.appendChild(picker);
+    } else {
+      // Fallback: HA never registered <ha-area-picker>. Skip the area step
+      // gracefully — the user can still proceed without filtering.
+      const note = document.createElement("p");
+      note.className = "modal-hint";
+      note.textContent = "Area picker unavailable — skip this step.";
+      mount.appendChild(note);
+    }
+  }
+
+  _lightenerEntityIds() {
+    const ids = new Set();
+    if (Array.isArray(this._lightenerEntities)) {
+      for (const e of this._lightenerEntities) {
+        if (e?.entity_id) ids.add(e.entity_id);
+      }
+    }
+    return Array.from(ids);
+  }
+
+  _lightsInArea(areaId) {
+    // Mirrors the area-resolution rule in
+    // custom_components/lightener/config_flow.py::_light_entity_ids_in_area
+    // (a light is "in" an area if its entity entry has area_id matching, OR
+    // if the entry has no area_id but its parent device's area_id matches).
+    // Both implementations must stay in sync — backend rule changes need to
+    // propagate to this client-side filter.
+    // Returns null when no area is selected (caller treats as "no filter"),
+    // an array (possibly empty) when an area is selected.
+    if (!areaId || !this._hass) return null;
+    const entities = this._hass.entities || {};
+    const devices = this._hass.devices || {};
+    const inArea = new Set();
+    for (const [entityId, entry] of Object.entries(entities)) {
+      if (!entityId.startsWith("light.")) continue;
+      if (entry?.area_id === areaId) {
+        inArea.add(entityId);
+        continue;
+      }
+      const deviceId = entry?.device_id;
+      if (!entry?.area_id && deviceId && devices[deviceId]?.area_id === areaId) {
+        inArea.add(entityId);
+      }
+    }
+    return Array.from(inArea);
+  }
+
+  async _renderCreateGroupLightsPicker(openToken = this._createGroupOpenToken, renderToken = this._createGroupRenderToken) {
     const mount = this.shadowRoot.querySelector("#cgf-lights-mount");
     if (!mount) return;
     mount.innerHTML = "";
     await this._ensureEntityPickerLoaded();
     // The mount stays in the DOM while the modal is hidden, so checking its
     // existence is not enough to detect a close-and-reopen during the warm-up.
-    // Reject this render if the open-cycle token has moved on or the modal
-    // is no longer visible.
+    // Reject this render if the open-cycle token, the per-render token, or
+    // the modal visibility has moved on. The render token guards against
+    // rapid Next/Back navigation appending duplicate pickers into the mount.
     const modal = this.shadowRoot.querySelector("#create-group-modal");
     if (
       openToken !== this._createGroupOpenToken ||
+      renderToken !== this._createGroupRenderToken ||
       !this.shadowRoot.querySelector("#cgf-lights-mount") ||
       !modal ||
       modal.hidden
     ) {
       return;
+    }
+    // Existing Lightener entities must not appear in the picker — selecting one
+    // creates a recursive group that deadlocks the HA event loop. The backend
+    // also enforces this (commit 5c7a009); the client-side filter is for UX
+    // clarity so the user never sees an invalid option.
+    const excluded = this._lightenerEntityIds();
+    const areaId = this._createGroupAreaId;
+    // Honor area filter even when it resolves to zero lights — show an empty
+    // picker rather than silently widening to ALL lights, which would let the
+    // user submit lights that don't belong to the chosen area. If the entity
+    // registry isn't loaded yet (no _hass.entities), areaLights returns null
+    // and we fall through to the unfiltered picker with a console warning so
+    // the user isn't blocked.
+    let areaLights = null;
+    if (areaId) {
+      if (this._hass?.entities) {
+        areaLights = this._lightsInArea(areaId);
+      } else {
+        console.warn(
+          "[lightener] hass.entities not available — cannot apply area filter; showing all lights.",
+        );
+      }
     }
     let picker;
     if (customElements.get("ha-entity-picker")) {
@@ -1027,6 +1374,13 @@ class LightenerEditorPanel extends HTMLElement {
       picker.includeDomains = ["light"];
       picker.allowCustomEntity = true;
       picker.value = "";
+      if (excluded.length) picker.excludeEntities = excluded;
+      if (areaLights !== null) {
+        // areaLights is [] when the area genuinely has no lights — pass it
+        // through so the picker accurately reflects "your area is empty"
+        // instead of silently widening to every light.
+        picker.includeEntities = areaLights.filter((id) => !excluded.includes(id));
+      }
       picker.addEventListener("value-changed", (event) => {
         const id = (event.detail?.value || "").trim();
         if (!id) return;
@@ -1127,12 +1481,19 @@ class LightenerEditorPanel extends HTMLElement {
   }
 
   _setCreateGroupSubmitDisabled() {
-    const btn = this.shadowRoot.querySelector("#cgf-submit");
-    if (!btn) return;
+    const submitBtn = this.shadowRoot.querySelector("#cgf-submit");
+    const nextBtn = this.shadowRoot.querySelector("#cgf-next");
     const nameInput = this.shadowRoot.querySelector("#cgf-name");
     const hasName = !!(nameInput?.value || "").trim();
     const hasLights = this._createGroupSelectedLights.length > 0;
-    btn.disabled = this._createGroupSubmitting || !hasName || !hasLights;
+    if (submitBtn) {
+      submitBtn.disabled = this._createGroupSubmitting || !hasName || !hasLights;
+    }
+    if (nextBtn) {
+      // Next on step 0 requires a name; on step 1 (area) it's always enabled.
+      const step = this._createGroupStep || 0;
+      nextBtn.disabled = this._createGroupSubmitting || (step === 0 && !hasName);
+    }
   }
 
   async _submitCreateGroup() {
@@ -1145,10 +1506,12 @@ class LightenerEditorPanel extends HTMLElement {
     const errorEl = this.shadowRoot.querySelector("#create-group-error");
     const submitBtn = this.shadowRoot.querySelector("#cgf-submit");
     const cancelBtn = this.shadowRoot.querySelector("#cgf-cancel");
+    const backBtn = this.shadowRoot.querySelector("#cgf-back");
     const name = (nameInput?.value || "").trim();
     // Snapshot mutable modal state before any awaits — the user can keep
     // editing the lights list while the API calls are in flight.
     const selectedLights = [...this._createGroupSelectedLights];
+    const areaId = this._createGroupAreaId || null;
     if (!name || selectedLights.length === 0) {
       this._createGroupSubmitting = false;
       return;
@@ -1158,11 +1521,12 @@ class LightenerEditorPanel extends HTMLElement {
     errorEl.textContent = "";
     submitBtn.disabled = true;
     if (cancelBtn) cancelBtn.disabled = true;
+    if (backBtn) backBtn.disabled = true;
     submitBtn.textContent = "Creating…";
 
     let flowId = null;
     try {
-      console.debug("[lightener] create-group: init", { name, lights: selectedLights });
+      console.debug("[lightener] create-group: init", { name, lights: selectedLights, areaId });
       const init = await this._hass.callApi("POST", "config/config_entries/flow", {
         handler: "lightener",
         show_advanced_options: false,
@@ -1174,15 +1538,24 @@ class LightenerEditorPanel extends HTMLElement {
         throw new Error(step?.reason || "Could not start config flow");
       }
 
+      // Verify the flow init landed at the expected step before walking
+      // forward. If a future backend reshuffle (e.g. step 4 of the unify
+      // plan collapses these into a single redirect step) changes the
+      // shape, this catches the mismatch before we POST a malformed body.
+      this._assertFlowStep(init, "user", "Lightener config flow looks out of date — try refreshing the page");
+
       console.debug("[lightener] create-group: name step");
       step = await this._hass.callApi("POST", `config/config_entries/flow/${flowId}`, { name });
       console.debug("[lightener] create-group: name result", step);
       this._raiseFlowError(step, "Could not set group name");
+      this._assertFlowStep(step, "area", "Could not set group name");
 
-      console.debug("[lightener] create-group: area step");
-      step = await this._hass.callApi("POST", `config/config_entries/flow/${flowId}`, {});
+      console.debug("[lightener] create-group: area step", { areaId });
+      const areaPayload = areaId ? { area_id: areaId } : {};
+      step = await this._hass.callApi("POST", `config/config_entries/flow/${flowId}`, areaPayload);
       console.debug("[lightener] create-group: area result", step);
-      this._raiseFlowError(step, "Could not skip area filter");
+      this._raiseFlowError(step, "Could not apply area filter");
+      this._assertFlowStep(step, "lights", "Could not apply area filter");
 
       console.debug("[lightener] create-group: lights step");
       step = await this._hass.callApi("POST", `config/config_entries/flow/${flowId}`, {
@@ -1231,6 +1604,7 @@ class LightenerEditorPanel extends HTMLElement {
       this._createGroupSubmitting = false;
       submitBtn.disabled = false;
       if (cancelBtn) cancelBtn.disabled = false;
+      if (backBtn) backBtn.disabled = false;
       submitBtn.textContent = "Create group";
       this._setCreateGroupSubmitDisabled();
     }
@@ -1244,6 +1618,19 @@ class LightenerEditorPanel extends HTMLElement {
     if (step.type === "form" && step.errors && Object.keys(step.errors).length) {
       const code = Object.values(step.errors)[0];
       throw new Error(typeof code === "string" ? code : fallback);
+    }
+  }
+
+  _assertFlowStep(step, expectedStepId, fallback) {
+    // Defensive: confirm the backend advanced to the step we expect before
+    // sending the next payload. Catches frontend/backend version skew where
+    // the flow shape changed under us — without this, the next POST sends
+    // valid-looking JSON to the wrong step and the user sees a misleading
+    // error from the wrong layer.
+    if (step?.type === "form" && step.step_id && step.step_id !== expectedStepId) {
+      throw new Error(
+        `${fallback} (expected step "${expectedStepId}", got "${step.step_id}")`
+      );
     }
   }
 }
