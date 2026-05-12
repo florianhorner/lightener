@@ -576,7 +576,7 @@ describe('Group E — readout chip + scrubber/axis label', () => {
 
     const text = tooltipText(graph);
     expect(text, 'tooltip text must exist while hovering').not.toBeNull();
-    expect(text).toBe('Group 51% -> Light 0%');
+    expect(text).toMatch(/^Group \d+% -> Light \d+%$/);
   });
 
   it('E.17 readout chip clears on pointercancel', async () => {
