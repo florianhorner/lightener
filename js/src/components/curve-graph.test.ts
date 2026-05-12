@@ -565,7 +565,7 @@ describe('Group E — readout chip + scrubber/axis label', () => {
     return text ? (text.textContent ?? '').trim() : null;
   }
 
-  it('E.16 shows the readout chip in (input %, output %) format on hover', async () => {
+  it('E.16 shows the readout chip with labeled group and light percentages on hover', async () => {
     const graph = makeFocusableGraph();
     await graph.updateComplete;
 
@@ -576,7 +576,7 @@ describe('Group E — readout chip + scrubber/axis label', () => {
 
     const text = tooltipText(graph);
     expect(text, 'tooltip text must exist while hovering').not.toBeNull();
-    expect(text).toMatch(/^\(\s*\d+%\s*,\s*\d+%\s*\)$/);
+    expect(text).toBe('Group 51% -> Light 0%');
   });
 
   it('E.17 readout chip clears on pointercancel', async () => {
@@ -639,6 +639,18 @@ describe('Group E — readout chip + scrubber/axis label', () => {
 
     const text = tooltipText(graph) ?? '';
     expect(text, 'integer points must not render with decimals').not.toMatch(/\.\d/);
+  });
+
+  it('E.18b renders a themeable plot frame aligned to the graph bounds', async () => {
+    const graph = makeFocusableGraph();
+    await graph.updateComplete;
+
+    const frame = graph.shadowRoot!.querySelector<SVGRectElement>('rect.plot-frame');
+    expect(frame).not.toBeNull();
+    expect(frame!.getAttribute('x')).toBe('44');
+    expect(frame!.getAttribute('y')).toBe('12');
+    expect(frame!.getAttribute('width')).toBe('300');
+    expect(frame!.getAttribute('height')).toBe('200');
   });
 
   it('E.19 graph does not render its own "Group brightness" x-axis label', async () => {

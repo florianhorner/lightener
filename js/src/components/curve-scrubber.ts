@@ -33,14 +33,28 @@ export class CurveScrubber extends LitElement {
     .scrubber-header {
       display: flex;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: space-between;
+      gap: 12px;
       margin-bottom: 10px;
-      min-height: 22px;
+      min-height: 26px;
     }
-    .scrubber-label {
-      font-size: 11px;
+    .scrubber-heading {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .scrubber-title {
+      font-size: 12px;
       font-weight: 600;
+      color: var(--primary-text-color, #212121);
+      line-height: 1.2;
+    }
+    .scrubber-helper {
+      font-size: 10px;
+      font-weight: 500;
       color: var(--secondary-text-color, #616161);
+      line-height: 1.25;
     }
     .preview-toggle-btn {
       border: 1px solid var(--divider);
@@ -194,13 +208,19 @@ export class CurveScrubber extends LitElement {
       .position-label {
         font-size: 12px;
       }
-      .scrubber-label {
+      .scrubber-title {
         font-size: 13px;
+      }
+      .scrubber-helper {
+        font-size: 11px;
       }
       .preview-toggle-btn {
         font-size: 11px;
         padding: 0 12px;
         min-height: 44px;
+      }
+      .scrubber-header {
+        align-items: flex-start;
       }
     }
   `;
@@ -286,6 +306,10 @@ export class CurveScrubber extends LitElement {
     return html`
       <div class="scrubber-panel">
         <div class="scrubber-header">
+          <div class="scrubber-heading">
+            <div class="scrubber-title">Preview group brightness</div>
+            <div class="scrubber-helper">Move the slider to preview each light output.</div>
+          </div>
           ${this.canPreview
             ? this.previewActive
               ? html`<button class="preview-toggle-btn active" @click=${this._onPreviewToggle}>
@@ -303,11 +327,11 @@ export class CurveScrubber extends LitElement {
           role="slider"
           tabindex="${this.readOnly ? -1 : 0}"
           aria-disabled="${this.readOnly}"
-          aria-label="Brightness scrubber"
+          aria-label="Preview group brightness"
           aria-valuemin="0"
           aria-valuemax="100"
           aria-valuenow=${pos}
-          aria-valuetext="${pos}% brightness"
+          aria-valuetext="${pos}% group brightness"
           @click=${this._onTrackClick}
           @keydown=${this._onKeyDown}
         >

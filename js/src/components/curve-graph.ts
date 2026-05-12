@@ -76,6 +76,12 @@ export class CurveGraph extends LitElement {
       stroke-width: 0.75;
       opacity: 0.4;
     }
+    .plot-frame {
+      fill: var(--graph-bg, var(--ha-card-background, var(--card-background-color, #fff)));
+      stroke: var(--divider-color, rgba(127, 127, 127, 0.2));
+      stroke-width: 0.75;
+      opacity: 0.95;
+    }
     .axis-label {
       fill: var(--secondary-text, #616161);
       font-size: 10px;
@@ -126,13 +132,18 @@ export class CurveGraph extends LitElement {
       cursor: crosshair;
     }
     .hint {
-      fill: var(--secondary-text, #616161);
+      fill: var(--primary-text-color, #212121);
       font-size: 11px;
       font-family: inherit;
-      opacity: 0.8;
+      opacity: 0.86;
+      paint-order: stroke;
+      stroke: var(--graph-bg, var(--ha-card-background, var(--card-background-color, #fff)));
+      stroke-width: 2.5px;
+      stroke-linejoin: round;
     }
     .hint-select {
-      font-weight: 500;
+      font-weight: 600;
+      opacity: 0.92;
     }
     .editing-label {
       font-size: 11px;
@@ -175,7 +186,7 @@ export class CurveGraph extends LitElement {
       fill: var(--tooltip-background-color, var(--primary-text-color, #212121));
       rx: 3;
       ry: 3;
-      opacity: 0.9;
+      opacity: 0.94;
     }
     .tooltip-text {
       fill: var(--tooltip-text-color, var(--card-background-color, #fff));
@@ -544,6 +555,10 @@ export class CurveGraph extends LitElement {
         </clipPath>
       </defs>
 
+      <rect class="plot-frame"
+        x="${PAD_LEFT}" y="${PAD_TOP}"
+        width="${GRAPH_W}" height="${GRAPH_H}" />
+
       ${ticks.map(
         (t) => svg`
         <!-- Vertical grid -->
@@ -602,12 +617,8 @@ export class CurveGraph extends LitElement {
   private _renderTooltip(cp: ControlPoint) {
     const cx = toSvgX(cp.lightener);
     const cy = toSvgY(cp.target);
-    // (input %, output %) — reads as a coordinate, not a time (T-2.1 / T-6.7).
-    const label = `(${cp.lightener}%, ${cp.target}%)`;
-    // 5.8 px/char accounts for parens and % glyphs being wider than digits at the
-    // 9.5px font-size used by .tooltip-text. Underestimating clipped the rect at
-    // max-length labels like "(100%, 100%)".
-    const textWidth = Math.ceil(label.length * 5.8);
+    const label = `Group ${cp.lightener}% -> Light ${cp.target}%`;
+    const textWidth = Math.ceil(label.length * 4.9);
     // Position above the point, clamped within viewBox
     const tx = clamp(cx - textWidth / 2 - 2, PAD_LEFT, PAD_LEFT + GRAPH_W - textWidth - 8);
     const ty = Math.max(PAD_TOP + 4, cy - 16);

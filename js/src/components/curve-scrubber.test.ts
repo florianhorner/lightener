@@ -47,11 +47,13 @@ function makeScrubber(opts?: {
 }
 
 describe('curve-scrubber — render + ARIA', () => {
-  it('does not render a redundant "Group brightness" label (deduped against the chart x-axis)', async () => {
+  it('labels the scrubber as the group brightness preview control', async () => {
     const el = makeScrubber();
     await el.updateComplete;
-    const label = el.renderRoot.querySelector('.scrubber-label');
-    expect(label).toBeNull();
+    const title = el.renderRoot.querySelector('.scrubber-title');
+    const helper = el.renderRoot.querySelector('.scrubber-helper');
+    expect(title?.textContent?.trim()).toBe('Preview group brightness');
+    expect(helper?.textContent?.trim()).toBe('Move the slider to preview each light output.');
   });
 
   it('exposes ARIA slider role with valid min/max/now/text', async () => {
@@ -62,7 +64,8 @@ describe('curve-scrubber — render + ARIA', () => {
     expect(track.getAttribute('aria-valuemin')).toBe('0');
     expect(track.getAttribute('aria-valuemax')).toBe('100');
     expect(track.getAttribute('aria-valuenow')).toBe('50');
-    expect(track.getAttribute('aria-valuetext')).toBe('50% brightness');
+    expect(track.getAttribute('aria-label')).toBe('Preview group brightness');
+    expect(track.getAttribute('aria-valuetext')).toBe('50% group brightness');
   });
 
   it('shows position label reflecting _position (default 50%)', async () => {
