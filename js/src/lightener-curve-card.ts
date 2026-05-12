@@ -303,6 +303,7 @@ export class LightenerCurveCard extends LitElement {
   private _lastPreviewTime = 0;
   private _previewRestoreBrightness: Map<string, number | null | undefined> = new Map();
   private _lastPreviewBrightness: Map<string, number | 'off'> = new Map();
+  private _previewFrameGeneration = 0;
   private _lastEmittedDirtyState = false;
   private _dirtyVersion = 0;
   private _cleanVersion = 0;
@@ -869,6 +870,7 @@ export class LightenerCurveCard extends LitElement {
     }
     this._dirtyVersion++;
     this._showPresets = false;
+    this._refreshActivePreview(true);
   }
 
   private _renderPresetsPanel() {
@@ -1096,13 +1098,14 @@ export class LightenerCurveCard extends LitElement {
         );
       }
     }
-    this._previewLights(this._scrubberPosition);
+    this._refreshActivePreview(true);
   };
 
   private _stopPreview = (): void => {
     if (!this._previewActive || !this._hass) return;
     this._previewActive = false;
     this._previewRafPending = false;
+    this._previewFrameGeneration++;
     if (this._previewTrailingTimer) {
       clearTimeout(this._previewTrailingTimer);
       this._previewTrailingTimer = null;
@@ -1134,9 +1137,27 @@ export class LightenerCurveCard extends LitElement {
 
   private _pendingPreviewPosition: number | null = null;
 
-  private _previewLights(position: number): void {
+  private _refreshActivePreview(force = false): void {
+    if (!this._previewActive) return;
+    if (this._scrubberPosition === null) {
+      this._scrubberPosition = 50;
+    }
+    this._previewLights(this._scrubberPosition, force);
+  }
+
+  private _previewLights(position: number, force = false): void {
     if (!this._previewActive || !this._hass) return;
     this._pendingPreviewPosition = position;
+    if (force) {
+      this._lastPreviewTime = 0;
+      this._previewRafPending = false;
+      this._previewFrameGeneration++;
+      this._lastPreviewBrightness.clear();
+      if (this._previewTrailingTimer) {
+        clearTimeout(this._previewTrailingTimer);
+        this._previewTrailingTimer = null;
+      }
+    }
     const now = Date.now();
     const elapsed = now - this._lastPreviewTime;
     if (elapsed < this._PREVIEW_INTERVAL_MS) {
@@ -1159,15 +1180,18 @@ export class LightenerCurveCard extends LitElement {
       this._previewTrailingTimer = null;
     }
     this._previewRafPending = true;
+    const frameGeneration = this._previewFrameGeneration;
 
     requestAnimationFrame(() => {
+      if (frameGeneration !== this._previewFrameGeneration) return;
       this._previewRafPending = false;
       if (!this._previewActive || !this._hass) return;
       this._lastPreviewTime = Date.now();
+      const previewPosition = this._pendingPreviewPosition ?? position;
 
       for (const curve of this._curves) {
         if (!curve.visible) continue;
-        const value = Math.round(sampleCurveAt(curve.controlPoints, position));
+        const value = Math.round(sampleCurveAt(curve.controlPoints, previewPosition));
         // Convert 0-100% to HA brightness 0-255
         const brightness = Math.round((value / 100) * 255);
         if (brightness === 0) {
@@ -1195,6 +1219,7 @@ export class LightenerCurveCard extends LitElement {
     // to exist and be visible.
     if (entityId !== this._selectedCurveId && !canSelectCurve(this._curves, entityId)) return;
     this._selectedCurveId = toggleSelection(this._selectedCurveId, entityId);
+    this._refreshActivePreview(true);
   }
 
   private _onFocusCurve(e: CustomEvent): void {
@@ -1203,6 +1228,7 @@ export class LightenerCurveCard extends LitElement {
     const curve = this._curves.find((item) => item.entityId === entityId);
     if (!curve || !curve.visible) return;
     this._selectedCurveId = entityId;
+    this._refreshActivePreview(true);
   }
 
   private _pushUndo(): void {
@@ -1294,6 +1320,7 @@ export class LightenerCurveCard extends LitElement {
     curves[curveIndex] = curve;
     this._curves = curves;
     this._dirtyVersion++;
+    this._refreshActivePreview();
   }
 
   private _onPointDrop(_e: CustomEvent): void {
@@ -1312,6 +1339,7 @@ export class LightenerCurveCard extends LitElement {
     this._pushUndo();
     this._curves = next;
     this._dirtyVersion++;
+    this._refreshActivePreview(true);
   }
 
   private _onPointRemove(e: CustomEvent): void {
@@ -1326,6 +1354,7 @@ export class LightenerCurveCard extends LitElement {
     this._pushUndo();
     this._curves = next;
     this._dirtyVersion++;
+    this._refreshActivePreview(true);
   }
 
   private _onToggleCurve(e: CustomEvent): void {
