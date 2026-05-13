@@ -6,7 +6,6 @@ tracked as GitHub Issues before implementation.
 
 ## Open Follow-Ups
 
-- [ ] Fix the SVG graph description so non-monotonic curves are not labeled with an incorrect "max" value.
 - [ ] Consolidate responsive breakpoints across the demo page, card shell, graph, legend, and footer.
 - [ ] Update `DESIGN.md` with the live `--secondary-text` token and breakpoint guidance.
 - [ ] Investigate hidden-parent rendering with tabs, popups, and stacked dashboards; add a resize/intersection guard if reproducible.
