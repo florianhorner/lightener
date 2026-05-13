@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Stress-fixture test suite for 20-light long-name scenarios.** `lightener-curve-card.stress.test.ts` mounts a full `<lightener-curve-card>` custom element with 20 entities, long friendly names (50+ chars), and a two-state matchMedia mock. Covers: DOM scale (20 legend rows + 20 SVG curve lines), CSS overflow contracts on `.name-block`, `.name`, `.entity-id`, and `.brightness-value`, desktop/mobile hint text and hit-circle radius, partial entity load (10 entities), and a negative guard ensuring `hass.states` friendly names are used — not stripped entity IDs.
+
 ### Changed
 
 - **TypeScript strictness tightened.** `noUnusedLocals` and `noUnusedParameters` are now enforced in `js/tsconfig.json`. Three dead symbols were removed to clear the new flags: the unused `curve` parameter in `_renderTooltip`, the never-called `makeScrubber` test helper, and the immediately-overwritten `originalStop` variable.
