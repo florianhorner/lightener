@@ -254,12 +254,12 @@ describe('lightener-curve-card stress fixture', () => {
   });
 
   it('mobile matchMedia: hint text contains double-tap, control point radius = 28', async () => {
-    const { card, graph } = await mountStressCard();
+    const { card } = await mountStressCard();
 
     _mqlMatches = true;
     // Dispatch to all registered listeners rather than hardcoding index 0.
     mockMql.dispatchEvent({ matches: true } as unknown as Event);
-    await drainUpdates(card);
+    const { graph } = await drainUpdates(card);
 
     const hint = graph.shadowRoot!.querySelector<SVGTextElement>('.hint-select');
     expect(hint?.textContent).toContain('double-tap');
