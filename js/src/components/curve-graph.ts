@@ -871,8 +871,11 @@ export class CurveGraph extends LitElement {
     const visible = this.curves.filter((c) => c.visible);
     if (!visible.length) return 'No curves displayed';
     const items = visible.map((c) => {
-      const last = c.controlPoints[c.controlPoints.length - 1];
-      return `${c.friendlyName} (${c.controlPoints.length} points, max ${last?.target ?? 0}%)`;
+      const maxTarget = c.controlPoints.reduce(
+        (max, p) => (Number.isFinite(p.target) ? Math.max(max, p.target) : max),
+        0
+      );
+      return `${c.friendlyName} (${c.controlPoints.length} points, max ${maxTarget}%)`;
     });
     return `${visible.length} curve${visible.length === 1 ? '' : 's'}: ${items.join(', ')}`;
   }
