@@ -1128,9 +1128,8 @@ export class LightenerCurveCard extends LitElement {
   private _onScrubberMove(e: CustomEvent): void {
     const position = e.detail.position;
     this._scrubberPosition = position;
-    const entityId = this._loadedEntityId ?? this._entityId;
-    if (entityId) {
-      this._writeStoredState(entityId, { scrubberPosition: position });
+    if (this._loadedEntityId) {
+      this._writeStoredState(this._loadedEntityId, { scrubberPosition: position });
     }
     if (this._previewActive) {
       this._previewLights(position);
