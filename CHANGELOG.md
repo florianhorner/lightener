@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **Graph hint text no longer overflows on first load.** The two-line "Select a light, then double-click its curve" hint was rendering as a single line that extended ~30px past the right edge of the graph area. It now splits cleanly into two centered lines with proper line spacing at all breakpoints (11px desktop, 14px mobile).
 - **Curve editor preview is clearer and easier to read.** The tooltip now reads "Group X% → Light Y%" instead of "(X%, Y%)", making it immediately obvious which axis is which. A subtle plot-frame border now visually anchors the graph area. Hint text is slightly bolder and uses a text halo for better contrast on busy backgrounds. The scrubber heading splits into a title and helper line so you always know what the slider controls. ARIA labels updated to match ("Preview group brightness" instead of "Brightness scrubber").
+- **SVG description correctly reports peak brightness for non-monotonic curves.** The graph's accessibility description used the final control point's target as the "max" brightness. For curves that peak before the last point (e.g. `0% → 90% → 40%`) this reported the wrong value. It now scans all control points and reports the highest finite target.
 
 ## [2.15.0-dev.7] - 2026-05-10
 

@@ -135,7 +135,7 @@ function e(e,t,i,r){var n,s=arguments.length,o=s<3?t:null===r?r=Object.getOwnPro
             />
           `})}
         ${null!==s?this._renderTooltip(s):K}
-      `}catch{return K}}connectedCallback(){super.connectedCallback(),this._mql=window.matchMedia("(max-width: 500px)"),this._isMobile=this._mql.matches,this._mql.addEventListener("change",this._onMqlChange)}disconnectedCallback(){super.disconnectedCallback(),this._clearLongPress(),this._mql?.removeEventListener("change",this._onMqlChange),this._mql=null}_getSvgDescription(){const e=this.curves.filter(e=>e.visible);if(!e.length)return"No curves displayed";const t=e.map(e=>{const t=e.controlPoints[e.controlPoints.length-1];return`${e.friendlyName} (${e.controlPoints.length} points, max ${t?.target??0}%)`});return`${e.length} curve${1===e.length?"":"s"}: ${t.join(", ")}`}render(){return V`
+      `}catch{return K}}connectedCallback(){super.connectedCallback(),this._mql=window.matchMedia("(max-width: 500px)"),this._isMobile=this._mql.matches,this._mql.addEventListener("change",this._onMqlChange)}disconnectedCallback(){super.disconnectedCallback(),this._clearLongPress(),this._mql?.removeEventListener("change",this._onMqlChange),this._mql=null}_getSvgDescription(){const e=this.curves.filter(e=>e.visible);if(!e.length)return"No curves displayed";const t=e.map(e=>{const t=e.controlPoints.reduce((e,t)=>Number.isFinite(t.target)?Math.max(e,t.target):e,0);return`${e.friendlyName} (${e.controlPoints.length} points, max ${t}%)`});return`${e.length} curve${1===e.length?"":"s"}: ${t.join(", ")}`}render(){return V`
       <svg
         viewBox="0 0 ${356} ${248}"
         preserveAspectRatio="xMidYMid meet"

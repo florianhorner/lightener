@@ -507,8 +507,8 @@ describe('curve-graph SVG accessibility description', () => {
         friendlyName: 'Alpha',
         controlPoints: [
           { lightener: 0, target: 0 },
-          { lightener: 50, target: 75 },
-          { lightener: 100, target: 100 },
+          { lightener: 50, target: 100 },
+          { lightener: 100, target: 75 },
         ],
         visible: true,
         color: '#2563eb',
@@ -522,6 +522,93 @@ describe('curve-graph SVG accessibility description', () => {
     expect(desc?.textContent).toContain('Alpha');
     expect(desc?.textContent).toContain('3 points');
     expect(desc?.textContent).toContain('max 100%');
+  });
+
+  it('reports the highest target for non-monotonic curves', async () => {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.alpha',
+        friendlyName: 'Alpha',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: 90 },
+          { lightener: 100, target: 40 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+    document.body.appendChild(graph);
+    await graph.updateComplete;
+
+    const desc = graph.shadowRoot!.querySelector('desc');
+    expect(desc?.textContent).toContain('max 90%');
+  });
+
+  it('reports the highest target without an explicit 100 endpoint', async () => {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.alpha',
+        friendlyName: 'Alpha',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: 90 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+    document.body.appendChild(graph);
+    await graph.updateComplete;
+
+    const desc = graph.shadowRoot!.querySelector('desc');
+    expect(desc?.textContent).toContain('max 90%');
+  });
+
+  it('reports the highest target for dim-floor curves', async () => {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.alpha',
+        friendlyName: 'Alpha',
+        controlPoints: [
+          { lightener: 0, target: 30 },
+          { lightener: 50, target: 80 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+    document.body.appendChild(graph);
+    await graph.updateComplete;
+
+    const desc = graph.shadowRoot!.querySelector('desc');
+    expect(desc?.textContent).toContain('max 80%');
+  });
+
+  it('ignores non-finite targets when reporting max brightness', async () => {
+    const graph = document.createElement('curve-graph') as CurveGraph;
+    graph.curves = [
+      {
+        entityId: 'light.alpha',
+        friendlyName: 'Alpha',
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: NaN },
+          { lightener: 100, target: 70 },
+        ],
+        visible: true,
+        color: '#2563eb',
+      },
+    ];
+    document.body.appendChild(graph);
+    await graph.updateComplete;
+
+    const desc = graph.shadowRoot!.querySelector('desc');
+    expect(desc?.textContent).toContain('max 70%');
+    expect(desc?.textContent).not.toContain('NaN');
   });
 
   it('uses plural "curves" when more than one is visible', async () => {
