@@ -13,6 +13,7 @@ import {
 const idle: SaveState = INITIAL_SAVE_STATE;
 const dirty: SaveState = { phase: 'dirty' };
 const saving: SaveState = { phase: 'saving' };
+const confirming: SaveState = { phase: 'confirming' };
 const saved: SaveState = { phase: 'saved' };
 const errored: SaveState = { phase: 'error', message: 'Save failed.' };
 
@@ -27,6 +28,7 @@ describe('save-lifecycle reducer', () => {
       ['idle', idle],
       ['dirty', dirty],
       ['saving', saving],
+      ['confirming', confirming],
       ['saved', saved],
       ['error', errored],
     ])('resets %s -> idle', (_label, from) => {
@@ -44,6 +46,7 @@ describe('save-lifecycle reducer', () => {
     it.each<[string, SaveState]>([
       ['dirty', dirty],
       ['saving', saving],
+      ['confirming', confirming],
       ['saved', saved],
       ['error', errored],
     ])('preserves %s (no override of in-flight / visible banner)', (_label, from) => {
@@ -66,22 +69,45 @@ describe('save-lifecycle reducer', () => {
     it('ignores from saving (already in flight)', () => {
       expect(reduce(saving, start)).toBe(saving);
     });
+
+    it('ignores from confirming (confirmation in flight)', () => {
+      expect(reduce(confirming, start)).toBe(confirming);
+    });
   });
 
   describe("action 'save-success'", () => {
     const success: SaveAction = { type: 'save-success' };
 
-    it('saving -> saved', () => {
-      expect(reduce(saving, success)).toEqual({ phase: 'saved' });
+    it('saving -> confirming', () => {
+      expect(reduce(saving, success)).toEqual({ phase: 'confirming' });
     });
 
     it.each<[string, SaveState]>([
       ['idle', idle],
       ['dirty', dirty],
+      ['confirming', confirming],
       ['saved', saved],
       ['error', errored],
     ])('ignores from %s', (_label, from) => {
       expect(reduce(from, success)).toBe(from);
+    });
+  });
+
+  describe("action 'save-confirmed'", () => {
+    const confirmed: SaveAction = { type: 'save-confirmed' };
+
+    it('confirming -> saved', () => {
+      expect(reduce(confirming, confirmed)).toEqual({ phase: 'saved' });
+    });
+
+    it.each<[string, SaveState]>([
+      ['idle', idle],
+      ['dirty', dirty],
+      ['saving', saving],
+      ['saved', saved],
+      ['error', errored],
+    ])('ignores from %s', (_label, from) => {
+      expect(reduce(from, confirmed)).toBe(from);
     });
   });
 
@@ -90,6 +116,13 @@ describe('save-lifecycle reducer', () => {
 
     it('saving -> error with message', () => {
       expect(reduce(saving, err)).toEqual({
+        phase: 'error',
+        message: 'Network down',
+      });
+    });
+
+    it('confirming -> error with message', () => {
+      expect(reduce(confirming, err)).toEqual({
         phase: 'error',
         message: 'Network down',
       });
@@ -119,24 +152,27 @@ describe('save-lifecycle reducer', () => {
       ['idle', idle],
       ['dirty', dirty],
       ['saving', saving],
+      ['confirming', confirming],
     ])('ignores from %s', (_label, from) => {
       expect(reduce(from, clear)).toBe(from);
     });
   });
 
-  it('end-to-end happy path: idle -> dirty -> saving -> saved -> idle', () => {
+  it('end-to-end happy path: idle -> dirty -> saving -> confirming -> saved -> idle', () => {
     let s: SaveState = INITIAL_SAVE_STATE;
     s = reduce(s, { type: 'dirty' });
     expect(s).toEqual({ phase: 'dirty' });
     s = reduce(s, { type: 'save-start' });
     expect(s).toEqual({ phase: 'saving' });
     s = reduce(s, { type: 'save-success' });
+    expect(s).toEqual({ phase: 'confirming' });
+    s = reduce(s, { type: 'save-confirmed' });
     expect(s).toEqual({ phase: 'saved' });
     s = reduce(s, { type: 'save-clear' });
     expect(s).toEqual({ phase: 'idle' });
   });
 
-  it('error recovery: dirty -> saving -> error -> saving -> saved', () => {
+  it('error recovery: dirty -> saving -> error -> saving -> confirming -> saved', () => {
     let s: SaveState = dirty;
     s = reduce(s, { type: 'save-start' });
     s = reduce(s, { type: 'save-error', message: 'oops' });
@@ -145,6 +181,8 @@ describe('save-lifecycle reducer', () => {
     s = reduce(s, { type: 'save-start' });
     expect(s).toEqual({ phase: 'saving' });
     s = reduce(s, { type: 'save-success' });
+    expect(s).toEqual({ phase: 'confirming' });
+    s = reduce(s, { type: 'save-confirmed' });
     expect(s).toEqual({ phase: 'saved' });
   });
 
@@ -161,12 +199,14 @@ describe('save-lifecycle reducer', () => {
 describe('save-lifecycle selectors', () => {
   it('isSaving', () => {
     expect(isSaving(saving)).toBe(true);
+    expect(isSaving(confirming)).toBe(true);
     expect(isSaving(idle)).toBe(false);
     expect(isSaving(saved)).toBe(false);
   });
 
   it('isSaved', () => {
     expect(isSaved(saved)).toBe(true);
+    expect(isSaved(confirming)).toBe(false);
     expect(isSaved(idle)).toBe(false);
     expect(isSaved(errored)).toBe(false);
   });

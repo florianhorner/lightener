@@ -2,7 +2,7 @@
  * Pure reducer for the curve-editor save lifecycle.
  *
  * The reducer is framework-free — no Lit, no DOM, no timers. It captures the
- * UI feedback state machine only: idle / dirty / saving / saved / error.
+ * UI feedback state machine only: idle / dirty / saving / confirming / saved / error.
  * All side effects (RPC call, RAF cancel animation, success timer,
  * entity-switch guard) live in the Lit element; the element dispatches
  * actions into `reduce` and reads the resulting state out.
@@ -15,12 +15,17 @@
  *     re-save during the success-banner window, retry after an error, or
  *     trigger a programmatic save when the reducer has returned to idle
  *     (the pre-refactor `_onSave` had no dirty guard — this preserves that).
+ *   - `save-success` transitions saving → confirming. The card awaits a
+ *     post-save get_curves round-trip before dispatching `save-confirmed`.
+ *   - `isSaving()` returns true for both saving and confirming so controls
+ *     stay disabled until the backend state is confirmed.
  */
 
 export type SaveState =
   | { phase: 'idle' }
   | { phase: 'dirty' }
   | { phase: 'saving' }
+  | { phase: 'confirming' }
   | { phase: 'saved' }
   | { phase: 'error'; message: string };
 
@@ -28,6 +33,7 @@ export type SaveAction =
   | { type: 'dirty' }
   | { type: 'save-start' }
   | { type: 'save-success' }
+  | { type: 'save-confirmed' }
   | { type: 'save-error'; message: string }
   | { type: 'save-clear' }
   | { type: 'reset' };
@@ -44,15 +50,19 @@ export function reduce(state: SaveState, action: SaveAction): SaveState {
       return state;
 
     case 'save-start':
-      if (state.phase === 'saving') return state;
+      if (state.phase === 'saving' || state.phase === 'confirming') return state;
       return { phase: 'saving' };
 
     case 'save-success':
       if (state.phase !== 'saving') return state;
+      return { phase: 'confirming' };
+
+    case 'save-confirmed':
+      if (state.phase !== 'confirming') return state;
       return { phase: 'saved' };
 
     case 'save-error':
-      if (state.phase !== 'saving') return state;
+      if (state.phase !== 'saving' && state.phase !== 'confirming') return state;
       return { phase: 'error', message: action.message };
 
     case 'save-clear':
@@ -64,7 +74,7 @@ export function reduce(state: SaveState, action: SaveAction): SaveState {
 }
 
 export function isSaving(state: SaveState): boolean {
-  return state.phase === 'saving';
+  return state.phase === 'saving' || state.phase === 'confirming';
 }
 
 export function isSaved(state: SaveState): boolean {

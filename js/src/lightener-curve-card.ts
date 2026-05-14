@@ -34,7 +34,7 @@ import './components/curve-scrubber.js';
 import './components/curve-legend.js';
 import './components/curve-footer.js';
 
-const CARD_VERSION = '2.15.0-dev.7';
+const CARD_VERSION = '2.15.0-dev.8';
 const SAVE_SUCCESS_DISPLAY_MS = 2000;
 const CANCEL_ANIM_DURATION_MS = 300;
 
@@ -1031,6 +1031,14 @@ export class LightenerCurveCard extends LitElement {
           this._showPresets = true;
         }
         this._autoPresetsShownFor.add(requestedEntity);
+        if (this._saveState.phase === 'confirming') {
+          this._dispatchSave({ type: 'save-confirmed' });
+          if (this._saveSuccessTimer) clearTimeout(this._saveSuccessTimer);
+          this._saveSuccessTimer = setTimeout(() => {
+            this._dispatchSave({ type: 'save-clear' });
+            this._saveSuccessTimer = null;
+          }, SAVE_SUCCESS_DISPLAY_MS);
+        }
       }
     } catch (err) {
       if (this._entityId !== requestedEntity) return;
@@ -1041,6 +1049,9 @@ export class LightenerCurveCard extends LitElement {
       // Remember which entity caused the error so re-mounts don't re-request
       // and re-spam the HA log for a permanently misconfigured entity.
       this._loadErrorEntityId = requestedEntity;
+      if (this._saveState.phase === 'confirming') {
+        this._dispatchSave({ type: 'save-error', message: 'Save failed. Check connection.' });
+      }
     } finally {
       this._loading = false;
       // If entity changed during flight, trigger reload for the new entity
@@ -1551,18 +1562,20 @@ export class LightenerCurveCard extends LitElement {
         this._dispatchSave({ type: 'reset' });
         return false;
       }
-      this._originalCurves = cloneCurves(this._curves);
+      // Clear dirty state before the re-fetch so _tryLoadCurves won't skip overwriting curves.
+      // _originalCurves is intentionally left stale until the backend re-fetch overwrites it.
       this._cleanVersion = this._dirtyVersion;
       this._undoStack = [];
       this._pendingReloadEntityId = undefined;
-      // Re-fetch from backend in case reload normalised data
-      this._reloadCurvesAfterCurrentLoad(savedEntityId);
-      this._dispatchSave({ type: 'save-success' });
-      if (this._saveSuccessTimer) clearTimeout(this._saveSuccessTimer);
-      this._saveSuccessTimer = setTimeout(() => {
-        this._dispatchSave({ type: 'save-clear' });
-        this._saveSuccessTimer = null;
-      }, SAVE_SUCCESS_DISPLAY_MS);
+      this._dispatchSave({ type: 'save-success' }); // → confirming; controls stay disabled
+      // Inline reload: _tryLoadCurves dispatches save-confirmed (and starts the success timer)
+      // once the re-fetch completes. In the stale-load case, queue behind the in-flight load.
+      this._loaded = false;
+      if (this._loading) {
+        this._reloadAfterLoadEntityId = savedEntityId;
+      } else {
+        await this._tryLoadCurves();
+      }
       return true;
     } catch (err) {
       console.error('[Lightener] Failed to save curves:', err);
