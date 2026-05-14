@@ -34,7 +34,7 @@ import './components/curve-scrubber.js';
 import './components/curve-legend.js';
 import './components/curve-footer.js';
 
-const CARD_VERSION = '2.15.0-dev.7';
+const CARD_VERSION = '2.15.0-dev.8';
 const SAVE_SUCCESS_DISPLAY_MS = 2000;
 const CANCEL_ANIM_DURATION_MS = 300;
 
