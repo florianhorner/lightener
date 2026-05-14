@@ -9,9 +9,9 @@ export class CurveScrubber extends LitElement {
   @property({ type: Boolean }) readOnly = false;
   @property({ type: Boolean }) previewActive = false;
   @property({ type: Boolean }) canPreview = false;
+  @property({ type: Number }) position: number | null = null;
 
   @state() private _dragging = false;
-  @state() private _position = 50; // 0-100
 
   private _trackRef: HTMLElement | null = null;
 
@@ -161,7 +161,9 @@ export class CurveScrubber extends LitElement {
       cursor: grab;
       border: 2px solid var(--ha-card-background, var(--card-background-color, #fff));
       box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 30%, transparent);
-      transition: box-shadow 0.15s ease;
+      transition:
+        left 0.05s linear,
+        box-shadow 0.15s ease;
       z-index: 2;
     }
     .thumb::after {
@@ -189,6 +191,12 @@ export class CurveScrubber extends LitElement {
       user-select: none;
       font-variant-numeric: tabular-nums;
       pointer-events: none;
+      transition: left 0.05s linear;
+    }
+    :host(:not(.is-loaded)) .track-fill,
+    :host(:not(.is-loaded)) .thumb,
+    :host(:not(.is-loaded)) .position-label {
+      transition: none;
     }
     @media (max-width: 500px) {
       .track-area {
@@ -254,23 +262,25 @@ export class CurveScrubber extends LitElement {
   private _onKeyDown(e: KeyboardEvent): void {
     if (this.readOnly) return;
     const step = e.shiftKey ? 10 : 1;
+    const current = Math.min(100, Math.max(0, this.position ?? 50));
+    let newPos: number;
     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
       e.preventDefault();
-      this._position = Math.min(100, this._position + step);
+      newPos = Math.min(100, current + step);
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
       e.preventDefault();
-      this._position = Math.max(0, this._position - step);
+      newPos = Math.max(0, current - step);
     } else if (e.key === 'Home') {
       e.preventDefault();
-      this._position = 0;
+      newPos = 0;
     } else if (e.key === 'End') {
       e.preventDefault();
-      this._position = 100;
+      newPos = 100;
     } else {
       return;
     }
 
-    this._emitPosition();
+    this._emitPosition(newPos);
   }
 
   private _updatePositionFromClient(clientX: number): void {
@@ -278,14 +288,14 @@ export class CurveScrubber extends LitElement {
     if (!track) return;
     const rect = track.getBoundingClientRect();
     const pct = ((clientX - rect.left) / rect.width) * 100;
-    this._position = Math.max(0, Math.min(100, pct));
-    this._emitPosition();
+    const newPos = Math.max(0, Math.min(100, pct));
+    this._emitPosition(newPos);
   }
 
-  private _emitPosition(): void {
+  private _emitPosition(position: number): void {
     this.dispatchEvent(
       new CustomEvent('scrubber-move', {
-        detail: { position: this._position },
+        detail: { position },
         bubbles: true,
         composed: true,
       })
@@ -298,10 +308,14 @@ export class CurveScrubber extends LitElement {
 
   protected firstUpdated(): void {
     this._trackRef = this.renderRoot.querySelector('.track-area');
+    requestAnimationFrame(() => {
+      this.classList.add('is-loaded');
+    });
   }
 
   render() {
-    const pos = Math.round(this._position);
+    const pos = Math.min(100, Math.max(0, this.position ?? 50));
+    const displayPos = Math.round(pos);
 
     return html`
       <div class="scrubber-panel">
@@ -330,17 +344,17 @@ export class CurveScrubber extends LitElement {
           aria-label="Preview group brightness"
           aria-valuemin="0"
           aria-valuemax="100"
-          aria-valuenow=${pos}
-          aria-valuetext="${pos}% group brightness"
+          aria-valuenow=${displayPos}
+          aria-valuetext="${displayPos}% group brightness"
           @click=${this._onTrackClick}
           @keydown=${this._onKeyDown}
         >
           <div class="track-bg"></div>
-          <div class="track-fill" style="width: ${this._position}%"></div>
-          <div class="position-label" style="left: ${this._position}%">${pos}%</div>
+          <div class="track-fill" style="width: ${pos}%"></div>
+          <div class="position-label" style="left: ${pos}%">${displayPos}%</div>
           <div
             class="thumb ${this._dragging ? 'dragging' : ''}"
-            style="left: ${this._position}%"
+            style="left: ${pos}%"
             @pointerdown=${this._onPointerDown}
             @pointermove=${this._onPointerMove}
             @pointerup=${this._onPointerUp}

@@ -15,8 +15,10 @@ function makeScrubber(opts?: {
   readOnly?: boolean;
   canPreview?: boolean;
   previewActive?: boolean;
+  position?: number | null;
 }): CurveScrubber {
   const el = document.createElement('curve-scrubber') as CurveScrubber;
+  if (opts?.position !== undefined) el.position = opts.position;
   el.curves = opts?.curves ?? [
     {
       entityId: 'light.a',
@@ -132,21 +134,30 @@ describe('curve-scrubber — preview toggle', () => {
 
 describe('curve-scrubber — keyboard nav', () => {
   it('ArrowRight moves position by +1 and dispatches scrubber-move', async () => {
-    const el = makeScrubber();
+    const el = makeScrubber({ position: 50 });
     await el.updateComplete;
     const moveSpy = vi.fn();
-    el.addEventListener('scrubber-move', moveSpy);
+    // Simulate controlled parent: update .position when event fires
+    el.addEventListener('scrubber-move', (e: Event) => {
+      moveSpy(e);
+      el.position = (e as CustomEvent<{ position: number }>).detail.position;
+    });
     const track = el.renderRoot.querySelector('.track-area')! as HTMLElement;
     track.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await el.updateComplete;
     expect(moveSpy).toHaveBeenCalledTimes(1);
-    expect(moveSpy.mock.calls[0]![0].detail.position).toBe(51);
+    expect((moveSpy.mock.calls[0]![0] as CustomEvent<{ position: number }>).detail.position).toBe(
+      51
+    );
     expect(track.getAttribute('aria-valuenow')).toBe('51');
   });
 
   it('ArrowLeft moves position by -1', async () => {
-    const el = makeScrubber();
+    const el = makeScrubber({ position: 50 });
     await el.updateComplete;
+    el.addEventListener('scrubber-move', (e: Event) => {
+      el.position = (e as CustomEvent<{ position: number }>).detail.position;
+    });
     const track = el.renderRoot.querySelector('.track-area')! as HTMLElement;
     track.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
     await el.updateComplete;
@@ -154,8 +165,11 @@ describe('curve-scrubber — keyboard nav', () => {
   });
 
   it('Shift+Arrow uses step=10', async () => {
-    const el = makeScrubber();
+    const el = makeScrubber({ position: 50 });
     await el.updateComplete;
+    el.addEventListener('scrubber-move', (e: Event) => {
+      el.position = (e as CustomEvent<{ position: number }>).detail.position;
+    });
     const track = el.renderRoot.querySelector('.track-area')! as HTMLElement;
     track.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true })
@@ -165,8 +179,11 @@ describe('curve-scrubber — keyboard nav', () => {
   });
 
   it('Home jumps to 0, End to 100', async () => {
-    const el = makeScrubber();
+    const el = makeScrubber({ position: 50 });
     await el.updateComplete;
+    el.addEventListener('scrubber-move', (e: Event) => {
+      el.position = (e as CustomEvent<{ position: number }>).detail.position;
+    });
     const track = el.renderRoot.querySelector('.track-area')! as HTMLElement;
     track.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
     await el.updateComplete;
@@ -177,8 +194,11 @@ describe('curve-scrubber — keyboard nav', () => {
   });
 
   it('clamps to [0, 100]', async () => {
-    const el = makeScrubber();
+    const el = makeScrubber({ position: 50 });
     await el.updateComplete;
+    el.addEventListener('scrubber-move', (e: Event) => {
+      el.position = (e as CustomEvent<{ position: number }>).detail.position;
+    });
     const track = el.renderRoot.querySelector('.track-area')! as HTMLElement;
     track.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
     await el.updateComplete;
@@ -251,12 +271,16 @@ describe('curve-scrubber — readOnly guard', () => {
 
 describe('curve-scrubber — pointer drag', () => {
   it('dispatches scrubber-start on pointerdown and scrubber-end on pointerup', async () => {
-    const el = makeScrubber();
+    const el = makeScrubber({ position: 50 });
     await el.updateComplete;
     const startSpy = vi.fn();
     const endSpy = vi.fn();
     el.addEventListener('scrubber-start', startSpy);
     el.addEventListener('scrubber-end', endSpy);
+    // Simulate controlled parent
+    el.addEventListener('scrubber-move', (e: Event) => {
+      el.position = (e as CustomEvent<{ position: number }>).detail.position;
+    });
 
     const thumb = el.renderRoot.querySelector('.thumb')! as HTMLElement;
     const track = el.renderRoot.querySelector('.track-area')! as HTMLElement;

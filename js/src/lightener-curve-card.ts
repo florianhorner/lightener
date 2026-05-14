@@ -689,6 +689,7 @@ export class LightenerCurveCard extends LitElement {
       this._groupDeleted = false;
       this._showPresets = false;
       this._selectedCurveId = null;
+      this._scrubberPosition = null;
       this._undoStack = [];
       this._pendingReloadEntityId = undefined;
       this._reloadAfterLoadEntityId = undefined;
@@ -915,6 +916,47 @@ export class LightenerCurveCard extends LitElement {
     `;
   }
 
+  private _storedStateKey(entityId: string): string {
+    return `lightener:curve-card:v1:${entityId}`;
+  }
+
+  private _readStoredState(
+    entityId: string
+  ): { selectedCurveId: string | null; scrubberPosition: number | null } | null {
+    try {
+      const raw = sessionStorage.getItem(this._storedStateKey(entityId));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const selectedCurveId =
+        typeof parsed.selectedCurveId === 'string' || parsed.selectedCurveId === null
+          ? parsed.selectedCurveId
+          : null;
+      let scrubberPosition = null;
+      if (typeof parsed.scrubberPosition === 'number' && isFinite(parsed.scrubberPosition)) {
+        scrubberPosition = Math.min(100, Math.max(0, parsed.scrubberPosition));
+      }
+      return { selectedCurveId, scrubberPosition };
+    } catch {
+      return null;
+    }
+  }
+
+  private _writeStoredState(
+    entityId: string,
+    partial: { selectedCurveId?: string | null; scrubberPosition?: number | null }
+  ): void {
+    try {
+      const existing = this._readStoredState(entityId) ?? {
+        selectedCurveId: null,
+        scrubberPosition: null,
+      };
+      const updated = { ...existing, ...partial };
+      sessionStorage.setItem(this._storedStateKey(entityId), JSON.stringify(updated));
+    } catch {
+      // blocked or quota exceeded — ignore
+    }
+  }
+
   private _onKeyDown(e: KeyboardEvent): void {
     // Only handle shortcuts when focus is inside this card (or nothing specific is focused)
     if (!shouldHandleKey(document.activeElement, this)) return;
@@ -1018,6 +1060,23 @@ export class LightenerCurveCard extends LitElement {
         this._loadedEntityId = requestedEntity;
         this._loadErrorEntityId = undefined;
 
+        // Single hydration site: restore session state only if the user has
+        // not already interacted while this async load was in flight.
+        if (this._selectedCurveId === null && this._scrubberPosition === null) {
+          const stored = this._readStoredState(requestedEntity);
+          if (stored) {
+            if (
+              stored.selectedCurveId !== null &&
+              canSelectCurve(this._curves, stored.selectedCurveId)
+            ) {
+              this._selectedCurveId = stored.selectedCurveId;
+            }
+            if (stored.scrubberPosition !== null) {
+              this._scrubberPosition = stored.scrubberPosition;
+            }
+          }
+        }
+
         // Onboarding handoff: a freshly-created group lands here with linear
         // default curves. Auto-open the preset chooser so the user picks a
         // starting curve visually instead of being told "nothing here yet."
@@ -1072,9 +1131,13 @@ export class LightenerCurveCard extends LitElement {
   // --- Event handlers ---
 
   private _onScrubberMove(e: CustomEvent): void {
-    this._scrubberPosition = e.detail.position;
+    const position = e.detail.position;
+    this._scrubberPosition = position;
+    if (this._loadedEntityId) {
+      this._writeStoredState(this._loadedEntityId, { scrubberPosition: position });
+    }
     if (this._previewActive) {
-      this._previewLights(e.detail.position);
+      this._previewLights(position);
     }
   }
 
@@ -1100,6 +1163,10 @@ export class LightenerCurveCard extends LitElement {
     // Ensure the graph shows a scrubber indicator even if the user never touched the slider
     if (this._scrubberPosition === null) {
       this._scrubberPosition = 50;
+      const entityId = this._loadedEntityId ?? this._entityId;
+      if (entityId) {
+        this._writeStoredState(entityId, { scrubberPosition: this._scrubberPosition });
+      }
     }
     // Snapshot current brightness for each controlled light so we can restore later.
     // null = was off; undefined = was on but no brightness attribute (on/off-only light).
@@ -1235,6 +1302,10 @@ export class LightenerCurveCard extends LitElement {
     // to exist and be visible.
     if (entityId !== this._selectedCurveId && !canSelectCurve(this._curves, entityId)) return;
     this._selectedCurveId = toggleSelection(this._selectedCurveId, entityId);
+    const storageEntityId = this._loadedEntityId ?? this._entityId;
+    if (storageEntityId) {
+      this._writeStoredState(storageEntityId, { selectedCurveId: this._selectedCurveId });
+    }
     this._refreshActivePreview(true);
   }
 
@@ -1244,6 +1315,10 @@ export class LightenerCurveCard extends LitElement {
     const curve = this._curves.find((item) => item.entityId === entityId);
     if (!curve || !curve.visible) return;
     this._selectedCurveId = entityId;
+    const storageEntityId = this._loadedEntityId ?? this._entityId;
+    if (storageEntityId) {
+      this._writeStoredState(storageEntityId, { selectedCurveId: this._selectedCurveId });
+    }
     this._refreshActivePreview(true);
   }
 
@@ -1328,6 +1403,10 @@ export class LightenerCurveCard extends LitElement {
     const draggedCurve = this._curves[curveIndex];
     if (draggedCurve && this._selectedCurveId !== draggedCurve.entityId) {
       this._selectedCurveId = draggedCurve.entityId;
+      const entityId = this._loadedEntityId ?? this._entityId;
+      if (entityId) {
+        this._writeStoredState(entityId, { selectedCurveId: this._selectedCurveId });
+      }
     }
     const curves = [...this._curves];
     const curve = { ...curves[curveIndex] };
@@ -1392,6 +1471,10 @@ export class LightenerCurveCard extends LitElement {
       const curve = this._curves.find((c) => c.entityId === entityId);
       if (curve && !curve.visible) {
         this._selectedCurveId = null;
+        const storageEntityId = this._loadedEntityId ?? this._entityId;
+        if (storageEntityId) {
+          this._writeStoredState(storageEntityId, { selectedCurveId: null });
+        }
       }
     }
   }
@@ -1477,6 +1560,7 @@ export class LightenerCurveCard extends LitElement {
       this._loaded = true;
       this._loadedEntityId = entityId;
       this._selectedCurveId = null;
+      this._writeStoredState(entityId, { selectedCurveId: null });
       this._loadError = null;
       this._loadErrorEntityId = undefined;
       this._groupDeleted = true;
@@ -1510,6 +1594,10 @@ export class LightenerCurveCard extends LitElement {
       });
       if (this._selectedCurveId === entityId) {
         this._selectedCurveId = null;
+        const storageEntityId = this._loadedEntityId ?? this._entityId;
+        if (storageEntityId) {
+          this._writeStoredState(storageEntityId, { selectedCurveId: null });
+        }
       }
       this._undoStack = [];
       this._eligibleAddLightIds = null;
@@ -1616,6 +1704,9 @@ export class LightenerCurveCard extends LitElement {
     this._undoStack = [];
     this._animateCurvesTo(cloneCurves(this._originalCurves), () => {
       this._selectedCurveId = null;
+      if (this._loadedEntityId) {
+        this._writeStoredState(this._loadedEntityId, { selectedCurveId: null });
+      }
       this._dispatchSave({ type: 'reset' });
     });
   }
@@ -1676,6 +1767,7 @@ export class LightenerCurveCard extends LitElement {
                   .readOnly=${!this._isAdmin || this._managingLights}
                   .canPreview=${this._isAdmin && !this._cancelAnimating && !this._managingLights}
                   .previewActive=${this._previewActive}
+                  .position=${this._scrubberPosition}
                   @scrubber-move=${this._onScrubberMove}
                   @scrubber-start=${this._onScrubberStart}
                   @scrubber-end=${this._onScrubberEnd}

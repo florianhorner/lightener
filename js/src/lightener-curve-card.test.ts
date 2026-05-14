@@ -52,6 +52,7 @@ function forceDirty(card: LightenerCurveCard): void {
 // which removes those listeners.
 afterEach(() => {
   document.body.querySelectorAll('lightener-curve-card').forEach((el) => el.remove());
+  sessionStorage.clear();
 });
 
 beforeAll(async () => {
@@ -1167,6 +1168,8 @@ describe('lightener-curve-card — live preview propagation', () => {
     const { card, hass } = await mountCard({
       'light.a': { brightness: { '100': '100' } },
     });
+    // Drain any RAFs queued during mount (e.g. CurveScrubber.firstUpdated is-loaded class)
+    queuedFrames.length = 0;
     const internal = card as unknown as CardInternals;
     internal._scrubberPosition = 20;
     internal._startPreview();
