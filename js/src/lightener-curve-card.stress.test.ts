@@ -151,7 +151,7 @@ async function mountStressCard(count = 20): Promise<{
     if (msg.type === 'lightener/list_eligible_lights') {
       return { entities: [] } as T;
     }
-    return undefined as T;
+    throw new Error(`Unexpected callWS message type: ${String(msg.type)}`);
   });
 
   const card = document.createElement('lightener-curve-card') as LightenerCurveCard;
