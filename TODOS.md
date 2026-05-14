@@ -6,6 +6,8 @@ tracked as GitHub Issues before implementation.
 
 ## Open Follow-Ups
 
+- [ ] **[P2 — save lifecycle]** Add a confirmation timeout (~8s) to the `confirming` phase. Without it, a stalled HA re-fetch leaves the card permanently frozen with controls disabled and no recovery path short of page reload. Requires a `save-unverified` terminal FSM state or a timeout-triggered `save-error`. (Follow-up to issue #92)
+- [ ] **[P3 — save lifecycle]** Consider replacing the blocking `confirming` phase with an optimistic save + silent background re-fetch. Both CEO review models flagged this as the more resilient architecture for slow HA environments. User deferred this during the issue-92 review.
 - [ ] Consolidate responsive breakpoints across the demo page, card shell, graph, legend, and footer.
 - [ ] Update `DESIGN.md` with the live `--secondary-text` token and breakpoint guidance.
 - [ ] Investigate hidden-parent rendering with tabs, popups, and stacked dashboards; add a resize/intersection guard if reproducible.
