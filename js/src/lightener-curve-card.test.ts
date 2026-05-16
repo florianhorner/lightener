@@ -3,6 +3,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { LightenerCurveCard } from './lightener-curve-card.js';
 import type { Hass, LightCurve } from './utils/types.js';
+import type { LoadState } from './utils/load-lifecycle.js';
 
 // Tests reach private @state fields directly (instead of exposing a test-only
 // setter on the card) because every production caller would have to ignore it.
@@ -15,10 +16,7 @@ type CardInternals = {
   _undo: () => void;
   _tryLoadCurves: () => Promise<void>;
   _undoStack: LightCurve[][];
-  _loaded: boolean;
-  _loading: boolean;
-  _pendingReloadEntityId: string | undefined;
-  _reloadAfterLoadEntityId: string | undefined;
+  _load: LoadState;
   _dirtyVersion: number;
   _cleanVersion: number;
   _eligibleAddLightIds: string[] | null;
@@ -445,7 +443,7 @@ describe('lightener-curve-card — save flow', () => {
 
     hass.callWS.mockReset();
     hass.callWS.mockReturnValueOnce(reloadPromise);
-    internal._loaded = false;
+    internal._load = { ...internal._load, loaded: false };
     const load = internal._tryLoadCurves();
 
     graph.dispatchEvent(
@@ -462,9 +460,47 @@ describe('lightener-curve-card — save flow', () => {
 
     expect(internal._curves.map((curve) => curve.entityId)).toEqual(['light.a']);
     expect(internal._curves[0].controlPoints).toContainEqual({ lightener: 50, target: 60 });
-    expect(internal._loading).toBe(false);
-    expect(internal._loaded).toBe(true);
-    expect(internal._pendingReloadEntityId).toBe('light.lightener');
+    expect(internal._load.loading).toBe(false);
+    expect(internal._load.loaded).toBe(true);
+    expect(internal._load.pendingReloadEntityId).toBe('light.lightener');
+  });
+
+  it('surfaces a load error when a malformed payload arrives during a dirty load', async () => {
+    // Regression: the dirty-defer path must still parse the payload eagerly so a
+    // malformed response (no `entities` key) fails loud into the error path
+    // instead of being silently marked loaded. Matches the pre-refactor behavior.
+    const { card, hass } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+    });
+    const internal = card as unknown as CardInternals;
+    const graph = card.renderRoot.querySelector('curve-graph')!;
+    let resolveReload: (value: unknown) => void = () => {};
+    const reloadPromise = new Promise((resolve) => {
+      resolveReload = resolve;
+    });
+
+    hass.callWS.mockReset();
+    hass.callWS.mockReturnValueOnce(reloadPromise);
+    internal._load = { ...internal._load, loaded: false };
+    const load = internal._tryLoadCurves();
+
+    graph.dispatchEvent(
+      new CustomEvent('point-move', {
+        detail: { curveIndex: 0, pointIndex: 1, lightener: 50, target: 60 },
+        bubbles: true,
+        composed: true,
+      })
+    );
+
+    // Malformed: missing the `entities` key entirely.
+    resolveReload({});
+    await load;
+    await card.updateComplete;
+
+    expect(internal._load.loadError).not.toBeNull();
+    expect(internal._load.loading).toBe(false);
+    // The user's unsaved edit is still intact — the error did not wipe it.
+    expect(internal._curves[0].controlPoints).toContainEqual({ lightener: 50, target: 60 });
   });
 
   it('hass state push during drag does not reload curves', async () => {
@@ -475,7 +511,7 @@ describe('lightener-curve-card — save flow', () => {
 
     hass.callWS.mockReset();
     hass.callWS.mockResolvedValue({ entities: {} });
-    internal._loaded = false;
+    internal._load = { ...internal._load, loaded: false };
 
     internal._onPointMove(
       new CustomEvent('point-move', {
@@ -513,7 +549,7 @@ describe('lightener-curve-card — save flow', () => {
 
     hass.callWS.mockReset();
     hass.callWS.mockReturnValueOnce(dirtyReloadPromise);
-    internal._loaded = false;
+    internal._load = { ...internal._load, loaded: false };
     const dirtyLoad = internal._tryLoadCurves();
     graph.dispatchEvent(
       new CustomEvent('point-move', {
@@ -525,10 +561,10 @@ describe('lightener-curve-card — save flow', () => {
     resolveDirtyReload({ entities: { 'light.b': { brightness: { '1': '5', '100': '10' } } } });
     await dirtyLoad;
 
-    // Simulate the save path: _saveCurves() resets _loaded before calling _tryLoadCurves().
+    // Simulate the save path: _onSave() clears the loaded flag before calling _tryLoadCurves().
     // Without this reset, the early-out guard correctly blocks re-loading.
     internal._cleanVersion = internal._dirtyVersion;
-    internal._loaded = false;
+    internal._load = { ...internal._load, loaded: false };
     hass.callWS.mockResolvedValueOnce({
       entities: { 'light.b': { brightness: { '1': '5', '100': '10' } } },
     });
@@ -537,8 +573,8 @@ describe('lightener-curve-card — save flow', () => {
     await card.updateComplete;
 
     expect(internal._curves.map((curve) => curve.entityId)).toEqual(['light.b']);
-    expect(internal._loading).toBe(false);
-    expect(internal._pendingReloadEntityId).toBeUndefined();
+    expect(internal._load.loading).toBe(false);
+    expect(internal._load.pendingReloadEntityId).toBeUndefined();
   });
 
   it('refetches a dirty-deferred reload after cancel restores the clean snapshot', async () => {
@@ -558,7 +594,7 @@ describe('lightener-curve-card — save flow', () => {
 
     hass.callWS.mockReset();
     hass.callWS.mockReturnValueOnce(dirtyReloadPromise);
-    internal._loaded = false;
+    internal._load = { ...internal._load, loaded: false };
     const dirtyLoad = internal._tryLoadCurves();
     graph.dispatchEvent(
       new CustomEvent('point-move', {
@@ -587,8 +623,8 @@ describe('lightener-curve-card — save flow', () => {
     rafSpy.mockRestore();
 
     expect(internal._curves.map((curve) => curve.entityId)).toEqual(['light.b']);
-    expect(internal._pendingReloadEntityId).toBeUndefined();
-    expect(internal._loaded).toBe(true);
+    expect(internal._load.pendingReloadEntityId).toBeUndefined();
+    expect(internal._load.loaded).toBe(true);
   });
 
   it('refetches a dirty-deferred reload after undo restores the clean snapshot', async () => {
@@ -608,7 +644,7 @@ describe('lightener-curve-card — save flow', () => {
 
     hass.callWS.mockReset();
     hass.callWS.mockReturnValueOnce(dirtyReloadPromise);
-    internal._loaded = false;
+    internal._load = { ...internal._load, loaded: false };
     const dirtyLoad = internal._tryLoadCurves();
     graph.dispatchEvent(
       new CustomEvent('point-move', {
@@ -637,8 +673,8 @@ describe('lightener-curve-card — save flow', () => {
     rafSpy.mockRestore();
 
     expect(internal._curves.map((curve) => curve.entityId)).toEqual(['light.b']);
-    expect(internal._pendingReloadEntityId).toBeUndefined();
-    expect(internal._loaded).toBe(true);
+    expect(internal._load.pendingReloadEntityId).toBeUndefined();
+    expect(internal._load.loaded).toBe(true);
   });
 
   it('queues the post-save reload when an older curve load is still in flight', async () => {
@@ -670,7 +706,7 @@ describe('lightener-curve-card — save flow', () => {
       return Promise.resolve({ entities: {} });
     });
 
-    internal._loaded = false;
+    internal._load = { ...internal._load, loaded: false };
     const staleLoad = internal._tryLoadCurves();
     graph.dispatchEvent(
       new CustomEvent('point-move', {
@@ -681,7 +717,7 @@ describe('lightener-curve-card — save flow', () => {
     );
 
     await internal._onSave();
-    expect(internal._reloadAfterLoadEntityId).toBe('light.lightener');
+    expect(internal._load.reloadAfterLoadEntityId).toBe('light.lightener');
 
     resolveStaleReload({
       entities: { 'light.stale': { brightness: { '1': '2', '100': '20' } } },
@@ -693,7 +729,7 @@ describe('lightener-curve-card — save flow', () => {
 
     expect(getCurveCalls).toBe(2);
     expect(internal._curves.map((curve) => curve.entityId)).toEqual(['light.fresh']);
-    expect(internal._reloadAfterLoadEntityId).toBeUndefined();
+    expect(internal._load.reloadAfterLoadEntityId).toBeUndefined();
   });
 
   it('clears stale undo history when switching entities with unsaved edits', async () => {
@@ -813,7 +849,8 @@ describe('lightener-curve-card — onboarding handoff (preset auto-open)', () =>
     hass.callWS.mockResolvedValueOnce({
       entities: { 'light.a': { brightness: { '1': '1', '100': '100' } } },
     });
-    (card as unknown as { _loaded: boolean })._loaded = false;
+    const presetInternal = card as unknown as CardInternals;
+    presetInternal._load = { ...presetInternal._load, loaded: false };
     card.hass = hass;
     await card.updateComplete;
     await Promise.resolve();

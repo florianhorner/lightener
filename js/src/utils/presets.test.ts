@@ -3,6 +3,7 @@ import {
   CURVE_PRESETS,
   controlPointsAreLinearDefault,
   presetPolylinePoints,
+  shouldAutoOpenPresets,
   type PresetDef,
 } from './presets.js';
 
@@ -185,5 +186,42 @@ describe('controlPointsAreLinearDefault', () => {
 
   it('returns false for an empty curve', () => {
     expect(controlPointsAreLinearDefault([])).toBe(false);
+  });
+});
+
+describe('shouldAutoOpenPresets', () => {
+  const linearCurve = {
+    controlPoints: [
+      { lightener: 0, target: 0 },
+      { lightener: 1, target: 1 },
+      { lightener: 100, target: 100 },
+    ],
+  };
+  const editedCurve = {
+    controlPoints: [
+      { lightener: 0, target: 0 },
+      { lightener: 1, target: 1 },
+      { lightener: 100, target: 60 },
+    ],
+  };
+
+  it('returns true for an unseen entity whose curves are all linear default', () => {
+    expect(shouldAutoOpenPresets(new Set(), 'light.lightener', [linearCurve])).toBe(true);
+  });
+
+  it('returns false when the entity has already been shown the chooser', () => {
+    expect(
+      shouldAutoOpenPresets(new Set(['light.lightener']), 'light.lightener', [linearCurve])
+    ).toBe(false);
+  });
+
+  it('returns false when any curve has been edited away from the linear default', () => {
+    expect(shouldAutoOpenPresets(new Set(), 'light.lightener', [linearCurve, editedCurve])).toBe(
+      false
+    );
+  });
+
+  it('returns false when there are no curves', () => {
+    expect(shouldAutoOpenPresets(new Set(), 'light.lightener', [])).toBe(false);
   });
 });
