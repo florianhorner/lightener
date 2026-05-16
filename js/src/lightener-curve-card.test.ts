@@ -501,6 +501,10 @@ describe('lightener-curve-card — save flow', () => {
     expect(internal._load.loading).toBe(false);
     // The user's unsaved edit is still intact — the error did not wipe it.
     expect(internal._curves[0].controlPoints).toContainEqual({ lightener: 50, target: 60 });
+    // A failed parse must NOT strand the deferred-reload marker: the response
+    // never produced a valid snapshot, so a later cancel/undo must not drain
+    // pendingReloadEntityId into a spurious reload.
+    expect(internal._load.pendingReloadEntityId).toBeUndefined();
   });
 
   it('hass state push during drag does not reload curves', async () => {

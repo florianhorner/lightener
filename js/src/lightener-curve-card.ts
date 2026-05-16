@@ -1042,15 +1042,20 @@ export class LightenerCurveCard extends LitElement {
         this._entityId,
         this._isDirty
       );
+      // Parse BEFORE committing the new load state. wsPayloadToCurves throws on
+      // a malformed payload (e.g. missing `entities`); committing `state` first
+      // would strand pendingReloadEntityId from a 'defer-dirty' transition on a
+      // load that actually failed — a later cancel/undo would then drain it as a
+      // spurious reload. Parsing first leaves the catch's resolveError working
+      // on the pre-transition state. The eager parse on the defer-dirty path
+      // still keeps a malformed dirty response failing loud, as before.
+      let curves: LightCurve[] | undefined;
+      if (action === 'apply' || action === 'defer-dirty') {
+        curves = wsPayloadToCurves(result.entities, this._hass.states, CURVE_COLORS);
+      }
       this._load = state;
       if (action === 'apply' || action === 'defer-dirty') {
-        // Parse eagerly on both paths. On 'defer-dirty' the result is not
-        // written (unsaved edits win), but the parse must still run so a
-        // malformed payload (e.g. missing `entities`) fails loud into the
-        // catch block instead of being silently marked loaded — this matches
-        // the pre-refactor eager parse and keeps the refactor behaviour-neutral.
-        const curves = wsPayloadToCurves(result.entities, this._hass.states, CURVE_COLORS);
-        if (action === 'apply') {
+        if (action === 'apply' && curves) {
           this._curves = curves;
           this._originalCurves = cloneCurves(curves);
           this._cleanVersion = this._dirtyVersion;
