@@ -6,9 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## [2.15.0-dev.8] - 2026-05-14
+## [2.15.0-dev.9] - 2026-05-16
 
 ### Added
+
+- **Session persistence for curve selection and scrubber position.** Selected curve and scrubber position now survive page reloads and HA navigation via `sessionStorage` (keyed per entity). `<curve-scrubber>` refactored into a fully controlled component; hydration guard prevents overwriting active user state on entity switch. (#102)
+
+### Fixed
+
+- **HA state push during active drag no longer clobbers mid-drag edits.** A `_dragActive` sentinel blocks `_tryLoadCurves()` while a curve point is being dragged. A deferred reload fires on `point-drop`/`point-remove` so the card never stays stale after the drag ends. `@pointercancel` wired to the SVG drag surface closes the mobile touch-cancel escape path. (#103)
 
 - **Stress-fixture test suite for 20-light long-name scenarios.** `lightener-curve-card.stress.test.ts` mounts a full `<lightener-curve-card>` custom element with 20 entities, long friendly names (50+ chars), and a two-state matchMedia mock. Covers: DOM scale (20 legend rows + 20 SVG curve lines), CSS overflow contracts on `.name-block`, `.name`, `.entity-id`, and `.brightness-value`, desktop/mobile hint text and hit-circle radius, partial entity load (10 entities), and a negative guard ensuring `hass.states` friendly names are used — not stripped entity IDs.
 
