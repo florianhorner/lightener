@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.15.0-dev.10] - 2026-05-16
+
+### Changed
+
+- **Curve-load lifecycle extracted into a pure, tested module.** The seven scattered load-state fields on `<lightener-curve-card>` (`_loaded`, `_loading`, `_loadError`, and the queued-reload entity IDs) are consolidated into a single `_load` state object driven by pure transition functions in `js/src/utils/load-lifecycle.ts` — the same pattern as `save-lifecycle.ts`. The linear-default preset-chooser decision moved to `presets.ts` as `shouldAutoOpenPresets`. Behaviour is preserved; this is internal structure for testability, on the way to bringing the card under the 400-line coverage threshold. (#106)
+
+### Fixed
+
+- **Malformed curve payloads during an unsaved edit now surface a load error.** A backend `get_curves` response missing its `entities` key while the user has unsaved local edits is no longer silently accepted as "loaded" — it fails loud into the load-error path, matching pre-refactor behaviour. The user's unsaved edits are preserved. (#106)
+
 ## [2.15.0-dev.9] - 2026-05-16
 
 ### Added

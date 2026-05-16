@@ -17,8 +17,8 @@ import {
 import { easeOutCubic, sampleCurveAt, CURVE_COLORS } from './utils/graph-math.js';
 import {
   CURVE_PRESETS,
-  controlPointsAreLinearDefault,
   presetPolylinePoints,
+  shouldAutoOpenPresets,
   type PresetDef,
 } from './utils/presets.js';
 import {
@@ -29,12 +29,26 @@ import {
   isSaving,
   reduce as reduceSave,
 } from './utils/save-lifecycle.js';
+import {
+  INITIAL_LOAD_STATE,
+  type LoadState,
+  beginLoad,
+  clearForEntity,
+  clearLoadedFlag,
+  finishLoad,
+  needsLoad,
+  queueReload,
+  resolveError,
+  resolveSuccess,
+  retryLoad,
+  takePendingDirtyReload,
+} from './utils/load-lifecycle.js';
 import './components/curve-graph.js';
 import './components/curve-scrubber.js';
 import './components/curve-legend.js';
 import './components/curve-footer.js';
 
-const CARD_VERSION = '2.15.0-dev.9';
+const CARD_VERSION = '2.15.0-dev.10';
 const SAVE_SUCCESS_DISPLAY_MS = 2000;
 const CANCEL_ANIM_DURATION_MS = 300;
 
@@ -253,8 +267,10 @@ export class LightenerCurveCard extends LitElement {
   @state() private _config: Record<string, unknown> = {};
   @state() private _selectedCurveId: string | null = null;
   @state() private _saveState: SaveState = INITIAL_SAVE_STATE;
-  @state() private _loadError: string | null = null;
-  @state() private _loading = false;
+  // Curve-load state machine. Held as one @state() object reassigned via the
+  // pure helpers in utils/load-lifecycle.ts — never mutated in place — so Lit
+  // re-renders on every transition (same pattern as _saveState above).
+  @state() private _load: LoadState = INITIAL_LOAD_STATE;
   @state() private _manageError: string | null = null;
   @state() private _managingLights = false;
   @state() private _groupDeleted = false;
@@ -279,11 +295,6 @@ export class LightenerCurveCard extends LitElement {
   private _undoStack: LightCurve[][] = [];
   private _dragUndoPushed = false;
   private _dragActive = false;
-  private _loaded = false;
-  private _loadedEntityId: string | undefined = undefined;
-  private _loadErrorEntityId: string | undefined = undefined;
-  private _pendingReloadEntityId: string | undefined = undefined;
-  private _reloadAfterLoadEntityId: string | undefined = undefined;
   // entity_ids we have already auto-opened the preset chooser for. Once a
   // user has seen the auto-open for a given group, we never auto-open it
   // again on the same card instance — even after they switch away to
@@ -683,16 +694,12 @@ export class LightenerCurveCard extends LitElement {
     if (entityChanged) {
       if (this._previewActive) this._stopPreview();
       this._dragActive = false;
-      this._loaded = false;
-      this._loadedEntityId = undefined;
-      this._loadErrorEntityId = undefined;
+      this._load = clearForEntity(this._load);
       this._groupDeleted = false;
       this._showPresets = false;
       this._selectedCurveId = null;
       this._scrubberPosition = null;
       this._undoStack = [];
-      this._pendingReloadEntityId = undefined;
-      this._reloadAfterLoadEntityId = undefined;
       this._eligibleAddLightIds = null;
       // Abandon any unsaved edits so the dirty-reload guard in _tryLoadCurves()
       // does not block the incoming response for the new entity.
@@ -705,7 +712,7 @@ export class LightenerCurveCard extends LitElement {
     const hadHass = !!this._hass;
     this._hass = hass;
     // Only load on first hass assignment or if not yet loaded
-    if (!hadHass || !this._loaded) {
+    if (!hadHass || !this._load.loaded) {
       if (!this._dragActive) {
         this._tryLoadCurves();
       }
@@ -747,9 +754,9 @@ export class LightenerCurveCard extends LitElement {
       !this._isDirty &&
       !this._saving &&
       !this._cancelAnimating &&
-      !this._loading &&
+      !this._load.loading &&
       !this._managingLights &&
-      !this._loadError &&
+      !this._load.loadError &&
       !this._groupDeleted
     );
   }
@@ -764,9 +771,8 @@ export class LightenerCurveCard extends LitElement {
     // Skip the reset if we already have a load error for the same entity — avoids
     // re-spamming the backend (and the HA log) every time the card re-mounts on a
     // misconfigured entity ID.
-    if (this._loadErrorEntityId !== this._entityId) {
-      this._loaded = false;
-      this._loadedEntityId = undefined;
+    if (this._load.loadErrorEntityId !== this._entityId) {
+      this._load = clearLoadedFlag(this._load);
     }
     // If the card was previously deleted from inside this instance and the
     // dashboard has since been re-pointed at a different entity, clear the
@@ -774,10 +780,9 @@ export class LightenerCurveCard extends LitElement {
     // remount (navigate away and back, conditional re-render), keep the
     // deleted state — re-fetching curves for a removed config entry would
     // either 404 or render an empty grid that looks like a fresh group.
-    if (this._groupDeleted && this._loadedEntityId !== this._entityId) {
+    if (this._groupDeleted && this._load.loadedEntityId !== this._entityId) {
       this._groupDeleted = false;
-      this._loaded = false;
-      this._loadedEntityId = undefined;
+      this._load = clearLoadedFlag(this._load);
     }
     this._tryLoadCurves();
 
@@ -1005,9 +1010,8 @@ export class LightenerCurveCard extends LitElement {
   }
 
   private async _tryLoadCurves(): Promise<void> {
-    // Re-load if the entity changed since last load
-    if (this._loaded && this._loadedEntityId === this._entityId) return;
-    if (this._loading) return;
+    // Skip if the current entity is already loaded, or a load is in flight.
+    if (!needsLoad(this._load, this._entityId)) return;
 
     if (!this._hass || !this._entityId) {
       // No hass or entity yet — use mock data for dev/preview
@@ -1020,11 +1024,9 @@ export class LightenerCurveCard extends LitElement {
       return;
     }
 
-    this._loadError = null;
-    this._loading = true;
+    this._load = beginLoad(this._load);
     // Capture the entity we're loading so we can discard stale responses
     const requestedEntity = this._entityId;
-    let shouldRunQueuedReload = false;
 
     try {
       const result = await this._hass.callWS<{
@@ -1034,97 +1036,92 @@ export class LightenerCurveCard extends LitElement {
         entity_id: requestedEntity,
       });
 
-      // Discard if entity changed while the request was in flight
-      if (this._entityId !== requestedEntity) return;
-      if (this._reloadAfterLoadEntityId === requestedEntity) {
-        shouldRunQueuedReload = true;
-      } else {
-        const curves = wsPayloadToCurves(result.entities, this._hass.states, CURVE_COLORS);
-        if (this._isDirty) {
-          // Do not overwrite unsaved local curve edits with an in-flight reload response.
-          // Mark as loaded so set hass() stops re-triggering on every HA state update.
-          // Clear error state and mark the entity as seen for auto-preset suppression
-          // — the same housekeeping the success path does below.
-          this._pendingReloadEntityId = requestedEntity;
-          this._loaded = true;
-          this._loadedEntityId = requestedEntity;
-          this._loadErrorEntityId = undefined;
-          this._autoPresetsShownFor.add(requestedEntity);
-          return;
-        }
-        this._pendingReloadEntityId = undefined;
-        this._curves = curves;
-        this._originalCurves = cloneCurves(curves);
-        this._cleanVersion = this._dirtyVersion;
-        this._loaded = true;
-        this._loadedEntityId = requestedEntity;
-        this._loadErrorEntityId = undefined;
+      const { state, action } = resolveSuccess(
+        this._load,
+        requestedEntity,
+        this._entityId,
+        this._isDirty
+      );
+      // Parse BEFORE committing the new load state. wsPayloadToCurves throws on
+      // a malformed payload (e.g. missing `entities`); committing `state` first
+      // would strand pendingReloadEntityId from a 'defer-dirty' transition on a
+      // load that actually failed — a later cancel/undo would then drain it as a
+      // spurious reload. Parsing first leaves the catch's resolveError working
+      // on the pre-transition state. The eager parse on the defer-dirty path
+      // still keeps a malformed dirty response failing loud, as before.
+      let curves: LightCurve[] | undefined;
+      if (action === 'apply' || action === 'defer-dirty') {
+        curves = wsPayloadToCurves(result.entities, this._hass.states, CURVE_COLORS);
+      }
+      this._load = state;
+      if (action === 'apply' || action === 'defer-dirty') {
+        if (action === 'apply' && curves) {
+          this._curves = curves;
+          this._originalCurves = cloneCurves(curves);
+          this._cleanVersion = this._dirtyVersion;
 
-        // Single hydration site: restore session state only if the user has
-        // not already interacted while this async load was in flight.
-        if (this._selectedCurveId === null && this._scrubberPosition === null) {
-          const stored = this._readStoredState(requestedEntity);
-          if (stored) {
-            if (
-              stored.selectedCurveId !== null &&
-              canSelectCurve(this._curves, stored.selectedCurveId)
-            ) {
-              this._selectedCurveId = stored.selectedCurveId;
-            }
-            if (stored.scrubberPosition !== null) {
-              this._scrubberPosition = stored.scrubberPosition;
+          // Single hydration site: restore session state only if the user has
+          // not already interacted while this async load was in flight.
+          if (this._selectedCurveId === null && this._scrubberPosition === null) {
+            const stored = this._readStoredState(requestedEntity);
+            if (stored) {
+              if (
+                stored.selectedCurveId !== null &&
+                canSelectCurve(this._curves, stored.selectedCurveId)
+              ) {
+                this._selectedCurveId = stored.selectedCurveId;
+              }
+              if (stored.scrubberPosition !== null) {
+                this._scrubberPosition = stored.scrubberPosition;
+              }
             }
           }
-        }
 
-        // Onboarding handoff: a freshly-created group lands here with linear
-        // default curves. Auto-open the preset chooser so the user picks a
-        // starting curve visually instead of being told "nothing here yet."
-        // One-shot per entity for the card's lifetime — switching away and
-        // back must not re-open after the user dismissed it.
-        if (
-          !this._autoPresetsShownFor.has(requestedEntity) &&
-          curves.length > 0 &&
-          curves.every((c) => controlPointsAreLinearDefault(c.controlPoints))
-        ) {
-          this._showPresets = true;
+          // Onboarding handoff: a freshly-created group lands here with linear
+          // default curves. Auto-open the preset chooser so the user picks a
+          // starting curve visually instead of being told "nothing here yet."
+          // One-shot per entity for the card's lifetime — switching away and
+          // back must not re-open after the user dismissed it.
+          if (shouldAutoOpenPresets(this._autoPresetsShownFor, requestedEntity, curves)) {
+            this._showPresets = true;
+          }
+          if (this._saveState.phase === 'confirming') {
+            this._dispatchSave({ type: 'save-confirmed' });
+            if (this._saveSuccessTimer) clearTimeout(this._saveSuccessTimer);
+            this._saveSuccessTimer = setTimeout(() => {
+              this._dispatchSave({ type: 'save-clear' });
+              this._saveSuccessTimer = null;
+            }, SAVE_SUCCESS_DISPLAY_MS);
+          }
         }
+        // Mark the entity as seen so the preset chooser is not auto-opened
+        // later — applies to both apply and defer-dirty, mirroring the original.
         this._autoPresetsShownFor.add(requestedEntity);
-        if (this._saveState.phase === 'confirming') {
-          this._dispatchSave({ type: 'save-confirmed' });
-          if (this._saveSuccessTimer) clearTimeout(this._saveSuccessTimer);
-          this._saveSuccessTimer = setTimeout(() => {
-            this._dispatchSave({ type: 'save-clear' });
-            this._saveSuccessTimer = null;
-          }, SAVE_SUCCESS_DISPLAY_MS);
-        }
       }
+      // action 'discard' / 'run-queued-reload' need no curve write here;
+      // finishLoad() below issues any follow-up reload.
     } catch (err) {
-      if (this._entityId !== requestedEntity) return;
-      console.error('[Lightener] Failed to load curves:', err);
-      this._loadError = String(err);
-      this._loaded = true;
-      this._loadedEntityId = requestedEntity;
-      // Remember which entity caused the error so re-mounts don't re-request
-      // and re-spam the HA log for a permanently misconfigured entity.
-      this._loadErrorEntityId = requestedEntity;
-      if (this._saveState.phase === 'confirming') {
-        this._dispatchSave({ type: 'save-error', message: 'Save failed. Check connection.' });
+      const { state, discarded } = resolveError(
+        this._load,
+        requestedEntity,
+        this._entityId,
+        String(err)
+      );
+      this._load = state;
+      if (!discarded) {
+        console.error('[Lightener] Failed to load curves:', err);
+        if (this._saveState.phase === 'confirming') {
+          this._dispatchSave({ type: 'save-error', message: 'Save failed. Check connection.' });
+        }
       }
     } finally {
-      this._loading = false;
-      // If entity changed during flight, trigger reload for the new entity
-      if (this._entityId !== requestedEntity) {
+      const { state, followUp } = finishLoad(this._load, requestedEntity, this._entityId);
+      this._load = state;
+      // followUp: 'reload-changed-entity' (entity switched mid-flight) or
+      // 'run-queued-reload' (a reload was queued for this entity).
+      if (followUp !== 'none') {
         void this._tryLoadCurves();
       }
-    }
-    if (
-      shouldRunQueuedReload ||
-      (this._reloadAfterLoadEntityId === requestedEntity && this._entityId === requestedEntity)
-    ) {
-      this._reloadAfterLoadEntityId = undefined;
-      this._loaded = false;
-      void this._tryLoadCurves();
     }
   }
 
@@ -1133,8 +1130,8 @@ export class LightenerCurveCard extends LitElement {
   private _onScrubberMove(e: CustomEvent): void {
     const position = e.detail.position;
     this._scrubberPosition = position;
-    if (this._loadedEntityId) {
-      this._writeStoredState(this._loadedEntityId, { scrubberPosition: position });
+    if (this._load.loadedEntityId) {
+      this._writeStoredState(this._load.loadedEntityId, { scrubberPosition: position });
     }
     if (this._previewActive) {
       this._previewLights(position);
@@ -1163,7 +1160,7 @@ export class LightenerCurveCard extends LitElement {
     // Ensure the graph shows a scrubber indicator even if the user never touched the slider
     if (this._scrubberPosition === null) {
       this._scrubberPosition = 50;
-      const entityId = this._loadedEntityId ?? this._entityId;
+      const entityId = this._load.loadedEntityId ?? this._entityId;
       if (entityId) {
         this._writeStoredState(entityId, { scrubberPosition: this._scrubberPosition });
       }
@@ -1302,7 +1299,7 @@ export class LightenerCurveCard extends LitElement {
     // to exist and be visible.
     if (entityId !== this._selectedCurveId && !canSelectCurve(this._curves, entityId)) return;
     this._selectedCurveId = toggleSelection(this._selectedCurveId, entityId);
-    const storageEntityId = this._loadedEntityId ?? this._entityId;
+    const storageEntityId = this._load.loadedEntityId ?? this._entityId;
     if (storageEntityId) {
       this._writeStoredState(storageEntityId, { selectedCurveId: this._selectedCurveId });
     }
@@ -1315,7 +1312,7 @@ export class LightenerCurveCard extends LitElement {
     const curve = this._curves.find((item) => item.entityId === entityId);
     if (!curve || !curve.visible) return;
     this._selectedCurveId = entityId;
-    const storageEntityId = this._loadedEntityId ?? this._entityId;
+    const storageEntityId = this._load.loadedEntityId ?? this._entityId;
     if (storageEntityId) {
       this._writeStoredState(storageEntityId, { selectedCurveId: this._selectedCurveId });
     }
@@ -1403,7 +1400,7 @@ export class LightenerCurveCard extends LitElement {
     const draggedCurve = this._curves[curveIndex];
     if (draggedCurve && this._selectedCurveId !== draggedCurve.entityId) {
       this._selectedCurveId = draggedCurve.entityId;
-      const entityId = this._loadedEntityId ?? this._entityId;
+      const entityId = this._load.loadedEntityId ?? this._entityId;
       if (entityId) {
         this._writeStoredState(entityId, { selectedCurveId: this._selectedCurveId });
       }
@@ -1422,7 +1419,7 @@ export class LightenerCurveCard extends LitElement {
   private _onPointDrop(_e: CustomEvent): void {
     this._dragUndoPushed = false;
     this._dragActive = false;
-    if (!this._loaded && this._hass) {
+    if (!this._load.loaded && this._hass) {
       this._tryLoadCurves();
     }
   }
@@ -1447,7 +1444,7 @@ export class LightenerCurveCard extends LitElement {
     // Reset drag-undo flag in case removal came from long-press (which skips point-drop)
     this._dragUndoPushed = false;
     this._dragActive = false;
-    if (!this._loaded && this._hass) {
+    if (!this._load.loaded && this._hass) {
       this._tryLoadCurves();
     }
     const { curveIndex, pointIndex } = e.detail;
@@ -1471,7 +1468,7 @@ export class LightenerCurveCard extends LitElement {
       const curve = this._curves.find((c) => c.entityId === entityId);
       if (curve && !curve.visible) {
         this._selectedCurveId = null;
-        const storageEntityId = this._loadedEntityId ?? this._entityId;
+        const storageEntityId = this._load.loadedEntityId ?? this._entityId;
         if (storageEntityId) {
           this._writeStoredState(storageEntityId, { selectedCurveId: null });
         }
@@ -1496,7 +1493,7 @@ export class LightenerCurveCard extends LitElement {
       await this._hass.callWS(payload);
       this._undoStack = [];
       this._eligibleAddLightIds = null;
-      this._loaded = false;
+      this._load = clearLoadedFlag(this._load);
       await this._tryLoadCurves();
       this._manageMode = false;
       this._legendCloseAddSignal++;
@@ -1557,12 +1554,17 @@ export class LightenerCurveCard extends LitElement {
       this._curves = [];
       this._originalCurves = [];
       this._undoStack = [];
-      this._loaded = true;
-      this._loadedEntityId = entityId;
+      // Mark the deleted group as cleanly loaded with no error so the render
+      // path shows the deleted-group view, not a spinner or a load error.
+      this._load = {
+        ...this._load,
+        loaded: true,
+        loadedEntityId: entityId,
+        loadError: null,
+        loadErrorEntityId: undefined,
+      };
       this._selectedCurveId = null;
       this._writeStoredState(entityId, { selectedCurveId: null });
-      this._loadError = null;
-      this._loadErrorEntityId = undefined;
       this._groupDeleted = true;
       this.dispatchEvent(
         new CustomEvent('lightener-group-deleted', {
@@ -1594,14 +1596,14 @@ export class LightenerCurveCard extends LitElement {
       });
       if (this._selectedCurveId === entityId) {
         this._selectedCurveId = null;
-        const storageEntityId = this._loadedEntityId ?? this._entityId;
+        const storageEntityId = this._load.loadedEntityId ?? this._entityId;
         if (storageEntityId) {
           this._writeStoredState(storageEntityId, { selectedCurveId: null });
         }
       }
       this._undoStack = [];
       this._eligibleAddLightIds = null;
-      this._loaded = false;
+      this._load = clearLoadedFlag(this._load);
       await this._tryLoadCurves();
     } catch (err) {
       console.error('[Lightener] Failed to remove light:', err);
@@ -1654,14 +1656,17 @@ export class LightenerCurveCard extends LitElement {
       // _originalCurves is intentionally left stale until the backend re-fetch overwrites it.
       this._cleanVersion = this._dirtyVersion;
       this._undoStack = [];
-      this._pendingReloadEntityId = undefined;
+      // The curves are now clean — any dirty-deferred reload is moot.
+      this._load = { ...this._load, pendingReloadEntityId: undefined };
       this._dispatchSave({ type: 'save-success' }); // → confirming; controls stay disabled
       // Inline reload: _tryLoadCurves dispatches save-confirmed (and starts the success timer)
-      // once the re-fetch completes. In the stale-load case, queue behind the in-flight load.
-      this._loaded = false;
-      if (this._loading) {
-        this._reloadAfterLoadEntityId = savedEntityId;
-      } else {
+      // once the re-fetch completes. In the stale-load case, queue behind the in-flight load
+      // and return without awaiting; otherwise await the re-fetch so callers that await
+      // saveCurves() (e.g. the entity-switch flow in lightener-panel.js) do not advance
+      // while the card is still in the `confirming` phase.
+      const { state: reloadState, runNow } = queueReload(this._load, savedEntityId);
+      this._load = reloadState;
+      if (runNow) {
         await this._tryLoadCurves();
       }
       return true;
@@ -1673,28 +1678,20 @@ export class LightenerCurveCard extends LitElement {
   }
 
   private _retryLoad(): void {
-    this._loaded = false;
-    this._loadError = null;
-    this._loadErrorEntityId = undefined;
-    this._pendingReloadEntityId = undefined;
-    this._reloadAfterLoadEntityId = undefined;
+    this._load = retryLoad(this._load);
     this._tryLoadCurves();
   }
 
   private _reloadCurvesAfterCurrentLoad(entityId: string): void {
-    this._loaded = false;
-    if (this._loading) {
-      this._reloadAfterLoadEntityId = entityId;
-      return;
-    }
-    void this._tryLoadCurves();
+    const { state, runNow } = queueReload(this._load, entityId);
+    this._load = state;
+    if (runNow) void this._tryLoadCurves();
   }
 
   private _reloadPendingDirtyResponse(): void {
-    const entityId = this._pendingReloadEntityId;
-    if (!entityId || entityId !== this._entityId) return;
-    this._pendingReloadEntityId = undefined;
-    this._reloadCurvesAfterCurrentLoad(entityId);
+    const { state, reloadEntityId } = takePendingDirtyReload(this._load, this._entityId);
+    this._load = state;
+    if (reloadEntityId) this._reloadCurvesAfterCurrentLoad(reloadEntityId);
   }
 
   private _onCancel(): void {
@@ -1704,8 +1701,8 @@ export class LightenerCurveCard extends LitElement {
     this._undoStack = [];
     this._animateCurvesTo(cloneCurves(this._originalCurves), () => {
       this._selectedCurveId = null;
-      if (this._loadedEntityId) {
-        this._writeStoredState(this._loadedEntityId, { selectedCurveId: null });
+      if (this._load.loadedEntityId) {
+        this._writeStoredState(this._load.loadedEntityId, { selectedCurveId: null });
       }
       this._dispatchSave({ type: 'reset' });
     });
@@ -1729,7 +1726,7 @@ export class LightenerCurveCard extends LitElement {
       >
         <div class="header">
           <h2>${(this._config.title as string) ?? 'Brightness Curves'}</h2>
-          ${!this._loading && this._isAdmin && this._curves.length > 0
+          ${!this._load.loading && this._isAdmin && this._curves.length > 0
             ? html`<button
                 class="presets-btn ${this._showPresets ? 'active' : ''}"
                 @click=${this._togglePresets}
@@ -1745,7 +1742,7 @@ export class LightenerCurveCard extends LitElement {
 
         <div class="workspace">
           <div class="main-stack">
-            ${this._loading
+            ${this._load.loading
               ? this._renderLoadingSkeleton()
               : html`<div class="graph-panel">
                   <curve-graph
@@ -1835,7 +1832,7 @@ export class LightenerCurveCard extends LitElement {
                 Saved successfully
               </div>`
             : nothing}
-          ${this._loadError
+          ${this._load.loadError
             ? html`<div class="error" role="alert">
                 ${WARNING_ICON} Failed to load curves
                 <button type="button" class="retry-link" @click=${this._retryLoad}>Retry</button>

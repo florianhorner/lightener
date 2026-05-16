@@ -147,9 +147,14 @@
         const curves = clone(scenarios[name]);
         preview.loadCurves(curves);
         for (const card of cards) {
-          card._loaded = false;
-          card._loadedEntityId = undefined;
-          card._loadError = null;
+          // The load lifecycle lives in a single `_load` state object
+          // (see js/src/utils/load-lifecycle.ts) — reassign it to force a reload.
+          card._load = {
+            ...card._load,
+            loaded: false,
+            loadedEntityId: undefined,
+            loadError: null,
+          };
           card._showPresets = false;
           card._selectedCurveId = curves[0]?.entityId ?? null;
           await card._tryLoadCurves?.();
@@ -161,8 +166,7 @@
 
       function refreshCards() {
         for (const card of cards) {
-          card._loaded = false;
-          card._loadedEntityId = undefined;
+          card._load = { ...card._load, loaded: false, loadedEntityId: undefined };
           card._tryLoadCurves?.();
         }
       }

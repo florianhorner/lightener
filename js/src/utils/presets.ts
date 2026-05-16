@@ -85,3 +85,20 @@ export function controlPointsAreLinearDefault(
       cp.target === linear.controlPoints[i]!.target
   );
 }
+
+/**
+ * Decide whether the preset chooser should auto-open for a freshly-loaded
+ * group. True only when the entity has not been shown the chooser yet (the
+ * card tracks this per-instance) and every loaded curve is still at the
+ * linear default — i.e. a brand-new group straight from the config flow.
+ * One-shot per entity: switching away and back must not re-open it.
+ */
+export function shouldAutoOpenPresets(
+  autoPresetsShownFor: ReadonlySet<string>,
+  requestedEntity: string,
+  curves: ReadonlyArray<{ controlPoints: ReadonlyArray<{ lightener: number; target: number }> }>
+): boolean {
+  if (autoPresetsShownFor.has(requestedEntity)) return false;
+  if (curves.length === 0) return false;
+  return curves.every((c) => controlPointsAreLinearDefault(c.controlPoints));
+}
