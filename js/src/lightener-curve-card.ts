@@ -310,6 +310,7 @@ export class LightenerCurveCard extends LitElement {
   @state() private _legendCloseRemoveSignal = 0;
   @state() private _manageMode = false;
   @state() private _eligibleAddLightIds: string[] | null = null;
+  private _eligibleAddLightRequestId = 0;
   private _previewRafPending = false;
   private _previewTrailingTimer: ReturnType<typeof setTimeout> | null = null;
   private _lastPreviewTime = 0;
@@ -851,19 +852,30 @@ export class LightenerCurveCard extends LitElement {
 
   private _onLegendPanelOpen(): void {
     this._showPresets = false;
+    this._eligibleAddLightIds = null;
     void this._loadEligibleAddLights();
   }
 
-  private async _loadEligibleAddLights(): Promise<void> {
-    if (!this._hass || !this._isAdmin || this._eligibleAddLightIds !== null) return;
+  private _onAreaFilterChange(ev: CustomEvent<{ areaId: string | null }>): void {
+    const areaId = ev.detail.areaId;
+    this._eligibleAddLightIds = areaId ? [] : null;
+    void this._loadEligibleAddLights(areaId);
+  }
+
+  private async _loadEligibleAddLights(areaId: string | null = null): Promise<void> {
+    if (!this._hass || !this._isAdmin) return;
+    const requestId = ++this._eligibleAddLightRequestId;
     try {
       const result = await this._hass.callWS<{ entities?: string[] }>({
         type: 'lightener/list_eligible_lights',
+        ...(areaId ? { area_id: areaId } : {}),
       });
+      if (requestId !== this._eligibleAddLightRequestId) return;
       this._eligibleAddLightIds = Array.isArray(result?.entities) ? result.entities : [];
     } catch (err) {
+      if (requestId !== this._eligibleAddLightRequestId) return;
       console.warn('[Lightener] Failed to load eligible add-light entities:', err);
-      this._eligibleAddLightIds = null;
+      this._eligibleAddLightIds = areaId ? [] : null;
     }
   }
 
@@ -1790,6 +1802,7 @@ export class LightenerCurveCard extends LitElement {
               @toggle-curve=${this._onToggleCurve}
               @add-panel-open=${this._onLegendPanelOpen}
               @remove-panel-open=${this._onLegendPanelOpen}
+              @area-filter-change=${this._onAreaFilterChange}
               @add-light=${this._onAddLight}
               @remove-light=${this._onRemoveLight}
               @manage-toggle=${this._onManageToggle}

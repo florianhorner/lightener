@@ -2,6 +2,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { LightCurve, Hass } from '../utils/types.js';
 import { EntityPickerLoader } from '../utils/entity-picker-loader.js';
+import { AreaPickerLoader } from '../utils/area-picker-loader.js';
 import { LEGEND_SHAPES, sampleCurveAt } from '../utils/graph-math.js';
 import { discriminator as splitName } from '../utils/naming.js';
 import { CURVE_PRESETS, presetPolylinePoints } from '../utils/presets.js';
@@ -17,6 +18,12 @@ const DEFAULT_PRESET_OPTIONS: LegendPresetOption[] = [
   { value: 'late_starter', label: 'Late starter' },
   { value: 'night_mode', label: 'Night mode' },
 ];
+
+function normalizeAreaPickerValue(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const areaId = value.trim();
+  return areaId || null;
+}
 
 @customElement('curve-legend')
 export class CurveLegend extends LitElement {
@@ -35,10 +42,15 @@ export class CurveLegend extends LitElement {
 
   @state() private _addingLight = false;
   @state() private _pendingAddEntity = '';
+  @state() private _addAreaFilter: string | null = null;
   @state() private _pendingPreset: string = DEFAULT_PRESET_OPTIONS[0].value;
   @state() private _confirmingRemove: string | null = null;
   @state() private _confirmingDeleteGroup = false;
   private _picker = new EntityPickerLoader(
+    () => this.isConnected,
+    () => this.requestUpdate()
+  );
+  private _areaPicker = new AreaPickerLoader(
     () => this.isConnected,
     () => this.requestUpdate()
   );
@@ -812,10 +824,14 @@ export class CurveLegend extends LitElement {
   connectedCallback(): void {
     super.connectedCallback();
     this._picker.ensureLoaded();
+    this._areaPicker.ensureLoaded();
   }
 
   protected updated(changed: Map<string, unknown>): void {
-    if (changed.has('hass') && this.hass) this._picker.ensureLoaded();
+    if (changed.has('hass') && this.hass) {
+      this._picker.ensureLoaded();
+      this._areaPicker.ensureLoaded();
+    }
   }
 
   private _onFallbackAddEntityInput(e: Event): void {
@@ -827,6 +843,7 @@ export class CurveLegend extends LitElement {
     this._confirmingDeleteGroup = false;
     this._addingLight = true;
     this._pendingAddEntity = '';
+    this._addAreaFilter = null;
     this._pendingPreset = this.presetOptions[0]?.value ?? 'linear';
     this.dispatchEvent(
       new CustomEvent('add-panel-open', {
@@ -839,10 +856,24 @@ export class CurveLegend extends LitElement {
   private _cancelAdd() {
     this._addingLight = false;
     this._pendingAddEntity = '';
+    this._addAreaFilter = null;
   }
 
   private _onAddEntityChange(e: CustomEvent) {
     this._pendingAddEntity = (e.detail?.value as string) ?? '';
+  }
+
+  private _onAddAreaChange(e: CustomEvent) {
+    const areaId = normalizeAreaPickerValue(e.detail?.value);
+    this._addAreaFilter = areaId;
+    this._pendingAddEntity = '';
+    this.dispatchEvent(
+      new CustomEvent('area-filter-change', {
+        detail: { areaId },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
   private _onPresetSelect(presetId: string) {
@@ -872,6 +903,13 @@ export class CurveLegend extends LitElement {
     ];
     return html`
       <div class="add-form">
+        ${this._areaPicker.ready
+          ? html`<ha-area-picker
+              .hass=${this.hass}
+              .value=${this._addAreaFilter ?? ''}
+              @value-changed=${this._onAddAreaChange}
+            ></ha-area-picker>`
+          : nothing}
         ${this._picker.ready
           ? html`<ha-entity-picker
               .hass=${this.hass}

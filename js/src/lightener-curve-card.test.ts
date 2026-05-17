@@ -252,6 +252,54 @@ describe('lightener-curve-card — light management', () => {
     expect(legend.includeEntityIds).toEqual(['light.free_bulb']);
   });
 
+  it('loads area-filtered eligible ids and ignores stale unfiltered responses', async () => {
+    const { card, hass } = await mountCard({
+      'light.a': { brightness: { '100': '100' } },
+    });
+    let resolveAll!: (value: { entities: string[] }) => void;
+    let resolveArea!: (value: { entities: string[] }) => void;
+    hass.callWS.mockReset();
+    hass.callWS.mockImplementation((msg: { type?: string; area_id?: string }) => {
+      if (msg.type !== 'lightener/list_eligible_lights') return Promise.resolve({ entities: {} });
+      if (msg.area_id === 'living_room') {
+        return new Promise((resolve) => {
+          resolveArea = resolve;
+        });
+      }
+      return new Promise((resolve) => {
+        resolveAll = resolve;
+      });
+    });
+
+    fireLegend(card, 'add-panel-open', {});
+    fireLegend(card, 'area-filter-change', { areaId: 'living_room' });
+    await card.updateComplete;
+
+    let legend = card.renderRoot.querySelector('curve-legend') as unknown as {
+      includeEntityIds: string[] | null;
+    };
+    expect(legend.includeEntityIds).toEqual([]);
+    resolveArea({ entities: ['light.living_room'] });
+    await Promise.resolve();
+    await card.updateComplete;
+    legend = card.renderRoot.querySelector('curve-legend') as unknown as {
+      includeEntityIds: string[] | null;
+    };
+    expect(legend.includeEntityIds).toEqual(['light.living_room']);
+
+    resolveAll({ entities: ['light.unfiltered'] });
+    await Promise.resolve();
+    await card.updateComplete;
+    legend = card.renderRoot.querySelector('curve-legend') as unknown as {
+      includeEntityIds: string[] | null;
+    };
+    expect(legend.includeEntityIds).toEqual(['light.living_room']);
+    expect(hass.callWS).toHaveBeenCalledWith({
+      type: 'lightener/list_eligible_lights',
+      area_id: 'living_room',
+    });
+  });
+
   it('clears cached eligible add-light ids after add and remove mutations', async () => {
     const { card, hass } = await mountCard({
       'light.a': { brightness: { '100': '100' } },
