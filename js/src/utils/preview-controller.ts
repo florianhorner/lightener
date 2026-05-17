@@ -60,6 +60,7 @@ export class PreviewController {
     this._restoreBrightness.clear();
     this._lastBrightness.clear();
     for (const curve of this._host.getCurves()) {
+      if (!curve.visible) continue;
       const state = hass.states[curve.entityId];
       if (state) {
         this._restoreBrightness.set(

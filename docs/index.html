@@ -570,7 +570,7 @@
         const ss = getScrubber(source);
         const ts = getScrubber(target);
         if (ss && ts) {
-          ts._position = ss._position;
+          ts.position = ss.position;
           ts.requestUpdate();
         }
         target.requestUpdate();
@@ -584,7 +584,7 @@
           "|" +
           (card._selectedCurveId ?? "") +
           "|" +
-          (s ? s._position : 0)
+          (s ? s.position : 0)
         );
       }
 

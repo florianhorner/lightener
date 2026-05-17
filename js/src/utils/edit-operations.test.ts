@@ -68,6 +68,21 @@ describe('edit operations', () => {
     expect(removePointEdit([curve('light.a')], 0, 0)).toBeNull();
   });
 
+  it('rejects stale remove indexes without returning a no-op edit', () => {
+    const curves = [
+      {
+        ...curve('light.a'),
+        controlPoints: [
+          { lightener: 0, target: 0 },
+          { lightener: 50, target: 40 },
+          { lightener: 100, target: 100 },
+        ],
+      },
+    ];
+
+    expect(removePointEdit(curves, 0, 9)).toBeNull();
+  });
+
   it('adds a point to the matching curve, sorted by lightener', () => {
     const curves = [curve('light.a'), curve('light.b')];
     const next = addPointEdit(curves, 'light.a', 50, 30);

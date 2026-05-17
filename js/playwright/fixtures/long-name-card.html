@@ -38,7 +38,7 @@
   <body>
     <main id="root"></main>
     <script type="module">
-      import '../../src/lightener-curve-card.ts';
+      import '../../../docs/lightener-curve-card.js';
       import { CURVE_COLORS } from '../../src/utils/graph-math.ts';
 
       const LIGHTENER_ENTITY = 'light.lightener';
@@ -126,6 +126,7 @@
           type: 'custom:lightener-curve-card',
           entity: LIGHTENER_ENTITY,
           title: 'Brightness Curves',
+          embedded: true,
         });
         card.hass = hass;
         document.getElementById('root').append(card);

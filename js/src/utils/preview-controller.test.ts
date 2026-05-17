@@ -280,6 +280,26 @@ describe('PreviewController — throttle / RAF / dedupe', () => {
     expect(touched).not.toContain('light.hidden');
   });
 
+  it('does not restore hidden curves that preview never touched', () => {
+    const hass = makeHass({
+      'light.shown': { state: 'on', attributes: { brightness: 120 } },
+      'light.hidden': { state: 'on', attributes: { brightness: 80 } },
+    });
+    const hidden = { ...makeCurve('light.hidden'), visible: false };
+    const host = makeHost(hass, [makeCurve('light.shown'), hidden]);
+    const ctrl = new PreviewController(host);
+    ctrl.start();
+    flushRaf();
+    hass.callService.mockClear();
+
+    ctrl.stop();
+    const restored = hass.callService.mock.calls.map(
+      (c) => (c[2] as { entity_id: string }).entity_id
+    );
+    expect(restored).toContain('light.shown');
+    expect(restored).not.toContain('light.hidden');
+  });
+
   it('refresh() re-applies the current position while active and is inert when inactive', () => {
     const hass = makeHass();
     const host = makeHost(hass, [makeCurve('light.a')]);

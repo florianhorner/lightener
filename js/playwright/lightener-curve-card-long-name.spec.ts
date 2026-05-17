@@ -17,7 +17,7 @@ test.describe('20-light long-name curve card layout', () => {
   for (const width of WIDTHS) {
     test(`does not horizontally overflow at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: HEIGHT });
-      await page.goto('/playwright/fixtures/long-name-card.html');
+      await page.goto('/js/playwright/fixtures/long-name-card.html');
       await page.evaluate(() => window.__LIGHTENER_CARD_READY__);
 
       const report = await page.evaluate<LayoutReport, number>((tolerance) => {
