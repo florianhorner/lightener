@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>Lightener Long Name Fixture</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100vh;
+        overflow-x: visible;
+      }
+      body {
+        background: #f2f4f8;
+        color: #212121;
+        font-family: Roboto, 'Segoe UI', sans-serif;
+      }
+      #root {
+        width: 100%;
+        --primary-text-color: #212121;
+        --secondary-text-color: #616161;
+        --card-background-color: #fff;
+        --ha-card-background: #fff;
+        --divider-color: rgba(0, 0, 0, 0.12);
+        --ha-card-border-radius: 12px;
+        --ha-card-box-shadow: none;
+        --primary-color: #2563eb;
+        --error-color: #db4437;
+        --success-color: #2563eb;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="root"></main>
+    <script type="module">
+      import '../../src/lightener-curve-card.ts';
+      import { CURVE_COLORS } from '../../src/utils/graph-math.ts';
+
+      const LIGHTENER_ENTITY = 'light.lightener';
+
+      function makeStressFixture(count = 20) {
+        const curves = Array.from({ length: count }, (_, idx) => {
+          const nnn = String(idx + 1).padStart(3, '0');
+          const entityId = `light.living_room_overhead_ambient_controller_zone_${nnn}`;
+          return {
+            entityId,
+            friendlyName: `Living Room Overhead Ambient Controller Zone ${nnn}`,
+            controlPoints: [
+              { lightener: 0, target: 0 },
+              { lightener: 100, target: 100 },
+            ],
+            visible: true,
+            color: CURVE_COLORS[idx % CURVE_COLORS.length],
+          };
+        });
+
+        const entities = Object.fromEntries(
+          curves.map((curve) => [
+            curve.entityId,
+            {
+              brightness: Object.fromEntries(
+                curve.controlPoints.map((point) => [String(point.lightener), String(point.target)])
+              ),
+            },
+          ])
+        );
+
+        const states = Object.fromEntries(
+          curves.map((curve) => [
+            curve.entityId,
+            {
+              state: 'on',
+              attributes: {
+                friendly_name: curve.friendlyName,
+                brightness: 255,
+              },
+            },
+          ])
+        );
+
+        return { curves, entities, states };
+      }
+
+      async function waitForFixture(card) {
+        await card.updateComplete;
+        const graph = card.renderRoot.querySelector('curve-graph');
+        const legend = card.renderRoot.querySelector('curve-legend');
+        await graph.updateComplete;
+        await legend.updateComplete;
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
+
+      window.__LIGHTENER_CARD_READY__ = (async () => {
+        await customElements.whenDefined('lightener-curve-card');
+
+        const fixture = makeStressFixture();
+        const hass = {
+          user: { is_admin: true },
+          states: {
+            [LIGHTENER_ENTITY]: {
+              state: 'on',
+              attributes: { friendly_name: 'Lightener' },
+            },
+            ...fixture.states,
+          },
+          callWS: async (msg) => {
+            if (msg.type === 'lightener/get_curves') {
+              return { entities: fixture.entities };
+            }
+            if (msg.type === 'lightener/list_eligible_lights') {
+              return { entities: [] };
+            }
+            throw new Error(`Unexpected callWS message type: ${String(msg.type)}`);
+          },
+          callApi: async () => undefined,
+          callService: async () => undefined,
+        };
+
+        const card = document.createElement('lightener-curve-card');
+        card.setConfig({
+          type: 'custom:lightener-curve-card',
+          entity: LIGHTENER_ENTITY,
+          title: 'Brightness Curves',
+        });
+        card.hass = hass;
+        document.getElementById('root').append(card);
+        await waitForFixture(card);
+        window.__LIGHTENER_STRESS_FIXTURE__ = fixture;
+      })();
+    </script>
+  </body>
+</html>

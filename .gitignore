@@ -20,6 +20,8 @@ config/*
 !config/configuration.yaml
 node_modules/
 js/coverage/
+js/test-results/
+js/playwright-report/
 .gstack/
 .context/
 .env.workspace
