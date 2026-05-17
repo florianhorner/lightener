@@ -2,6 +2,8 @@ import { LitElement, html, css, svg, nothing } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { LightCurve, ControlPoint } from '../utils/types.js';
 import { prepareBrightnessConfig } from '../utils/interpolation.js';
+import { MOBILE_BREAKPOINT_MEDIA_QUERY } from '../utils/breakpoints.js';
+import { MOBILE_MEDIA } from '../utils/breakpoint-styles.js';
 import {
   PAD_LEFT,
   PAD_TOP,
@@ -155,7 +157,7 @@ export class CurveGraph extends LitElement {
       stroke-width: 0.75;
       stroke-dasharray: 3 3;
     }
-    @media (max-width: 500px) {
+    @media ${MOBILE_MEDIA} {
       svg {
         min-height: 180px;
       }
@@ -851,7 +853,7 @@ export class CurveGraph extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
-    this._mql = window.matchMedia('(max-width: 500px)');
+    this._mql = window.matchMedia(MOBILE_BREAKPOINT_MEDIA_QUERY);
     this._isMobile = this._mql.matches;
     this._mql.addEventListener('change', this._onMqlChange);
   }

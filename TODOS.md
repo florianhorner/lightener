@@ -6,14 +6,9 @@ tracked as GitHub Issues before implementation.
 
 ## Open Follow-Ups
 
-- [ ] **[P2 — save lifecycle]** Add a confirmation timeout (~8s) to the `confirming` phase. Without it, a stalled HA re-fetch leaves the card permanently frozen with controls disabled and no recovery path short of page reload. Requires a `save-unverified` terminal FSM state or a timeout-triggered `save-error`. (Follow-up to issue #92)
 - [ ] **[P3 — save lifecycle]** Consider replacing the blocking `confirming` phase with an optimistic save + silent background re-fetch. Both CEO review models flagged this as the more resilient architecture for slow HA environments. User deferred this during the issue-92 review.
-- [ ] Consolidate responsive breakpoints across the demo page, card shell, graph, legend, and footer.
-- [ ] Update `DESIGN.md` with the live `--secondary-text` token and breakpoint guidance.
-- [ ] Investigate hidden-parent rendering with tabs, popups, and stacked dashboards; add a resize/intersection guard if reproducible.
+- [ ] Reproduce hidden-parent rendering in real HA tabs, popups, and stacked dashboards; add a resize/intersection guard only if the browser repro confirms graph space collapses.
 - [ ] Path-stamp the sidebar panel script if upgrade testing shows stale cached panels after HACS updates.
-- [ ] Improve secondary visual hierarchy on the GitHub Pages demo page.
-- [ ] Strengthen the first-time visitor trust funnel with clearer install, demo, and troubleshooting paths.
-- [ ] Add Playwright visual regression test for 20-light long-name fixture at real widths (issue-90 follow-up): jsdom CSS contract test cannot verify pixel-level overflow or actual box model behavior; a 30-second Playwright screenshot diff at 320px and 1100px would catch what the Vitest suite cannot.
 - [ ] Investigate usable upper bound for the curve card light count: what should happen with 30+ lights? Legend virtualization, scroll, or count cap? Flagged by Codex during issue-90 autoplan review as a strategic product question unaddressed by the test fixture.
-- [ ] Finish the `lightener-curve-card.ts` god-file extraction: PR 2 extracts a `preview-controller` (live-preview RAF/throttle/dedupe state), PR 3 extracts `edit-operations` (point move/add/remove, undo snapshots, deferred reload). PR 1 extracted `load-lifecycle`. Goal: bring the card under the 400-line coverage-inclusion threshold in `js/vitest.config.ts`.
+- [ ] Continue the `lightener-curve-card.ts` god-file extraction after `load-lifecycle`, `preview-controller`, and `edit-operations`: extract cohesive render/orchestration modules until the card file is coherent. The goal is a well-factored card, not a specific line count.
+- [ ] Decide the curve-card coverage strategy: either lower the `lightener-curve-card.ts` size threshold in `js/vitest.config.ts` to the card's real size so it is coverage-tracked, or add explicit coverage tests for the card. The 400-line threshold is a coverage-tool heuristic, not a design target.

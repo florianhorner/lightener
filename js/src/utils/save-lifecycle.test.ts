@@ -186,6 +186,14 @@ describe('save-lifecycle reducer', () => {
     expect(s).toEqual({ phase: 'saved' });
   });
 
+  it('confirmation timeout path: confirming -> error -> retry', () => {
+    let s: SaveState = confirming;
+    s = reduce(s, { type: 'save-error', message: 'Save confirmation timed out.' });
+    expect(s).toEqual({ phase: 'error', message: 'Save confirmation timed out.' });
+    s = reduce(s, { type: 'save-start' });
+    expect(s).toEqual({ phase: 'saving' });
+  });
+
   it('re-save during saved-banner window: saved -> saving', () => {
     let s: SaveState = saved;
     // User edits (no-op in saved), then clicks save before the timer fires.

@@ -1,5 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import { MOBILE_MEDIA } from '../utils/breakpoint-styles.js';
 
 @customElement('curve-footer')
 export class CurveFooter extends LitElement {
@@ -83,7 +84,7 @@ export class CurveFooter extends LitElement {
       width: 14px;
       height: 14px;
     }
-    @media (max-width: 500px) {
+    @media ${MOBILE_MEDIA} {
       .footer {
         min-height: 48px;
       }

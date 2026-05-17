@@ -6,6 +6,7 @@ import { AreaPickerLoader } from '../utils/area-picker-loader.js';
 import { LEGEND_SHAPES, sampleCurveAt } from '../utils/graph-math.js';
 import { discriminator as splitName } from '../utils/naming.js';
 import { CURVE_PRESETS, presetPolylinePoints } from '../utils/presets.js';
+import { MOBILE_MEDIA } from '../utils/breakpoint-styles.js';
 
 export interface LegendPresetOption {
   value: string;
@@ -558,7 +559,7 @@ export class CurveLegend extends LitElement {
       grid-template-columns: 1fr 1fr;
       gap: 6px;
     }
-    @media (max-width: 499px) {
+    @media ${MOBILE_MEDIA} {
       .preset-grid {
         grid-template-columns: 1fr;
       }
@@ -674,7 +675,7 @@ export class CurveLegend extends LitElement {
         transform: rotate(360deg);
       }
     }
-    @media (max-width: 500px) {
+    @media ${MOBILE_MEDIA} {
       .legend-item {
         padding: 10px 10px;
         font-size: 14px;

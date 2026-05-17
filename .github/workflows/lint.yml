@@ -136,6 +136,9 @@ jobs:
       - name: "Install dependencies"
         run: npm ci
 
+      - name: "Install Playwright browser"
+        run: npx playwright install --with-deps chromium
+
       - name: "ESLint"
         run: npx eslint src/
 
@@ -147,6 +150,9 @@ jobs:
 
       - name: "Tests with coverage"
         run: npm run test:coverage
+
+      - name: "Browser layout/overflow regression tests"
+        run: npm run test:browser
 
       - name: "Upload frontend coverage"
         if: always()

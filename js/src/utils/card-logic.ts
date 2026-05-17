@@ -86,6 +86,9 @@ export function removePointFromCurves(
   if (!curve) return null;
   if (curve.controlPoints.length <= 2) return null;
   if (pointIndex === 0) return null;
+  if (!Number.isInteger(pointIndex) || pointIndex < 0 || pointIndex >= curve.controlPoints.length) {
+    return null;
+  }
   const result = [...curves];
   const updated = { ...result[curveIndex] };
   updated.controlPoints = updated.controlPoints.filter((_, i) => i !== pointIndex);

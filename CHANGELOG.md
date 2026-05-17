@@ -11,6 +11,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **Room filter in the in-card add-lights form.** An `<ha-area-picker>` now appears above the entity picker when adding a light to a group. Selecting a room narrows the entity picker to only the eligible lights in that room; clearing the room restores the full list. Matches the room-filter step in the group onboarding wizard, so large homes are easy to navigate in both flows. Gracefully degrades — if `ha-area-picker` never loads, the form still works with all lights shown.
+- **Browser regression guard for long light names.** Added Playwright coverage for the 20-light long-name fixture at 320px and 1100px, asserting the card, graph, legend, and legend rows stay within the viewport in a real browser.
+
+### Changed
+
+- **Preview and edit operations extracted from the curve card.** Live-preview RAF/throttle/dedupe state now lives in `preview-controller`, and point/preset/undo edit mutations route through `edit-operations`, continuing the card god-file extraction after `load-lifecycle`.
+- **Responsive breakpoint and demo guidance tightened.** Component mobile breakpoints now use shared constants, `DESIGN.md` documents the live `--secondary-text` token and breakpoint policy, and the GitHub Pages demo has clearer install, demo, and troubleshooting paths.
+
+### Fixed
+
+- **Save confirmation can no longer freeze controls indefinitely.** A stalled post-save `get_curves` confirmation times out after 8 seconds and transitions from `confirming` to a retryable save error. A save generation token now fences late reloads, so a slow re-fetch from a timed-out save can no longer confirm a newer save, and `saveCurves()` waits for the backend to actually confirm before reporting success.
 
 ## [2.15.0-dev.10] - 2026-05-16
 
