@@ -1659,7 +1659,7 @@ function e(e,t,i,r){var n,s=arguments.length,o=s<3?t:null===r?r=Object.getOwnPro
         min-height: 44px;
       }
     }
-  `,e([ue({type:Boolean})],Xe.prototype,"dirty",void 0),e([ue({type:Boolean})],Xe.prototype,"readOnly",void 0),e([ue({type:Boolean})],Xe.prototype,"saving",void 0),e([ue({type:Boolean})],Xe.prototype,"canUndo",void 0),Xe=e([he("curve-footer")],Xe);"undefined"!=typeof window&&(window.__LIGHTENER_CURVE_CARD_VERSION__="2.15.0-dev.10");const Je=q`<svg
+  `,e([ue({type:Boolean})],Xe.prototype,"dirty",void 0),e([ue({type:Boolean})],Xe.prototype,"readOnly",void 0),e([ue({type:Boolean})],Xe.prototype,"saving",void 0),e([ue({type:Boolean})],Xe.prototype,"canUndo",void 0),Xe=e([he("curve-footer")],Xe);"undefined"!=typeof window&&(window.__LIGHTENER_CURVE_CARD_VERSION__="2.15.0-dev.11");const Je=q`<svg
   class="status-icon"
   viewBox="0 0 24 24"
   fill="none"

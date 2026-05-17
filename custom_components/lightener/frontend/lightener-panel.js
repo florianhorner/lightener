@@ -1,4 +1,4 @@
-const CARD_VERSION = "2.15.0-dev.10";
+const CARD_VERSION = "2.15.0-dev.11";
 const CARD_VERSION_GLOBAL = "__LIGHTENER_CURVE_CARD_VERSION__";
 const PANEL_VERSION_GLOBAL = "__LIGHTENER_PANEL_CARD_VERSION__";
 const CARD_STALE_RELOAD_KEY = "lightener_curve_card_reload_version";

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.15.0-dev.11] - 2026-05-17
+
+### Added
+
+- **Room filter in the in-card add-lights form.** An `<ha-area-picker>` now appears above the entity picker when adding a light to a group. Selecting a room narrows the entity picker to only the eligible lights in that room; clearing the room restores the full list. Matches the room-filter step in the group onboarding wizard, so large homes are easy to navigate in both flows. Gracefully degrades — if `ha-area-picker` never loads, the form still works with all lights shown.
+
 ## [2.15.0-dev.10] - 2026-05-16
 
 ### Changed

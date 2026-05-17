@@ -147,7 +147,7 @@ describe('lightener-curve-card module', () => {
     expect(
       (window as unknown as { __LIGHTENER_CURVE_CARD_VERSION__?: string })
         .__LIGHTENER_CURVE_CARD_VERSION__
-    ).toBe('2.15.0-dev.10');
+    ).toBe('2.15.0-dev.11');
   });
 });
 
