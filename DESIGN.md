@@ -26,6 +26,7 @@ This document captures the current visual system for the Lightener curve editor 
 - `--text-sm`: 12px status copy and controls
 - `--text-md`: 13px list rows
 - `--text-lg`: 14px card heading
+- `--secondary-text`: card-level alias for Home Assistant `--secondary-text-color`; graph and footer children use this alias when the card shell supplies it, with `#616161` fallback
 
 Typography rules:
 
@@ -46,6 +47,12 @@ Typography rules:
 - Undo and cancel use a short cubic ease animation.
 - Loading uses a shimmer skeleton that preserves graph space.
 - Sticky mobile footer should feel anchored, not floating; use blur and a subtle divider instead of heavy shadows.
+
+### Breakpoints
+
+- `500px` is the shared component mobile breakpoint for graph, scrubber, legend, and footer touch-target adjustments.
+- Use `MOBILE_MEDIA` from `js/src/utils/breakpoint-styles.ts` for component `css` `@media` blocks, and `MOBILE_BREAKPOINT_MEDIA_QUERY` from `js/src/utils/breakpoints.ts` for `matchMedia` consumers, instead of hand-writing nearby values. `breakpoints.ts` stays framework-free; `breakpoint-styles.ts` is the Lit-aware adapter that wraps the value in a `css` fragment.
+- The editor shell may still use wider layout breakpoints for column stacking; do not mix those shell-layout thresholds with the 500px touch/mobile component threshold.
 
 ## Component Patterns
 
@@ -74,15 +81,21 @@ Typography rules:
 
 ### Preview Toggle
 
-- A **Preview** button in the card header enters preview mode independently of scrubber position, defaulting to 50% if the scrubber has not been touched.
+- A **Preview all lights** button in the scrubber panel enters preview mode independently of scrubber position, defaulting to 50% if the scrubber has not been touched.
 - Lights restore to their pre-preview state on: toggle off, `disconnectedCallback`, or entity change.
 - The button must show clear active/inactive state; do not rely on color alone.
 
 ### Legend
 
-- Include a section label: `Lights`.
+- Include a section label: `Group lights`.
 - Each item combines color, shape, name, and visibility affordance.
 - Selected state uses an underline accent instead of heavier framing.
+
+### Hidden Parents
+
+- Hidden dashboard parents such as tabs, popups, and stacked dashboards must preserve graph space until the card becomes visible again.
+- Prefer visibility/resize guards only after reproducing a concrete hidden-parent failure in a browser; avoid speculative observers that can fight Home Assistant's native dashboard lifecycle.
+- If a hidden-parent issue is reproduced, the guard should be scoped to graph sizing/re-rendering and must not alter save, preview, or entity-load lifecycle behavior.
 
 ### Panel
 

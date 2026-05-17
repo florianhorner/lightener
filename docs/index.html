@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -43,7 +43,11 @@
         transform: translateX(-50%);
         width: 900px;
         height: 600px;
-        background: radial-gradient(ellipse, rgba(3, 169, 244, 0.08) 0%, transparent 70%);
+        background: radial-gradient(
+          ellipse,
+          rgba(3, 169, 244, 0.08) 0%,
+          transparent 70%
+        );
       }
       .bg-glow::after {
         content: "";
@@ -53,7 +57,11 @@
         transform: translateX(-50%);
         width: 1200px;
         height: 500px;
-        background: radial-gradient(ellipse, rgba(3, 169, 244, 0.05) 0%, transparent 70%);
+        background: radial-gradient(
+          ellipse,
+          rgba(3, 169, 244, 0.05) 0%,
+          transparent 70%
+        );
       }
 
       /* Subtle dot grid */
@@ -62,7 +70,10 @@
         inset: 0;
         z-index: 0;
         pointer-events: none;
-        background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-image: radial-gradient(
+          rgba(255, 255, 255, 0.03) 1px,
+          transparent 1px
+        );
         background-size: 32px 32px;
       }
 
@@ -79,8 +90,8 @@
       /* Header */
       .demo-header {
         text-align: center;
-        max-width: 600px;
-        margin: 0 auto 40px;
+        max-width: 680px;
+        margin: 0 auto 30px;
       }
       .demo-header h1 {
         font-size: 32px;
@@ -104,6 +115,24 @@
         line-height: 1.6;
         text-wrap: pretty;
       }
+      .demo-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #a5abb8;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+      .demo-kicker::before,
+      .demo-kicker::after {
+        content: "";
+        width: 18px;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.16);
+      }
       .demo-header a {
         display: inline-flex;
         align-items: center;
@@ -114,7 +143,9 @@
         text-decoration: none;
         border-bottom: 1px solid rgba(100, 181, 246, 0.3);
         border-radius: 8px;
-        transition: border-color 0.2s, background-color 0.2s;
+        transition:
+          border-color 0.2s,
+          background-color 0.2s;
       }
       .demo-header a:hover {
         border-color: #64b5f6;
@@ -123,6 +154,63 @@
       .demo-header a:focus-visible {
         outline: 2px solid #42a5f5;
         outline-offset: 2px;
+      }
+      .demo-actions {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 22px;
+        flex-wrap: wrap;
+      }
+      .action-link {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #d5d9e2;
+        background: rgba(255, 255, 255, 0.05);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        transition:
+          color 0.2s,
+          border-color 0.2s,
+          background-color 0.2s;
+      }
+      .action-link.primary {
+        border-color: rgba(66, 165, 245, 0.45);
+        background: #1e88e5;
+        color: #fff;
+      }
+      .action-link:hover {
+        color: #fff;
+        border-color: rgba(100, 181, 246, 0.48);
+        background: rgba(100, 181, 246, 0.12);
+      }
+      .action-link.primary:hover {
+        background: #1976d2;
+      }
+      .action-link:focus-visible {
+        outline: 2px solid #42a5f5;
+        outline-offset: 2px;
+      }
+      .trust-row {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin: 14px 0 0;
+        padding: 0;
+        list-style: none;
+        color: #858b98;
+        font-size: 12px;
+        flex-wrap: wrap;
+      }
+      .trust-row li + li::before {
+        content: "/";
+        color: #4d5360;
+        margin-right: 12px;
       }
 
       /* Hint pills */
@@ -160,6 +248,7 @@
         align-items: flex-start;
         gap: 40px;
         flex-wrap: wrap;
+        margin-top: 8px;
       }
       .preview-container {
         width: 400px;
@@ -178,10 +267,18 @@
         transition: opacity 0.4s ease;
       }
       .preview-container.light-theme::before {
-        background: radial-gradient(ellipse at center, rgba(66, 165, 245, 0.12) 0%, transparent 70%);
+        background: radial-gradient(
+          ellipse at center,
+          rgba(66, 165, 245, 0.12) 0%,
+          transparent 70%
+        );
       }
       .preview-container.dark-theme::before {
-        background: radial-gradient(ellipse at center, rgba(3, 169, 244, 0.10) 0%, transparent 70%);
+        background: radial-gradient(
+          ellipse at center,
+          rgba(3, 169, 244, 0.1) 0%,
+          transparent 70%
+        );
       }
       .preview-container:hover::before {
         opacity: 1;
@@ -223,7 +320,8 @@
         --ha-card-background: #fff;
         --divider-color: rgba(0, 0, 0, 0.12);
         --ha-card-border-radius: 12px;
-        --ha-card-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 8px 32px rgba(0, 0, 0, 0.08);
+        --ha-card-box-shadow:
+          0 2px 8px rgba(0, 0, 0, 0.12), 0 8px 32px rgba(0, 0, 0, 0.08);
         --primary-color: #03a9f4;
         --error-color: #db4437;
         --success-color: #2563eb;
@@ -236,7 +334,9 @@
         --ha-card-background: #1c1c1c;
         --divider-color: rgba(255, 255, 255, 0.12);
         --ha-card-border-radius: 12px;
-        --ha-card-box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 2px 8px rgba(0, 0, 0, 0.3), 0 8px 32px rgba(0, 0, 0, 0.2);
+        --ha-card-box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.06), 0 2px 8px rgba(0, 0, 0, 0.3),
+          0 8px 32px rgba(0, 0, 0, 0.2);
         --primary-color: #03a9f4;
         --error-color: #ef5350;
         --success-color: #2563eb;
@@ -248,6 +348,10 @@
         margin-top: 48px;
         text-align: center;
         padding: 24px;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
       }
       .demo-footer a {
         display: inline-flex;
@@ -260,7 +364,10 @@
         padding: 10px 16px;
         border-radius: 8px;
         border: 1px solid rgba(255, 255, 255, 0.06);
-        transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+        transition:
+          color 0.2s,
+          border-color 0.2s,
+          background-color 0.2s;
       }
       .demo-footer a:hover {
         color: #999;
@@ -277,10 +384,16 @@
         fill: currentColor;
       }
 
-      .touch-hints { display: none; }
+      .touch-hints {
+        display: none;
+      }
       @media (pointer: coarse) {
-        .pointer-hints { display: none; }
-        .touch-hints { display: flex; }
+        .pointer-hints {
+          display: none;
+        }
+        .touch-hints {
+          display: flex;
+        }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -301,6 +414,17 @@
         .demo-header h1 {
           font-size: 24px;
         }
+        .demo-actions {
+          align-items: stretch;
+        }
+        .action-link {
+          justify-content: center;
+          flex: 1 1 180px;
+        }
+        .trust-row li + li::before {
+          content: none;
+          margin-right: 0;
+        }
         .cards-container {
           flex-direction: column;
           align-items: center;
@@ -316,12 +440,35 @@
 
     <main class="page-content">
       <header class="demo-header">
+        <div class="demo-kicker">Live GitHub Pages demo</div>
         <h1>Lightener <span>Curve Editor</span></h1>
         <p>
           Interactive brightness curve editor for
-          <a href="https://www.home-assistant.io/">Home Assistant</a>.
-          Map group brightness to individual light levels with draggable control points.
+          <a href="https://www.home-assistant.io/">Home Assistant</a>. Map group
+          brightness to individual light levels with draggable control points.
         </p>
+        <div class="demo-actions" aria-label="Project links">
+          <a
+            class="action-link primary"
+            href="https://github.com/florianhorner/lightener-curve-editor#installing"
+            >Install with HACS</a
+          >
+          <a
+            class="action-link"
+            href="https://github.com/florianhorner/lightener-curve-editor"
+            >Read setup docs</a
+          >
+          <a
+            class="action-link"
+            href="https://github.com/florianhorner/lightener-curve-editor/blob/master/docs/TROUBLESHOOTING.md"
+            >Troubleshooting</a
+          >
+        </div>
+        <ul class="trust-row" aria-label="Project signals">
+          <li>HACS custom integration</li>
+          <li>Local-only Home Assistant UI</li>
+          <li>Light and dark theme preview</li>
+        </ul>
         <div class="demo-hints pointer-hints">
           <span class="hint-pill">Click a light to edit</span>
           <span class="hint-pill">Drag points to shape the curve</span>
@@ -349,12 +496,28 @@
 
       <footer class="demo-footer">
         <a href="https://github.com/florianhorner/lightener-curve-editor">
-          <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          <svg viewBox="0 0 16 16">
+            <path
+              d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+            />
+          </svg>
           View on GitHub
         </a>
-        <a href="https://github.com/florianhorner/lightener-curve-editor/issues">
-          <svg viewBox="0 0 16 16"><path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Z"/></svg>
+        <a
+          href="https://github.com/florianhorner/lightener-curve-editor/issues"
+        >
+          <svg viewBox="0 0 16 16">
+            <path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+            <path
+              d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Z"
+            />
+          </svg>
           Issues
+        </a>
+        <a
+          href="https://github.com/florianhorner/lightener-curve-editor/releases"
+        >
+          Releases
         </a>
       </footer>
     </main>
@@ -393,7 +556,9 @@
         syncing = true;
         target._curves = JSON.parse(JSON.stringify(source._curves));
         target._selectedCurveId = source._selectedCurveId;
-        target._originalCurves = JSON.parse(JSON.stringify(source._originalCurves));
+        target._originalCurves = JSON.parse(
+          JSON.stringify(source._originalCurves),
+        );
         const ss = getScrubber(source);
         const ts = getScrubber(target);
         if (ss && ts) {
@@ -406,7 +571,13 @@
 
       function fingerprint(card) {
         const s = getScrubber(card);
-        return JSON.stringify(card._curves || null) + "|" + (card._selectedCurveId ?? "") + "|" + (s ? s._position : 0);
+        return (
+          JSON.stringify(card._curves || null) +
+          "|" +
+          (card._selectedCurveId ?? "") +
+          "|" +
+          (s ? s._position : 0)
+        );
       }
 
       // Wait for hass to be set and curves to exist before starting poll
