@@ -13,9 +13,19 @@ beforeAll(async () => {
       'ha-entity-picker',
       class extends HTMLElement {
         excludeEntities: string[] = [];
+        includeEntities?: string[];
         value = '';
         hass: unknown = null;
         includeDomains: string[] = [];
+      }
+    );
+  }
+  if (!customElements.get('ha-area-picker')) {
+    customElements.define(
+      'ha-area-picker',
+      class extends HTMLElement {
+        value = '';
+        hass: unknown = null;
       }
     );
   }
@@ -596,6 +606,52 @@ describe('curve-legend', () => {
       expect(picker.excludeEntities).toContain('light.b');
       expect(picker.excludeEntities).toContain('light.self');
       expect(picker.includeEntities).toEqual(['light.free_bulb']);
+    });
+
+    it('dispatches normalized area-filter-change when the add area changes', async () => {
+      const el = makeLegend();
+      el.canManage = true;
+      el.manageMode = true;
+      await el.updateComplete;
+      el.renderRoot.querySelector<HTMLButtonElement>('.add-light-btn')!.click();
+      await el.updateComplete;
+
+      const spy = vi.fn();
+      el.addEventListener('area-filter-change', spy);
+      const picker = el.renderRoot.querySelector('ha-area-picker')!;
+      picker.dispatchEvent(
+        new CustomEvent('value-changed', {
+          detail: { value: ' living_room ' },
+          bubbles: true,
+          composed: true,
+        })
+      );
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.calls[0]![0].detail).toEqual({ areaId: 'living_room' });
+    });
+
+    it('treats non-string add area picker values as no area', async () => {
+      const el = makeLegend();
+      el.canManage = true;
+      el.manageMode = true;
+      await el.updateComplete;
+      el.renderRoot.querySelector<HTMLButtonElement>('.add-light-btn')!.click();
+      await el.updateComplete;
+
+      const spy = vi.fn();
+      el.addEventListener('area-filter-change', spy);
+      const picker = el.renderRoot.querySelector('ha-area-picker')!;
+      picker.dispatchEvent(
+        new CustomEvent('value-changed', {
+          detail: { value: { area_id: 'living_room' } },
+          bubbles: true,
+          composed: true,
+        })
+      );
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.calls[0]![0].detail).toEqual({ areaId: null });
     });
 
     it('Cancel in add form hides the picker without firing add-light', async () => {

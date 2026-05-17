@@ -53,7 +53,7 @@ import './components/curve-scrubber.js';
 import './components/curve-legend.js';
 import './components/curve-footer.js';
 
-const CARD_VERSION = '2.15.0-dev.10';
+const CARD_VERSION = '2.15.0-dev.11';
 const SAVE_SUCCESS_DISPLAY_MS = 2000;
 const SAVE_CONFIRM_TIMEOUT_MS = 8000;
 const CANCEL_ANIM_DURATION_MS = 300;
@@ -375,6 +375,7 @@ export class LightenerCurveCard extends LitElement {
   @state() private _legendCloseRemoveSignal = 0;
   @state() private _manageMode = false;
   @state() private _eligibleAddLightIds: string[] | null = null;
+  private _eligibleAddLightRequestId = 0;
   private _previewController = new PreviewController({
     getHass: () => this._hass,
     getCurves: () => this._curves,
@@ -951,19 +952,33 @@ export class LightenerCurveCard extends LitElement {
 
   private _onLegendPanelOpen(): void {
     this._showPresets = false;
+    // Keep the previously loaded eligible list visible while the refreshed
+    // list_eligible_lights response is in flight — clearing it to null would
+    // briefly drop the picker constraint and let users pick ineligible lights.
     void this._loadEligibleAddLights();
   }
 
-  private async _loadEligibleAddLights(): Promise<void> {
-    if (!this._hass || !this._isAdmin || this._eligibleAddLightIds !== null) return;
+  private _onAreaFilterChange(ev: CustomEvent<{ areaId: string | null }>): void {
+    const rawAreaId = ev.detail?.areaId;
+    const areaId = typeof rawAreaId === 'string' ? rawAreaId : null;
+    this._eligibleAddLightIds = areaId ? [] : null;
+    void this._loadEligibleAddLights(areaId);
+  }
+
+  private async _loadEligibleAddLights(areaId: string | null = null): Promise<void> {
+    if (!this._hass || !this._isAdmin) return;
+    const requestId = ++this._eligibleAddLightRequestId;
     try {
       const result = await this._hass.callWS<{ entities?: string[] }>({
         type: 'lightener/list_eligible_lights',
+        ...(areaId ? { area_id: areaId } : {}),
       });
+      if (requestId !== this._eligibleAddLightRequestId) return;
       this._eligibleAddLightIds = Array.isArray(result?.entities) ? result.entities : [];
     } catch (err) {
+      if (requestId !== this._eligibleAddLightRequestId) return;
       console.warn('[Lightener] Failed to load eligible add-light entities:', err);
-      this._eligibleAddLightIds = null;
+      this._eligibleAddLightIds = areaId ? [] : null;
     }
   }
 
@@ -1773,6 +1788,7 @@ export class LightenerCurveCard extends LitElement {
               @toggle-curve=${this._onToggleCurve}
               @add-panel-open=${this._onLegendPanelOpen}
               @remove-panel-open=${this._onLegendPanelOpen}
+              @area-filter-change=${this._onAreaFilterChange}
               @add-light=${this._onAddLight}
               @remove-light=${this._onRemoveLight}
               @manage-toggle=${this._onManageToggle}

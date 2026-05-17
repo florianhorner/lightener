@@ -148,7 +148,7 @@ describe('lightener-curve-card module', () => {
     expect(
       (window as unknown as { __LIGHTENER_CURVE_CARD_VERSION__?: string })
         .__LIGHTENER_CURVE_CARD_VERSION__
-    ).toBe('2.15.0-dev.10');
+    ).toBe('2.15.0-dev.11');
   });
 });
 
@@ -251,6 +251,97 @@ describe('lightener-curve-card — light management', () => {
       includeEntityIds: string[] | null;
     };
     expect(legend.includeEntityIds).toEqual(['light.free_bulb']);
+  });
+
+  it('keeps the previously loaded eligible list visible while a panel reopen reload is in flight', async () => {
+    const { card, hass } = await mountCard({
+      'light.a': { brightness: { '100': '100' } },
+    });
+    hass.callWS.mockReset();
+    hass.callWS.mockResolvedValueOnce({ entities: ['light.free_bulb'] });
+
+    fireLegend(card, 'add-panel-open', {});
+    await Promise.resolve();
+    await Promise.resolve();
+    await card.updateComplete;
+
+    let legend = card.renderRoot.querySelector('curve-legend') as unknown as {
+      includeEntityIds: string[] | null;
+    };
+    expect(legend.includeEntityIds).toEqual(['light.free_bulb']);
+
+    // Reopen the panel — hold the refreshed response pending.
+    let resolveReload!: (value: { entities: string[] }) => void;
+    hass.callWS.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveReload = resolve;
+      })
+    );
+    fireLegend(card, 'add-panel-open', {});
+    await card.updateComplete;
+
+    // Constraint must NOT drop to null mid-reload — that would briefly show
+    // every light.* entity and let users pick ineligible lights.
+    legend = card.renderRoot.querySelector('curve-legend') as unknown as {
+      includeEntityIds: string[] | null;
+    };
+    expect(legend.includeEntityIds).toEqual(['light.free_bulb']);
+
+    resolveReload({ entities: ['light.other_bulb'] });
+    await Promise.resolve();
+    await card.updateComplete;
+    legend = card.renderRoot.querySelector('curve-legend') as unknown as {
+      includeEntityIds: string[] | null;
+    };
+    expect(legend.includeEntityIds).toEqual(['light.other_bulb']);
+  });
+
+  it('loads area-filtered eligible ids and ignores stale unfiltered responses', async () => {
+    const { card, hass } = await mountCard({
+      'light.a': { brightness: { '100': '100' } },
+    });
+    let resolveAll!: (value: { entities: string[] }) => void;
+    let resolveArea!: (value: { entities: string[] }) => void;
+    hass.callWS.mockReset();
+    hass.callWS.mockImplementation((msg: { type?: string; area_id?: string }) => {
+      if (msg.type !== 'lightener/list_eligible_lights') return Promise.resolve({ entities: {} });
+      if (msg.area_id === 'living_room') {
+        return new Promise((resolve) => {
+          resolveArea = resolve;
+        });
+      }
+      return new Promise((resolve) => {
+        resolveAll = resolve;
+      });
+    });
+
+    fireLegend(card, 'add-panel-open', {});
+    fireLegend(card, 'area-filter-change', { areaId: 'living_room' });
+    await card.updateComplete;
+
+    let legend = card.renderRoot.querySelector('curve-legend') as unknown as {
+      includeEntityIds: string[] | null;
+    };
+    expect(legend.includeEntityIds).toEqual([]);
+    resolveArea({ entities: ['light.living_room'] });
+    await Promise.resolve();
+    await card.updateComplete;
+    legend = card.renderRoot.querySelector('curve-legend') as unknown as {
+      includeEntityIds: string[] | null;
+    };
+    expect(legend.includeEntityIds).toEqual(['light.living_room']);
+
+    resolveAll({ entities: ['light.unfiltered'] });
+    await Promise.resolve();
+    await card.updateComplete;
+    legend = card.renderRoot.querySelector('curve-legend') as unknown as {
+      includeEntityIds: string[] | null;
+    };
+    expect(legend.includeEntityIds).toEqual(['light.living_room']);
+    expect(hass.callWS).toHaveBeenCalledWith({
+      type: 'lightener/list_eligible_lights',
+      area_id: 'living_room',
+    });
   });
 
   it('clears cached eligible add-light ids after add and remove mutations', async () => {
