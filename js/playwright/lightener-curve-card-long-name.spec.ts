@@ -160,17 +160,28 @@ test.describe('20-light long-name curve card layout', () => {
           graph.shadowRoot
             .querySelector('clipPath[id^="editing-label-clip"] rect')
             ?.getAttribute('width') ?? null;
-        if (documentWidth > viewportWidth + tolerance) {
-          failures.push(`document scrollWidth ${documentWidth} exceeds viewport ${viewportWidth}`);
+
+        // Re-read layout after all mutations so the overflow guard covers the
+        // post-mutation DOM (scrubber active + editing state).
+        const finalDocumentWidth = Math.max(
+          document.documentElement.scrollWidth,
+          document.body.scrollWidth
+        );
+        const finalCardWidth = typedCard.getBoundingClientRect().width;
+
+        if (finalDocumentWidth > viewportWidth + tolerance) {
+          failures.push(
+            `document scrollWidth ${finalDocumentWidth} exceeds viewport ${viewportWidth}`
+          );
         }
-        if (cardBox.width > viewportWidth + tolerance) {
-          failures.push(`card width ${cardBox.width.toFixed(2)} exceeds viewport ${viewportWidth}`);
+        if (finalCardWidth > viewportWidth + tolerance) {
+          failures.push(`card width ${finalCardWidth.toFixed(2)} exceeds viewport ${viewportWidth}`);
         }
 
         return {
-          documentWidth,
+          documentWidth: finalDocumentWidth,
           viewportWidth,
-          cardWidth: cardBox.width,
+          cardWidth: finalCardWidth,
           legendItems: legendItems.length,
           curveLines,
           longNameTitles: {
