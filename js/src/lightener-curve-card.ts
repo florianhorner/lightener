@@ -4,17 +4,22 @@ import { LightCurve, Hass } from './utils/types.js';
 import { EntityPickerLoader } from './utils/entity-picker-loader.js';
 import { curvesToWsPayload, wsPayloadToCurves, cloneCurves, curvesEqual } from './utils/data.js';
 import {
-  addPointToCurves,
   canSelectCurve,
   interpolateControlPoints,
   mergeFinalAnimationFrame,
-  pushToUndoStack,
-  removePointFromCurves,
   shouldHandleKey,
   toggleCurveVisibility,
   toggleSelection,
 } from './utils/card-logic.js';
-import { easeOutCubic, sampleCurveAt, CURVE_COLORS } from './utils/graph-math.js';
+import {
+  addPointEdit,
+  applyPresetToCurves,
+  movePointOnCurves,
+  pushEditUndo,
+  removePointEdit,
+} from './utils/edit-operations.js';
+import { easeOutCubic, CURVE_COLORS } from './utils/graph-math.js';
+import { PreviewController } from './utils/preview-controller.js';
 import {
   CURVE_PRESETS,
   presetPolylinePoints,
@@ -50,6 +55,7 @@ import './components/curve-footer.js';
 
 const CARD_VERSION = '2.15.0-dev.10';
 const SAVE_SUCCESS_DISPLAY_MS = 2000;
+const SAVE_CONFIRM_TIMEOUT_MS = 8000;
 const CANCEL_ANIM_DURATION_MS = 300;
 
 if (typeof window !== 'undefined') {
@@ -286,7 +292,60 @@ export class LightenerCurveCard extends LitElement {
   }
 
   private _dispatchSave(action: Parameters<typeof reduceSave>[1]): void {
+    const leftConfirming = this._saveState.phase === 'confirming';
     this._saveState = reduceSave(this._saveState, action);
+    if (this._saveState.phase !== 'confirming') {
+      this._clearSaveConfirmTimer();
+      // Leaving the confirming phase settles any pending saveCurves() awaiter:
+      // 'error' (including the confirm-timeout) reports failure, anything else
+      // (saved / idle) reports a confirmed success.
+      if (leftConfirming) {
+        this._settleSaveConfirm(this._saveState.phase === 'error' ? 'error' : 'confirmed');
+      }
+    }
+  }
+
+  private _clearSaveConfirmTimer(): void {
+    if (this._saveConfirmTimer) {
+      clearTimeout(this._saveConfirmTimer);
+      this._saveConfirmTimer = null;
+    }
+  }
+
+  // Resolve the promise returned by _startSaveConfirmTimer(). Idempotent — a
+  // second call is a no-op, so the awaiter never observes two outcomes.
+  private _settleSaveConfirm(outcome: 'confirmed' | 'error'): void {
+    const resolve = this._saveConfirmResolve;
+    if (resolve) {
+      this._saveConfirmResolve = null;
+      resolve(outcome);
+    }
+  }
+
+  // Arms the post-save confirmation guard for save `generation`. The returned
+  // promise resolves when the confirming phase ends for ANY reason: the
+  // backend re-fetch dispatches save-confirmed/-error, or this 8s timer fires.
+  // `generation` fences a stale timer — a newer save bumps _saveGeneration, so
+  // an old save's timer firing late is ignored instead of failing the new save.
+  private _startSaveConfirmTimer(generation: number): Promise<'confirmed' | 'error'> {
+    this._clearSaveConfirmTimer();
+    // Defensive: settle any orphaned resolver before overwriting it.
+    this._settleSaveConfirm('error');
+    return new Promise((resolve) => {
+      this._saveConfirmResolve = resolve;
+      this._saveConfirmTimer = setTimeout(() => {
+        this._saveConfirmTimer = null;
+        if (this._saveGeneration !== generation) return;
+        if (this._saveState.phase !== 'confirming') return;
+        // Do NOT clear _load.loading here — the original get_curves request is
+        // still in flight. Forcing it false lets a retry start a second,
+        // overlapping load of the same entity; a late stale response could
+        // then overwrite _curves. The hung reload clears _load itself via
+        // finishLoad when it finally settles, draining any queued retry.
+        // confirming -> error; _dispatchSave settles this promise with 'error'.
+        this._dispatchSave({ type: 'save-error', message: 'Save confirmation timed out.' });
+      }, SAVE_CONFIRM_TIMEOUT_MS);
+    });
   }
   @state() private _scrubberPosition: number | null = null;
   @state() private _cancelAnimating = false;
@@ -303,6 +362,12 @@ export class LightenerCurveCard extends LitElement {
   private _boundKeyHandler: ((e: KeyboardEvent) => void) | null = null;
   private _boundBeforeUnload: ((e: BeforeUnloadEvent) => void) | null = null;
   private _saveSuccessTimer: ReturnType<typeof setTimeout> | null = null;
+  private _saveConfirmTimer: ReturnType<typeof setTimeout> | null = null;
+  // Monotonic save counter, bumped each time a save enters the confirming
+  // phase. Lets a late reload or timer tell "my save" from a newer one.
+  private _saveGeneration = 0;
+  // Resolver for the in-flight _startSaveConfirmTimer() promise, or null.
+  private _saveConfirmResolve: ((outcome: 'confirmed' | 'error') => void) | null = null;
   private _cancelAnimFrame: number | null = null;
   @state() private _previewActive = false;
   @state() private _showPresets = false;
@@ -310,15 +375,32 @@ export class LightenerCurveCard extends LitElement {
   @state() private _legendCloseRemoveSignal = 0;
   @state() private _manageMode = false;
   @state() private _eligibleAddLightIds: string[] | null = null;
-  private _previewRafPending = false;
-  private _previewTrailingTimer: ReturnType<typeof setTimeout> | null = null;
-  private _lastPreviewTime = 0;
-  private _previewRestoreBrightness: Map<string, number | null | undefined> = new Map();
-  private _lastPreviewBrightness: Map<string, number | 'off'> = new Map();
-  private _previewFrameGeneration = 0;
+  private _previewController = new PreviewController({
+    getHass: () => this._hass,
+    getCurves: () => this._curves,
+    getScrubberPosition: () => this._scrubberPosition,
+    setScrubberPosition: (position) => {
+      this._scrubberPosition = position;
+    },
+    getStorageEntityId: () => this._load.loadedEntityId ?? this._entityId,
+    persistScrubberPosition: (entityId, position) => {
+      this._writeStoredState(entityId, { scrubberPosition: position });
+    },
+    setPreviewActive: (active) => {
+      this._previewActive = active;
+    },
+  });
   private _lastEmittedDirtyState = false;
   private _dirtyVersion = 0;
   private _cleanVersion = 0;
+
+  get _lastPreviewTime(): number {
+    return this._previewController.lastPreviewTime;
+  }
+
+  set _lastPreviewTime(value: number) {
+    this._previewController.lastPreviewTime = value;
+  }
 
   private get _embedded(): boolean {
     return this._config.embedded === true;
@@ -795,6 +877,7 @@ export class LightenerCurveCard extends LitElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this._previewActive) this._stopPreview();
+    this._previewController.disconnect();
     this._dragActive = false;
     if (this._boundKeyHandler) {
       window.removeEventListener('keydown', this._boundKeyHandler);
@@ -806,6 +889,23 @@ export class LightenerCurveCard extends LitElement {
       clearTimeout(this._saveSuccessTimer);
       this._saveSuccessTimer = null;
     }
+    // A disconnect mid-confirmation must not leave the card stuck. The backend
+    // re-fetch never confirmed, so settle the pending saveCurves() awaiter as a
+    // failure BEFORE the reset — `reset` -> idle would otherwise make
+    // _dispatchSave() settle it as 'confirmed'. Then drop the load flag and
+    // leave `confirming` so a reconnected card has live controls.
+    if (this._saveState.phase === 'confirming') {
+      this._settleSaveConfirm('error');
+      this._load = {
+        ...this._load,
+        loading: false,
+        loaded: false,
+        reloadAfterLoadEntityId: undefined,
+      };
+      this._dispatchSave({ type: 'reset' });
+    }
+    this._clearSaveConfirmTimer();
+    this._settleSaveConfirm('error');
     if (this._cancelAnimFrame) {
       cancelAnimationFrame(this._cancelAnimFrame);
       this._cancelAnimFrame = null;
@@ -871,14 +971,7 @@ export class LightenerCurveCard extends LitElement {
     if (this._cancelAnimating || this._saving || this._managingLights) return;
     if (this._curves.length === 0) return;
     this._pushUndo();
-    const pts = preset.controlPoints.map((cp) => ({ ...cp }));
-    if (this._selectedCurveId !== null) {
-      this._curves = this._curves.map((c) =>
-        c.entityId === this._selectedCurveId ? { ...c, controlPoints: pts } : c
-      );
-    } else {
-      this._curves = this._curves.map((c) => ({ ...c, controlPoints: pts }));
-    }
+    this._curves = applyPresetToCurves(this._curves, this._selectedCurveId, preset.controlPoints);
     this._dirtyVersion++;
     this._showPresets = false;
     this._refreshActivePreview(true);
@@ -1010,6 +1103,10 @@ export class LightenerCurveCard extends LitElement {
   }
 
   private async _tryLoadCurves(): Promise<void> {
+    // Fence the save-confirmation dispatch below to the save that was current
+    // when this reload began. A reload started for a since-superseded save
+    // (e.g. one that already timed out) must not confirm a newer save.
+    const saveGenerationAtStart = this._saveGeneration;
     // Skip if the current entity is already loaded, or a load is in flight.
     if (!needsLoad(this._load, this._entityId)) return;
 
@@ -1085,7 +1182,10 @@ export class LightenerCurveCard extends LitElement {
           if (shouldAutoOpenPresets(this._autoPresetsShownFor, requestedEntity, curves)) {
             this._showPresets = true;
           }
-          if (this._saveState.phase === 'confirming') {
+          if (
+            this._saveState.phase === 'confirming' &&
+            this._saveGeneration === saveGenerationAtStart
+          ) {
             this._dispatchSave({ type: 'save-confirmed' });
             if (this._saveSuccessTimer) clearTimeout(this._saveSuccessTimer);
             this._saveSuccessTimer = setTimeout(() => {
@@ -1110,7 +1210,10 @@ export class LightenerCurveCard extends LitElement {
       this._load = state;
       if (!discarded) {
         console.error('[Lightener] Failed to load curves:', err);
-        if (this._saveState.phase === 'confirming') {
+        if (
+          this._saveState.phase === 'confirming' &&
+          this._saveGeneration === saveGenerationAtStart
+        ) {
           this._dispatchSave({ type: 'save-error', message: 'Save failed. Check connection.' });
         }
       }
@@ -1155,140 +1258,19 @@ export class LightenerCurveCard extends LitElement {
   };
 
   private _startPreview = (): void => {
-    if (!this._hass || this._previewActive) return;
-    this._previewActive = true;
-    // Ensure the graph shows a scrubber indicator even if the user never touched the slider
-    if (this._scrubberPosition === null) {
-      this._scrubberPosition = 50;
-      const entityId = this._load.loadedEntityId ?? this._entityId;
-      if (entityId) {
-        this._writeStoredState(entityId, { scrubberPosition: this._scrubberPosition });
-      }
-    }
-    // Snapshot current brightness for each controlled light so we can restore later.
-    // null = was off; undefined = was on but no brightness attribute (on/off-only light).
-    this._previewRestoreBrightness.clear();
-    this._lastPreviewBrightness.clear();
-    for (const curve of this._curves) {
-      const state = this._hass.states[curve.entityId];
-      if (state) {
-        this._previewRestoreBrightness.set(
-          curve.entityId,
-          state.state === 'off' ? null : (state.attributes.brightness ?? undefined)
-        );
-      }
-    }
-    this._refreshActivePreview(true);
+    this._previewController.start();
   };
 
   private _stopPreview = (): void => {
-    if (!this._previewActive || !this._hass) return;
-    this._previewActive = false;
-    this._previewRafPending = false;
-    this._previewFrameGeneration++;
-    if (this._previewTrailingTimer) {
-      clearTimeout(this._previewTrailingTimer);
-      this._previewTrailingTimer = null;
-    }
-    // Restore original brightness for each light.
-    // null = turn off; undefined = on/off-only light that was on (no brightness attr); otherwise restore exact brightness.
-    for (const [entityId, brightness] of this._previewRestoreBrightness) {
-      if (brightness === null) {
-        this._hass.callService('light', 'turn_off', { entity_id: entityId }).catch(() => {});
-      } else if (brightness === undefined) {
-        this._hass.callService('light', 'turn_on', { entity_id: entityId }).catch(() => {});
-      } else {
-        this._hass
-          .callService('light', 'turn_on', { entity_id: entityId, brightness })
-          .catch(() => {});
-      }
-    }
-    this._previewRestoreBrightness.clear();
-    this._lastPreviewBrightness.clear();
+    this._previewController.stop();
   };
 
-  /**
-   * Push interpolated brightness to physical lights.
-   * Throttled to at most once per 300 ms to avoid congesting Zigbee/Matter/MQTT buses.
-   * At 60 fps the unthrottled RAF approach issued ~300 commands/sec for 5 lights; this
-   * caps it at ~15 commands/sec which keeps the command backlog from piling up.
-   */
-  private readonly _PREVIEW_INTERVAL_MS = 300;
-
-  private _pendingPreviewPosition: number | null = null;
-
   private _refreshActivePreview(force = false): void {
-    if (!this._previewActive) return;
-    if (this._scrubberPosition === null) {
-      this._scrubberPosition = 50;
-    }
-    this._previewLights(this._scrubberPosition, force);
+    this._previewController.refresh(force);
   }
 
   private _previewLights(position: number, force = false): void {
-    if (!this._previewActive || !this._hass) return;
-    this._pendingPreviewPosition = position;
-    if (force) {
-      this._lastPreviewTime = 0;
-      this._previewRafPending = false;
-      this._previewFrameGeneration++;
-      this._lastPreviewBrightness.clear();
-      if (this._previewTrailingTimer) {
-        clearTimeout(this._previewTrailingTimer);
-        this._previewTrailingTimer = null;
-      }
-    }
-    const now = Date.now();
-    const elapsed = now - this._lastPreviewTime;
-    if (elapsed < this._PREVIEW_INTERVAL_MS) {
-      // Schedule a trailing-edge call so the final position is never dropped.
-      // Read from _pendingPreviewPosition at fire time so rapid moves don't get stale.
-      if (!this._previewTrailingTimer) {
-        this._previewTrailingTimer = setTimeout(() => {
-          this._previewTrailingTimer = null;
-          if (this._pendingPreviewPosition !== null) {
-            this._previewLights(this._pendingPreviewPosition);
-          }
-        }, this._PREVIEW_INTERVAL_MS - elapsed);
-      }
-      return;
-    }
-    if (this._previewRafPending) return;
-    // Cancel any trailing timer since we're about to send
-    if (this._previewTrailingTimer) {
-      clearTimeout(this._previewTrailingTimer);
-      this._previewTrailingTimer = null;
-    }
-    this._previewRafPending = true;
-    const frameGeneration = this._previewFrameGeneration;
-
-    requestAnimationFrame(() => {
-      if (frameGeneration !== this._previewFrameGeneration) return;
-      this._previewRafPending = false;
-      if (!this._previewActive || !this._hass) return;
-      this._lastPreviewTime = Date.now();
-      const previewPosition = this._pendingPreviewPosition ?? position;
-
-      for (const curve of this._curves) {
-        if (!curve.visible) continue;
-        const value = Math.round(sampleCurveAt(curve.controlPoints, previewPosition));
-        // Convert 0-100% to HA brightness 0-255
-        const brightness = Math.round((value / 100) * 255);
-        if (brightness === 0) {
-          if (this._lastPreviewBrightness.get(curve.entityId) === 'off') continue;
-          this._lastPreviewBrightness.set(curve.entityId, 'off');
-          this._hass
-            .callService('light', 'turn_off', { entity_id: curve.entityId })
-            .catch(() => {});
-        } else {
-          if (this._lastPreviewBrightness.get(curve.entityId) === brightness) continue;
-          this._lastPreviewBrightness.set(curve.entityId, brightness);
-          this._hass
-            .callService('light', 'turn_on', { entity_id: curve.entityId, brightness })
-            .catch(() => {});
-        }
-      }
-    });
+    this._previewController.previewLights(position, force);
   }
 
   private _onSelectCurve(e: CustomEvent): void {
@@ -1320,7 +1302,7 @@ export class LightenerCurveCard extends LitElement {
   }
 
   private _pushUndo(): void {
-    pushToUndoStack(this._undoStack, this._curves);
+    pushEditUndo(this._undoStack, this._curves);
   }
 
   private _undo(): void {
@@ -1388,6 +1370,10 @@ export class LightenerCurveCard extends LitElement {
 
   private _onPointMove(e: CustomEvent): void {
     if (this._cancelAnimating) return;
+    const { curveIndex, pointIndex, lightener, target } = e.detail;
+    const nextCurves = movePointOnCurves(this._curves, curveIndex, pointIndex, lightener, target);
+    if (nextCurves === null) return;
+
     this._dragActive = true;
     this._showPresets = false;
     // Push undo once at start of each drag gesture
@@ -1395,7 +1381,6 @@ export class LightenerCurveCard extends LitElement {
       this._pushUndo();
       this._dragUndoPushed = true;
     }
-    const { curveIndex, pointIndex, lightener, target } = e.detail;
     // Auto-select the curve being dragged so others dim
     const draggedCurve = this._curves[curveIndex];
     if (draggedCurve && this._selectedCurveId !== draggedCurve.entityId) {
@@ -1405,13 +1390,7 @@ export class LightenerCurveCard extends LitElement {
         this._writeStoredState(entityId, { selectedCurveId: this._selectedCurveId });
       }
     }
-    const curves = [...this._curves];
-    const curve = { ...curves[curveIndex] };
-    const points = [...curve.controlPoints];
-    points[pointIndex] = { lightener, target };
-    curve.controlPoints = points;
-    curves[curveIndex] = curve;
-    this._curves = curves;
+    this._curves = nextCurves;
     this._dirtyVersion++;
     this._refreshActivePreview();
   }
@@ -1430,7 +1409,7 @@ export class LightenerCurveCard extends LitElement {
     const targetEntityId = entityId ?? this._selectedCurveId;
     if (!targetEntityId) return;
 
-    const next = addPointToCurves(this._curves, targetEntityId, lightener, target);
+    const next = addPointEdit(this._curves, targetEntityId, lightener, target);
     if (next === null) return;
 
     this._pushUndo();
@@ -1449,7 +1428,7 @@ export class LightenerCurveCard extends LitElement {
     }
     const { curveIndex, pointIndex } = e.detail;
 
-    const next = removePointFromCurves(this._curves, curveIndex, pointIndex);
+    const next = removePointEdit(this._curves, curveIndex, pointIndex);
     if (next === null) return;
 
     this._pushUndo();
@@ -1659,17 +1638,21 @@ export class LightenerCurveCard extends LitElement {
       // The curves are now clean — any dirty-deferred reload is moot.
       this._load = { ...this._load, pendingReloadEntityId: undefined };
       this._dispatchSave({ type: 'save-success' }); // → confirming; controls stay disabled
-      // Inline reload: _tryLoadCurves dispatches save-confirmed (and starts the success timer)
-      // once the re-fetch completes. In the stale-load case, queue behind the in-flight load
-      // and return without awaiting; otherwise await the re-fetch so callers that await
-      // saveCurves() (e.g. the entity-switch flow in lightener-panel.js) do not advance
-      // while the card is still in the `confirming` phase.
+      const saveGeneration = ++this._saveGeneration;
+      const confirmSettled = this._startSaveConfirmTimer(saveGeneration);
+      // _tryLoadCurves dispatches save-confirmed once the backend re-fetch
+      // completes. runNow=false means a load is already in flight and this
+      // reload is queued behind it — it still runs (and confirms) later via
+      // finishLoad's followUp. Either way we await `confirmSettled`, which
+      // resolves on save-confirmed, save-error, or the 8s timeout, so
+      // saveCurves() never reports success before the backend actually
+      // confirms (the entity-switch flow in lightener-panel.js awaits this).
       const { state: reloadState, runNow } = queueReload(this._load, savedEntityId);
       this._load = reloadState;
       if (runNow) {
-        await this._tryLoadCurves();
+        void this._tryLoadCurves();
       }
-      return true;
+      return (await confirmSettled) === 'confirmed';
     } catch (err) {
       console.error('[Lightener] Failed to save curves:', err);
       this._dispatchSave({ type: 'save-error', message: 'Save failed. Check connection.' });

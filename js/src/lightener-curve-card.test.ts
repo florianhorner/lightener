@@ -11,7 +11,7 @@ import type { LoadState } from './utils/load-lifecycle.js';
 type CardInternals = {
   _curves: LightCurve[];
   _selectedCurveId: string | null;
-  _onSave: () => Promise<void>;
+  _onSave: () => Promise<boolean>;
   _onCancel: () => void;
   _undo: () => void;
   _tryLoadCurves: () => Promise<void>;
@@ -51,6 +51,7 @@ function forceDirty(card: LightenerCurveCard): void {
 afterEach(() => {
   document.body.querySelectorAll('lightener-curve-card').forEach((el) => el.remove());
   sessionStorage.clear();
+  vi.useRealTimers();
 });
 
 beforeAll(async () => {
@@ -536,6 +537,31 @@ describe('lightener-curve-card — save flow', () => {
     });
   });
 
+  it('ignores stale point moves without dirtying or pushing undo history', async () => {
+    const { card } = await mountCard({
+      'light.a': { brightness: { '1': '1', '100': '100' } },
+    });
+    const internal = card as unknown as CardInternals;
+    const originalCurves = JSON.stringify(internal._curves);
+    const dirtyVersion = internal._dirtyVersion;
+
+    internal._onPointMove(
+      new CustomEvent('point-move', {
+        detail: { curveIndex: 9, pointIndex: 1, lightener: 50, target: 60 },
+      })
+    );
+    internal._onPointMove(
+      new CustomEvent('point-move', {
+        detail: { curveIndex: 0, pointIndex: 9, lightener: 50, target: 60 },
+      })
+    );
+
+    expect(JSON.stringify(internal._curves)).toBe(originalCurves);
+    expect(internal._dirtyVersion).toBe(dirtyVersion);
+    expect(internal._undoStack).toHaveLength(0);
+    expect(internal._dragActive).toBe(false);
+  });
+
   it('applies reload when clean after dirty state clears', async () => {
     const { card, hass } = await mountCard({
       'light.a': { brightness: { '1': '1', '100': '100' } },
@@ -720,13 +746,18 @@ describe('lightener-curve-card — save flow', () => {
       })
     );
 
-    await internal._onSave();
+    // _onSave() now awaits the post-save confirmation (the queued reload), so
+    // resolve the in-flight stale load first, then await the save.
+    const savePromise = internal._onSave();
+    await Promise.resolve();
+    await Promise.resolve();
     expect(internal._load.reloadAfterLoadEntityId).toBe('light.lightener');
 
     resolveStaleReload({
       entities: { 'light.stale': { brightness: { '1': '2', '100': '20' } } },
     });
     await staleLoad;
+    await savePromise;
     await Promise.resolve();
     await Promise.resolve();
     await card.updateComplete;
@@ -812,6 +843,131 @@ describe('lightener-curve-card — save flow', () => {
     const view = card as unknown as { _saving: boolean; _saveError: string | null };
     expect(view._saving).toBe(false);
     expect(view._saveError).toBe('Save failed. Check connection.');
+  });
+
+  it('recovers from a stuck post-save confirmation reload', async () => {
+    vi.useFakeTimers();
+    const { card, hass } = await mountCard({
+      'light.a': { brightness: { '100': '100' } },
+    });
+    const neverConfirmingReload = new Promise(() => {});
+    hass.callWS.mockReset();
+    hass.callWS.mockImplementation((msg: { type: string }) =>
+      msg.type === 'lightener/save_curves' ? Promise.resolve(undefined) : neverConfirmingReload
+    );
+
+    forceDirty(card);
+    const savePromise = (card as unknown as CardInternals)._onSave();
+    await Promise.resolve();
+    await card.updateComplete;
+
+    const view = card as unknown as {
+      _saving: boolean;
+      _saveError: string | null;
+      _load: LoadState;
+    };
+    expect(view._saving).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(8000);
+    await expect(savePromise).resolves.toBe(false);
+    await card.updateComplete;
+
+    expect(view._saving).toBe(false);
+    expect(view._saveError).toBe('Save confirmation timed out.');
+    // The timeout abandons the save UI but leaves the hung get_curves request
+    // marked in-flight — it has not actually resolved. Clearing the flag here
+    // would let a retry start an overlapping load of the same entity.
+    expect(view._load.loading).toBe(true);
+  });
+
+  it('a stale reload from a timed-out save does not confirm a newer save', async () => {
+    vi.useFakeTimers();
+    const { card, hass } = await mountCard({
+      'light.a': { brightness: { '100': '100' } },
+    });
+    const internal = card as unknown as CardInternals;
+    const view = card as unknown as { _saveState: { phase: string } };
+
+    // Save #1's reload (get_curves call 1) hangs under our control so the save
+    // times out; save #2's reload (call 2) hangs forever so save #2 stays in
+    // the confirming phase while save #1's late reload lands.
+    let resolveReload1: (v: {
+      entities: Record<string, { brightness: Record<string, string> }>;
+    }) => void = () => {};
+    const reload1 = new Promise<{
+      entities: Record<string, { brightness: Record<string, string> }>;
+    }>((resolve) => {
+      resolveReload1 = resolve;
+    });
+    const reload2 = new Promise<never>(() => {});
+    let getCalls = 0;
+    hass.callWS.mockReset();
+    hass.callWS.mockImplementation((msg: { type: string }) => {
+      if (msg.type === 'lightener/save_curves') return Promise.resolve(undefined);
+      getCalls++;
+      return getCalls === 1 ? reload1 : reload2;
+    });
+
+    // Save #1 — its reload hangs, so it times out after 8s -> error.
+    forceDirty(card);
+    const save1 = internal._onSave();
+    await Promise.resolve();
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(8000);
+    await expect(save1).resolves.toBe(false);
+    expect(view._saveState.phase).toBe('error');
+
+    // Save #2 — enters a fresh confirming phase; _saveGeneration is bumped.
+    forceDirty(card);
+    const save2 = internal._onSave();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(view._saveState.phase).toBe('confirming');
+
+    // Save #1's slow reload finally lands. The generation fence must stop it
+    // from dispatching save-confirmed against save #2 — save #2 stays in
+    // confirming, awaiting its own (hung) reload.
+    resolveReload1({ entities: { 'light.a': { brightness: { '100': '100' } } } });
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(view._saveState.phase).toBe('confirming');
+    void save2;
+  });
+
+  it('a disconnect mid-confirmation resets save state instead of sticking', async () => {
+    vi.useFakeTimers();
+    const { card, hass } = await mountCard({
+      'light.a': { brightness: { '100': '100' } },
+    });
+    const internal = card as unknown as CardInternals;
+    const view = card as unknown as {
+      _saveState: { phase: string };
+      _saving: boolean;
+      _load: LoadState;
+    };
+    const neverConfirmingReload = new Promise(() => {});
+    hass.callWS.mockReset();
+    hass.callWS.mockImplementation((msg: { type: string }) =>
+      msg.type === 'lightener/save_curves' ? Promise.resolve(undefined) : neverConfirmingReload
+    );
+
+    forceDirty(card);
+    const savePromise = internal._onSave();
+    await Promise.resolve();
+    await card.updateComplete;
+    expect(view._saveState.phase).toBe('confirming');
+
+    // Card removed from the DOM while still confirming.
+    card.remove();
+    // The backend never confirmed, so saveCurves() reports failure.
+    await expect(savePromise).resolves.toBe(false);
+
+    // FSM left `confirming`, controls re-enabled, load flag cleared — a
+    // reconnected card is not stuck.
+    expect(view._saveState.phase).toBe('idle');
+    expect(view._saving).toBe(false);
+    expect(view._load.loading).toBe(false);
   });
 });
 

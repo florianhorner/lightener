@@ -2,6 +2,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { LightCurve } from '../utils/types.js';
 import { PAD_LEFT, PAD_RIGHT, VB_W } from '../utils/graph-math.js';
+import { MOBILE_MEDIA } from '../utils/breakpoint-styles.js';
 
 @customElement('curve-scrubber')
 export class CurveScrubber extends LitElement {
@@ -198,7 +199,7 @@ export class CurveScrubber extends LitElement {
     :host(:not(.is-loaded)) .position-label {
       transition: none;
     }
-    @media (max-width: 500px) {
+    @media ${MOBILE_MEDIA} {
       .track-area {
         height: 36px;
       }

@@ -253,6 +253,12 @@ describe('removePointFromCurves', () => {
     expect(removePointFromCurves(curves, 5, 1)).toBeNull();
   });
 
+  it('returns null for invalid point index', () => {
+    const curves = [makeCurve()];
+    expect(removePointFromCurves(curves, 0, 9)).toBeNull();
+    expect(removePointFromCurves(curves, 0, -1)).toBeNull();
+  });
+
   it('does not mutate original', () => {
     const curves = [makeCurve()];
     const len = curves[0].controlPoints.length;
