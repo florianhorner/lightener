@@ -450,8 +450,10 @@
         <div class="demo-actions" aria-label="Project links">
           <a
             class="action-link primary"
-            href="https://github.com/florianhorner/lightener-curve-editor#installing"
-            >Install with HACS</a
+            href="https://my.home-assistant.io/redirect/hacs_repository/?owner=florianhorner&amp;repository=lightener-curve-editor&amp;category=integration"
+            target="_blank"
+            rel="noopener"
+            >Add to my Home Assistant</a
           >
           <a
             class="action-link"
@@ -531,28 +533,53 @@
     </main>
 
     <script type="module">
+      import {
+        LIGHTENER_ENTITY,
+        clone,
+        createPreviewHass,
+        definePreviewEntityPicker,
+        scenarios,
+      } from "./fake-ha.js";
       import "./lightener-curve-card.js";
 
+      definePreviewEntityPicker();
       await customElements.whenDefined("lightener-curve-card");
 
-      const hass = {
-        user: { is_admin: true },
-        states: {},
-        language: "en",
-        themes: { default_theme: "default" },
-      };
+      // One shared mock Home Assistant — the exact harness js/dev.html uses,
+      // so the demo runs the shipped card against the same fixtures as local
+      // development. No second mock to keep in sync.
+      const preview = createPreviewHass();
+      const { hass } = preview;
 
-      const cards = document.querySelectorAll("lightener-curve-card");
+      const cardLight = document.getElementById("card-light");
+      const cardDark = document.getElementById("card-dark");
+      const cards = [cardLight, cardDark];
+
       for (const card of cards) {
-        card.setConfig({ type: "custom:lightener-curve-card" });
-        setTimeout(() => {
-          card.hass = hass;
-        }, 0);
+        card.setConfig({
+          type: "custom:lightener-curve-card",
+          entity: LIGHTENER_ENTITY,
+          title: "Brightness Curves",
+        });
+        card.hass = hass;
+      }
+
+      // Load the 3-light scenario into both cards.
+      const curves = clone(scenarios.default);
+      preview.loadCurves(curves);
+      for (const card of cards) {
+        card._load = {
+          ...card._load,
+          loaded: false,
+          loadedEntityId: undefined,
+          loadError: null,
+        };
+        card._showPresets = false;
+        card._selectedCurveId = curves[0]?.entityId ?? null;
+        await card._tryLoadCurves?.();
       }
 
       // Sync both cards — poll every frame since shadow DOM events don't bubble
-      const cardLight = document.getElementById("card-light");
-      const cardDark = document.getElementById("card-dark");
       let syncing = false;
 
       function getScrubber(card) {
@@ -588,30 +615,28 @@
         );
       }
 
-      // Wait for hass to be set and curves to exist before starting poll
-      setTimeout(() => {
-        let knownLight = fingerprint(cardLight);
-        let knownDark = fingerprint(cardDark);
-        function pollSync() {
-          if (!syncing) {
-            const lf = fingerprint(cardLight);
-            const df = fingerprint(cardDark);
-            if (lf !== df) {
-              if (lf !== knownLight) {
-                syncCards(cardLight, cardDark);
-                knownLight = knownDark = fingerprint(cardLight);
-              } else if (df !== knownDark) {
-                syncCards(cardDark, cardLight);
-                knownLight = knownDark = fingerprint(cardDark);
-              }
-            } else {
-              knownLight = knownDark = lf;
+      // Curves are already loaded above, so the poll can start immediately.
+      let knownLight = fingerprint(cardLight);
+      let knownDark = fingerprint(cardDark);
+      function pollSync() {
+        if (!syncing) {
+          const lf = fingerprint(cardLight);
+          const df = fingerprint(cardDark);
+          if (lf !== df) {
+            if (lf !== knownLight) {
+              syncCards(cardLight, cardDark);
+              knownLight = knownDark = fingerprint(cardLight);
+            } else if (df !== knownDark) {
+              syncCards(cardDark, cardLight);
+              knownLight = knownDark = fingerprint(cardDark);
             }
+          } else {
+            knownLight = knownDark = lf;
           }
-          requestAnimationFrame(pollSync);
         }
         requestAnimationFrame(pollSync);
-      }, 100);
+      }
+      requestAnimationFrame(pollSync);
     </script>
   </body>
 </html>
