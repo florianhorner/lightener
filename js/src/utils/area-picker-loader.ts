@@ -23,6 +23,14 @@ export class AreaPickerLoader {
       } catch {
         /* ignore */
       }
+      try {
+        const entitiesCard = customElements.get('hui-entities-card') as
+          | (CustomElementConstructor & { getConfigElement?: () => Promise<HTMLElement> })
+          | undefined;
+        await entitiesCard?.getConfigElement?.();
+      } catch {
+        /* ignore */
+      }
     };
     kickLoaders();
     const ready = customElements.whenDefined('ha-area-picker');
