@@ -1,13 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "spec_url": "https://github.com/florianhorner/engineering-standards/blob/main/specs/commit-message-spec.md",
-  "format": "type(scope): subject",
+  "format": "[vMAJOR.MINOR.PATCH.MICRO ]type(scope): subject",
   "subject": {
     "max_length": 72,
     "imperative": true,
     "no_trailing_period": true,
-    "no_version_prefix": true
+    "version_prefix": {
+      "allowed": true,
+      "pattern": "v[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+ ",
+      "rationale": "Optional 4-component ship-version prefix (vMAJOR.MINOR.PATCH.MICRO). gstack workspace-aware /ship puts it at the front of PR titles / squash subjects as a landing-queue claim. Direct commits omit it; short version prefixes (v2, v1.2.3) stay banned via VERSION_IN_SUBJECT."
+    }
   },
   "types": {
     "allowed": [
@@ -87,10 +91,10 @@
       },
       {
         "rule_id": "VERSION_IN_SUBJECT",
-        "pattern": "^v[0-9]",
+        "pattern": "^v[0-9]+(\\.[0-9]+){0,2}([ :]|$)",
         "severity": "block",
-        "message": "Version numbers don't belong in commit subjects; let CHANGELOG do that.",
-        "fix_hint": "Drop the 'v1.2.3' prefix. Use 'chore(release): 1.2.3' if needed.",
+        "message": "Short version prefixes (v2, v1.2.3) don't belong in commit subjects; let CHANGELOG do that. The 4-component ship-version prefix (v1.2.3.4) is allowed.",
+        "fix_hint": "Drop the short version prefix. Use 'chore(release): 1.2.3', or the 4-component 'v1.2.3.4 type: subject' form for a gstack /ship PR title.",
         "spec_anchor": "specs/commit-message-spec.md#subjects"
       }
     ]
