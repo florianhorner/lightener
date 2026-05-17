@@ -1,4 +1,5 @@
 # artifacts
+.vite/
 .venv
 __pycache__
 .pytest*
