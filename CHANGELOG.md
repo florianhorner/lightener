@@ -4,15 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
-
-### Changed
-
-- **GitHub Pages demo now uses the shared `fake-ha.js` harness.** The demo page previously inlined a minimal stub `hass` object. It now imports `createPreviewHass`, `scenarios`, and `definePreviewEntityPicker` from `fake-ha.js` — the same harness `js/dev.html` uses. The demo card boots with a 3-light scenario and real curve data, and the `<entity-picker>` component is available for UI completeness. Eliminates a second mock to keep in sync.
-- **"Add to my Home Assistant" CTA.** The primary action button on the demo page now links to the HACS deep-link redirect (`my.home-assistant.io/redirect/hacs_repository/`) so users with HA installed can add the integration in one click.
-- **Build step copies `fake-ha.js` to `docs/`.** `npm run build` now runs `cp dev/fake-ha.js ../docs/fake-ha.js` after the Rollup bundle so the published demo always ships the latest harness.
-
-## [2.15.0-dev.11] - 2026-05-17
+## [2.15.0-dev.11] - 2026-05-18
 
 ### Added
 
@@ -23,6 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **Preview and edit operations extracted from the curve card.** Live-preview RAF/throttle/dedupe state now lives in `preview-controller`, and point/preset/undo edit mutations route through `edit-operations`, continuing the card god-file extraction after `load-lifecycle`.
 - **Responsive breakpoint and demo guidance tightened.** Component mobile breakpoints now use shared constants, `DESIGN.md` documents the live `--secondary-text` token and breakpoint policy, and the GitHub Pages demo has clearer install, demo, and troubleshooting paths.
+- **GitHub Pages demo now uses the shared `fake-ha.js` harness.** The demo page previously inlined a minimal stub `hass` object. It now imports `createPreviewHass`, `scenarios`, and `definePreviewEntityPicker` from `fake-ha.js` — the same harness `js/dev.html` uses. The demo card boots with a 3-light scenario and real curve data, and the `<entity-picker>` component is available for UI completeness. Eliminates a second mock to keep in sync.
+- **"Add to my Home Assistant" CTA.** The primary action button on the demo page now links to the HACS deep-link redirect (`my.home-assistant.io/redirect/hacs_repository/`) so users with HA installed can add the integration in one click.
+- **Build step copies `fake-ha.js` to `docs/`.** `npm run build` now runs `cp dev/fake-ha.js ../docs/fake-ha.js` after the Rollup bundle so the published demo always ships the latest harness.
 
 ### Fixed
 

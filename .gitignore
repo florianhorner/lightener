@@ -22,6 +22,7 @@ config/*
 node_modules/
 js/coverage/
 js/test-results/
+js/test-results.txt
 js/playwright-report/
 .gstack/
 .context/
