@@ -890,8 +890,21 @@ export class LightenerCurveCard extends LitElement {
       clearTimeout(this._saveSuccessTimer);
       this._saveSuccessTimer = null;
     }
+    // A disconnect mid-confirmation must not leave the card stuck. The save's
+    // WS write already succeeded, so drop out of `confirming` and clear the
+    // load flag — otherwise a reconnected card stays in `confirming` with
+    // controls disabled and never re-fetches. _dispatchSave() also settles any
+    // pending saveCurves() awaiter so it does not hang.
+    if (this._saveState.phase === 'confirming') {
+      this._load = {
+        ...this._load,
+        loading: false,
+        loaded: false,
+        reloadAfterLoadEntityId: undefined,
+      };
+      this._dispatchSave({ type: 'reset' });
+    }
     this._clearSaveConfirmTimer();
-    // A disconnect mid-confirmation must not leave saveCurves() awaiting forever.
     this._settleSaveConfirm('error');
     if (this._cancelAnimFrame) {
       cancelAnimationFrame(this._cancelAnimFrame);

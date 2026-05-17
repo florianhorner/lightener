@@ -931,6 +931,40 @@ describe('lightener-curve-card — save flow', () => {
     expect(view._saveState.phase).toBe('confirming');
     void save2;
   });
+
+  it('a disconnect mid-confirmation resets save state instead of sticking', async () => {
+    vi.useFakeTimers();
+    const { card, hass } = await mountCard({
+      'light.a': { brightness: { '100': '100' } },
+    });
+    const internal = card as unknown as CardInternals;
+    const view = card as unknown as {
+      _saveState: { phase: string };
+      _saving: boolean;
+      _load: LoadState;
+    };
+    const neverConfirmingReload = new Promise(() => {});
+    hass.callWS.mockReset();
+    hass.callWS.mockImplementation((msg: { type: string }) =>
+      msg.type === 'lightener/save_curves' ? Promise.resolve(undefined) : neverConfirmingReload
+    );
+
+    forceDirty(card);
+    const savePromise = internal._onSave();
+    await Promise.resolve();
+    await card.updateComplete;
+    expect(view._saveState.phase).toBe('confirming');
+
+    // Card removed from the DOM while still confirming.
+    card.remove();
+    await expect(savePromise).resolves.toBe(true);
+
+    // FSM left `confirming`, controls re-enabled, load flag cleared — a
+    // reconnected card is not stuck.
+    expect(view._saveState.phase).toBe('idle');
+    expect(view._saving).toBe(false);
+    expect(view._load.loading).toBe(false);
+  });
 });
 
 describe('lightener-curve-card — onboarding handoff (preset auto-open)', () => {
