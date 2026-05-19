@@ -22,6 +22,7 @@
       }
       #root {
         width: 100%;
+        min-width: 0;
         --primary-text-color: #212121;
         --secondary-text-color: #616161;
         --card-background-color: #fff;
@@ -33,12 +34,53 @@
         --error-color: #db4437;
         --success-color: #2563eb;
       }
+      #root.mode-standalone {
+        display: block;
+      }
+      #root.mode-lovelace {
+        max-width: 520px;
+        margin: 0 auto;
+        padding: 12px;
+      }
+      #root.mode-sidebar {
+        padding: 0;
+      }
+      .sidebar-shell,
+      .lovelace-shell {
+        min-width: 0;
+      }
+      .sidebar-shell {
+        display: grid;
+        grid-template-columns: 72px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+      .sidebar-nav {
+        min-width: 0;
+        background: #111827;
+      }
+      .sidebar-content {
+        min-width: 0;
+        padding: 16px;
+      }
+      @media (max-width: 500px) {
+        #root.mode-lovelace,
+        .sidebar-content {
+          padding: 8px;
+        }
+        .sidebar-shell {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .sidebar-nav {
+          display: none;
+        }
+      }
     </style>
   </head>
   <body>
     <main id="root"></main>
     <script type="module">
       import '../../../docs/lightener-curve-card.js';
+      import '../../../custom_components/lightener/frontend/lightener-panel.js';
       import { CURVE_COLORS } from '../../src/utils/graph-math.ts';
 
       const LIGHTENER_ENTITY = 'light.lightener';
@@ -95,8 +137,26 @@
         await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       }
 
+      async function waitForPanelCard(panel) {
+        for (let attempt = 0; attempt < 60; attempt++) {
+          const card = panel.shadowRoot?.querySelector('lightener-curve-card');
+          if (card?.renderRoot?.querySelector('curve-graph')) {
+            await waitForFixture(card);
+            return card;
+          }
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+        }
+        throw new Error('Timed out waiting for lightener-editor-panel to mount curve card');
+      }
+
       window.__LIGHTENER_CARD_READY__ = (async () => {
         await customElements.whenDefined('lightener-curve-card');
+        await customElements.whenDefined('lightener-editor-panel');
+
+        const params = new URLSearchParams(window.location.search);
+        const mode = params.get('mode') ?? 'standalone';
+        const root = document.getElementById('root');
+        root.className = `mode-${mode}`;
 
         const fixture = makeStressFixture();
         const hass = {
@@ -109,6 +169,9 @@
             ...fixture.states,
           },
           callWS: async (msg) => {
+            if (msg.type === 'lightener/list_entities') {
+              return { entities: [{ entity_id: LIGHTENER_ENTITY, name: 'Lightener' }] };
+            }
             if (msg.type === 'lightener/get_curves') {
               return { entities: fixture.entities };
             }
@@ -121,16 +184,49 @@
           callService: async () => undefined,
         };
 
-        const card = document.createElement('lightener-curve-card');
-        card.setConfig({
-          type: 'custom:lightener-curve-card',
-          entity: LIGHTENER_ENTITY,
-          title: 'Brightness Curves',
-          embedded: true,
-        });
-        card.hass = hass;
-        document.getElementById('root').append(card);
-        await waitForFixture(card);
+        if (mode === 'lovelace') {
+          const card = document.createElement('lightener-curve-card');
+          card.setConfig({
+            type: 'custom:lightener-curve-card',
+            entity: LIGHTENER_ENTITY,
+            title: 'Brightness Curves',
+          });
+          card.hass = hass;
+          const shell = document.createElement('section');
+          shell.className = 'lovelace-shell';
+          shell.append(card);
+          root.append(shell);
+          await waitForFixture(card);
+          window.__LIGHTENER_CARD_ELEMENT__ = card;
+        } else if (mode === 'sidebar') {
+          const shell = document.createElement('section');
+          shell.className = 'sidebar-shell';
+          const nav = document.createElement('nav');
+          nav.className = 'sidebar-nav';
+          nav.setAttribute('aria-label', 'Sidebar');
+          const content = document.createElement('div');
+          content.className = 'sidebar-content';
+          const panel = document.createElement('lightener-editor-panel');
+          panel._lightenerEntities = [{ entity_id: LIGHTENER_ENTITY, name: 'Lightener' }];
+          content.append(panel);
+          shell.append(nav, content);
+          root.append(shell);
+          panel.hass = hass;
+          window.__LIGHTENER_PANEL_ELEMENT__ = panel;
+          window.__LIGHTENER_CARD_ELEMENT__ = await waitForPanelCard(panel);
+        } else {
+          const card = document.createElement('lightener-curve-card');
+          card.setConfig({
+            type: 'custom:lightener-curve-card',
+            entity: LIGHTENER_ENTITY,
+            title: 'Brightness Curves',
+          });
+          card.hass = hass;
+          root.append(card);
+          await waitForFixture(card);
+          window.__LIGHTENER_CARD_ELEMENT__ = card;
+        }
+
         window.__LIGHTENER_STRESS_FIXTURE__ = fixture;
       })();
     </script>
