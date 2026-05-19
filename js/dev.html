@@ -11,17 +11,23 @@
       }
       body {
         margin: 0;
-        padding: 56px 40px 40px;
+        padding: 104px 40px 40px;
         background: #171717;
         font-family: 'Roboto', 'Segoe UI', sans-serif;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
-        gap: 32px;
         min-height: 100vh;
       }
+      .preview-shell {
+        width: 100%;
+        max-width: 1184px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+        gap: 32px;
+      }
       .preview-container {
-        width: min(560px, calc(50vw - 56px));
+        min-width: 0;
+        width: 100%;
       }
       .label {
         color: #777;
@@ -36,6 +42,7 @@
         left: 0;
         right: 0;
         display: flex;
+        flex-wrap: wrap;
         justify-content: center;
         gap: 8px;
         padding: 10px;
@@ -53,14 +60,35 @@
         color: #aaa;
         cursor: pointer;
       }
-      .scenario-btn:hover {
+      .scenario-btn:hover,
+      .surface-btn:hover {
         border-color: #666;
         color: #fff;
       }
-      .scenario-btn.active {
+      .scenario-btn.active,
+      .surface-btn.active {
         background: #2563eb;
         border-color: #2563eb;
         color: #fff;
+      }
+      .surface-btn {
+        font-family: inherit;
+        font-size: 11px;
+        padding: 5px 12px;
+        border-radius: 6px;
+        border: 1px solid #4a4a4a;
+        background: #191919;
+        color: #bbb;
+        cursor: pointer;
+      }
+      body[data-surface='lovelace'] .preview-shell {
+        max-width: 880px;
+        grid-template-columns: repeat(2, minmax(0, 400px));
+        justify-content: center;
+      }
+      body[data-surface='sidebar'] .preview-shell {
+        max-width: 1360px;
+        grid-template-columns: 1fr;
       }
       .light-theme {
         --primary-text-color: #212121;
@@ -89,11 +117,10 @@
       @media (max-width: 900px) {
         body {
           padding-inline: 16px;
-          flex-direction: column;
-          align-items: center;
         }
-        .preview-container {
-          width: min(560px, 100%);
+        .preview-shell,
+        body[data-surface='lovelace'] .preview-shell {
+          grid-template-columns: minmax(0, 1fr);
         }
         .scenario-bar {
           overflow-x: auto;
@@ -104,6 +131,9 @@
   </head>
   <body>
     <div class="scenario-bar">
+      <button class="surface-btn active" data-surface="standalone">Standalone</button>
+      <button class="surface-btn" data-surface="lovelace">Lovelace</button>
+      <button class="surface-btn" data-surface="sidebar">Sidebar</button>
       <button class="scenario-btn active" data-scenario="default">3 Lights</button>
       <button class="scenario-btn" data-scenario="two">2 Lights</button>
       <button class="scenario-btn" data-scenario="many">20 Lights</button>
@@ -111,13 +141,15 @@
       <button class="scenario-btn" data-scenario="empty">Empty</button>
     </div>
 
-    <div class="preview-container light-theme">
-      <div class="label">Light Mode</div>
-      <lightener-curve-card id="card-light"></lightener-curve-card>
-    </div>
-    <div class="preview-container dark-theme">
-      <div class="label">Dark Mode</div>
-      <lightener-curve-card id="card-dark"></lightener-curve-card>
+    <div class="preview-shell">
+      <div class="preview-container light-theme">
+        <div class="label">Light Mode</div>
+        <lightener-curve-card id="card-light"></lightener-curve-card>
+      </div>
+      <div class="preview-container dark-theme">
+        <div class="label">Dark Mode</div>
+        <lightener-curve-card id="card-dark"></lightener-curve-card>
+      </div>
     </div>
 
     <script type="module">
@@ -135,12 +167,30 @@
       await customElements.whenDefined('lightener-curve-card');
 
       let currentScenario = 'default';
+      let currentSurface = 'standalone';
       const preview = createPreviewHass({
         onChange: () => setTimeout(refreshCards, 0),
       });
       const { hass } = preview;
 
       const cards = [document.getElementById('card-light'), document.getElementById('card-dark')];
+
+      function applySurface(name) {
+        currentSurface = name;
+        document.body.dataset.surface = name;
+        for (const card of cards) {
+          card.setConfig({
+            type: 'custom:lightener-curve-card',
+            entity: LIGHTENER_ENTITY,
+            title: 'Brightness Curves',
+            ...(name === 'sidebar' ? { embedded: true } : {}),
+          });
+          card.hass = hass;
+        }
+        document.querySelectorAll('.surface-btn').forEach((button) => {
+          button.classList.toggle('active', button.dataset.surface === name);
+        });
+      }
 
       async function loadScenario(name) {
         currentScenario = name;
@@ -171,17 +221,16 @@
         }
       }
 
-      for (const card of cards) {
-        card.setConfig({
-          type: 'custom:lightener-curve-card',
-          entity: LIGHTENER_ENTITY,
-          title: 'Brightness Curves',
-        });
-        card.hass = hass;
-      }
+      applySurface(currentSurface);
 
       document.querySelectorAll('.scenario-btn').forEach((button) => {
         button.addEventListener('click', () => loadScenario(button.dataset.scenario));
+      });
+      document.querySelectorAll('.surface-btn').forEach((button) => {
+        button.addEventListener('click', async () => {
+          applySurface(button.dataset.surface);
+          await loadScenario(currentScenario);
+        });
       });
 
       document.addEventListener('curve-dirty-state', (event) => {
