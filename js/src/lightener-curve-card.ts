@@ -440,11 +440,6 @@ export class LightenerCurveCard extends LitElement {
       color: var(--text-color);
     }
     .card.embedded {
-      --curve-graph-max-height: 520px;
-      --curve-graph-min-height: 360px;
-      --curve-legend-max-height: 440px;
-      --curve-scrubber-badges-max-height: 72px;
-
       box-shadow: none;
     }
     .header {
@@ -624,10 +619,6 @@ export class LightenerCurveCard extends LitElement {
       }
     }
     @media (min-width: 1100px) {
-      .card.embedded {
-        --curve-graph-max-height: 360px;
-        --curve-graph-min-height: 240px;
-      }
       .card.embedded .workspace {
         grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.95fr);
         align-items: start;
@@ -646,11 +637,6 @@ export class LightenerCurveCard extends LitElement {
       }
     }
     @media (max-width: 1099px) {
-      .card.embedded {
-        --curve-graph-max-height: 420px;
-        --curve-graph-min-height: 300px;
-        --curve-legend-max-height: none;
-      }
       .card.embedded .footer-slot {
         order: 2;
         position: sticky;
@@ -663,11 +649,6 @@ export class LightenerCurveCard extends LitElement {
       }
       .card.embedded .side-rail {
         order: 3;
-      }
-    }
-    @media (max-width: 700px) {
-      .card.embedded {
-        --curve-graph-min-height: 240px;
       }
     }
     .presets-btn {
